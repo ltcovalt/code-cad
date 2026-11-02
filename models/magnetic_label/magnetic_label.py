@@ -53,10 +53,24 @@ LABEL_TEXT: str = "FASTENERS"
 # Batch label list: Just list your text strings here to generate all of them at once.
 # Supports simple strings e.g. ["M3 BOLTS", "M4 BOLTS", "WASHERS", "NUTS"]
 # or tuples with custom per-label overrides: [("SPECIAL", {"font_size": 16.0})]
-BATCH_LABELS: list[str | tuple[str, dict]] = []
+BATCH_LABELS: list[str | tuple[str, dict]] = [
+    "FASTENERS", 
+    "IN PROGRESS", 
+    "BITS/DRIVERS",
+    "BUILD MATS",
+    "3D PRINTING", 
+    "MAGNETS", 
+    "PLIERS", 
+    "T-SLOT", 
+    "MISC", 
+    "MEASURMENT",
+    "CUTTING",
+    "ADHESIVE",
+    "WIRE"
+]
 
-FONT_SIZE: float = 11.0               # Font height in mm
-FONT_NAME: str = "FreeSans"              # Font family (e.g. 'Arial', 'FreeSans', 'Helvetica')
+FONT_SIZE: float = 12.0               # Font height in mm
+FONT_NAME: str = "Arial"              # Font family (e.g. 'Arial', 'FreeSans', 'Helvetica')
 FONT_STYLE: str = "bold"              # 'regular', 'bold', 'italic', 'bold_italic'
 
 # Text Alignment: 'center', 'left', or 'right'
@@ -69,13 +83,13 @@ TEXT_DEPTH: float = 1.2               # Height of raised letters or depth of eng
 
 # Sizing: Set AUTO_SIZE = True for text-adaptive dimensions, or False for static dimensions
 AUTO_SIZE: bool = False
-STATIC_WIDTH: float = 80.0            # Used when AUTO_SIZE is False (mm)
-STATIC_HEIGHT: float = 24.0           # Used when AUTO_SIZE is False (mm)
-PADDING_X: float = 10.0               # Left & right margin around text in auto-size mode (mm)
-PADDING_Y: float = 6.0                # Top & bottom margin around text in auto-size mode (mm)
+STATIC_WIDTH: float = 100.0            # Used when AUTO_SIZE is False (mm)
+STATIC_HEIGHT: float = 16.0           # Used when AUTO_SIZE is False (mm)
+PADDING_X: float = 4.0               # Left & right margin around text in auto-size mode (mm)
+PADDING_Y: float = 4.0                # Top & bottom margin around text in auto-size mode (mm)
 
 # Plate & Edge Styling
-BASE_THICKNESS: float = 3.6           # Overall plate thickness (mm)
+BASE_THICKNESS: float = 3.0           # Overall plate thickness (mm)
 CORNER_RADIUS: float = 3.0            # Corner fillet radius (mm; set 0 for square corners)
 TOP_EDGE_CHAMFER: float = 0.6         # 45-degree bevel on front perimeter (mm; 0 to disable)
 BORDER_RIM: bool = True              # Add an optional raised border frame around the face
@@ -83,8 +97,8 @@ BORDER_WIDTH: float = 1.2             # Width of raised border frame (mm)
 
 # Magnet Specifications (Round press-fit magnets, e.g. 6x2mm or 6x3mm)
 MAGNET_DIAMETER: float = 10.0          # Nominal magnet diameter in mm
-MAGNET_THICKNESS: float = 3.0         # Nominal magnet thickness in mm
-MAGNET_CLEARANCE: float = 0.15        # Press-fit diameter tolerance for 3D printing (mm)
+MAGNET_THICKNESS: float = 2.0         # Nominal magnet thickness in mm
+MAGNET_CLEARANCE: float = 0.05        # Press-fit diameter tolerance for 3D printing (mm)
 POCKET_DEPTH_OFFSET: float = 0.1      # Pocket depth allowance to keep magnets sub-flush (mm)
 
 # Magnet Placement
@@ -93,7 +107,7 @@ MAGNET_COUNT: Optional[int] = None
 MAGNET_EDGE_MARGIN: float = 8.0       # Distance from plate ends to magnet centers (mm)
 
 # Export Settings
-EXPORT_STL: bool = False              # Save .stl files on execution
+EXPORT_STL: bool = True              # Save .stl files on execution
 EXPORT_STEP: bool = False             # Save .step files on execution
 OUTPUT_DIR: str = "."                 # Output directory for exported files
 
