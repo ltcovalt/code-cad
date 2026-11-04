@@ -53,7 +53,21 @@ LABEL_TEXT: str = "FASTENERS"
 # Batch label list: Just list your text strings here to generate all of them at once.
 # Supports simple strings e.g. ["M3 BOLTS", "M4 BOLTS", "WASHERS", "NUTS"]
 # or tuples with custom per-label overrides: [("SPECIAL", {"font_size": 16.0})]
-BATCH_LABELS: list[str | tuple[str, dict]] = []
+BATCH_LABELS: list[str | tuple[str, dict]] = [
+    "FASTENERS", 
+    "IN PROGRESS", 
+    "BITS/DRIVERS",
+    "BUILD MATS",
+    "3D PRINTING", 
+    "MAGNETS", 
+    "PLIERS", 
+    "T-SLOT", 
+    "MISC", 
+    "MEASURMENT",
+    "CUTTING",
+    "ADHESIVE",
+    "WIRE"
+]
 
 FONT_SIZE: float = 12.0               # Font height in mm
 FONT_NAME: str = "Arial"              # Font family (e.g. 'Arial', 'FreeSans', 'Helvetica')
