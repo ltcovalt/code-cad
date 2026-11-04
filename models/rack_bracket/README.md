@@ -1,26 +1,53 @@
 # Parametric 19-Inch Rackmount L-Brackets
 
-Parametric 19-inch EIA-310 rackmount L-bracket models built with `build123d`.
+Parametric 19-inch EIA-310 rackmount L-bracket model built with `build123d`.
 
 ---
 
 ## Features
 
-- **Standard EIA-310 Compliance**: Supports standard 1U, 2U, 3U, and custom height rack profiles.
-- **Customizable Length & Reinforcements**: Extended rear plate support for heavier rack equipment.
-- **Side Pilot Holes**: Repeating horizontal arrays of M4 thread-in pilot holes for secure device attachment.
+- **Arbitrary Rack Units**: Fully parametric height supporting 1U, 2U, 3U, 4U, and arbitrary U heights with standard 1.2mm total stacking clearance.
+- **Standard EIA-310 Compliance**: Automatically places standard EIA-310 mounting slots at top/bottom edges and intermediate rack unit centers.
+- **Customizable Length & Reinforcements**: Side plate length, wall thickness, and bend/corner fillets can be customized.
+- **Side Pilot Holes**: Repeating horizontal arrays of M4 thread-in pilot holes (3.3mm diameter for direct tapping into 3D prints) positioned securely within the solid edge margins.
 - **Ventilation Styles**: Selectable center cutout styles:
   - `'hex'`: Honeycomb mesh grill for airflow.
   - `'window'`: Clean rectangular opening.
   - `'none'`: Solid plate for maximum rigidity.
-- **Stacking Clearance**: Includes subtracted vertical margins for clean stacking fit in multi-unit racks.
 
 ---
 
 ## Usage
 
+Simply configure the parameters in `RackBracketParams` (e.g. `u_count=2` for 2U, `u_count=3` for 3U) and run the script:
+
 ```bash
 python3 rack_bracket.py
-# Or for the dedicated 2U bracket:
-python3 rack_bracket_2u.py
+```
+
+Generated `.step` and `.stl` files are saved to `models/rack_bracket/exports/`.
+
+### Export Settings
+
+At the top of `rack_bracket.py`, you can toggle exports using standard repo settings:
+
+```python
+EXPORT_STEP: bool = True               # Save .step file on execution
+EXPORT_STL: bool = True                # Save .stl file on execution
+OUTPUT_DIR: str = "exports"            # Output folder alongside this script
+```
+
+### Python / Scripting API
+
+```python
+from rack_bracket import RackBracketParams, create_rack_bracket
+from build123d import export_step, export_stl
+
+params = RackBracketParams(
+    u_count=3,              # 3U height (132.15 mm including 1.2mm stack margin)
+    bracket_length=150.0,   # Side plate length in mm
+    cutout_style="hex",     # 'hex', 'window', or 'none'
+)
+
+bracket = create_rack_bracket(params)
 ```
