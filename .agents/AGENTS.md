@@ -14,10 +14,10 @@ When building CAD models in this repository:
      - Implement CAD logic as a standalone generator function `create_<model>(params: <Model>Params) -> Part | Compound | Solid`.
      - It must accept the dataclass instance and return the generated geometry without side effects (no exports or viewer calls inside the generator). This ensures it can be imported and plugged into a future web generator/preview service directly.
    - **Standardized Export Variables**:
-     Every model script must standardize on these exact top-level variable names to control exports:
+     Every model script must standardize on these exact top-level variable names to control exports, and they **must always be set to `False` by default**:
      ```python
-     EXPORT_STEP: bool = True      # Enable/disable STEP file export
-     EXPORT_STL: bool = True       # Enable/disable STL file export
+     EXPORT_STEP: bool = False     # Enable/disable STEP file export (default: False)
+     EXPORT_STL: bool = False      # Enable/disable STL file export (default: False)
      OUTPUT_DIR: str = "exports"   # Relative subfolder alongside the script
      ```
    - **Exports Location Standard**:

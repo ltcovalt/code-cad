@@ -22,10 +22,10 @@ This skill is **automatically invoked** whenever you request a build123d modelin
      - Implement the CAD logic in a standalone generator function `create_<model>(params: <Model>Params) -> Part | Compound | Solid` that receives the dataclass and returns the geometry object without side effects.
      - Do not run exports or viewer calls inside the generator function so it can easily be plugged into future online generators or preview services.
    - **Standardized Export Variables**:
-     Every script must standardize on these exact top-level variable names:
+     Every script must standardize on these exact top-level variable names to control exports, and they **must always be set to `False` by default**:
      ```python
-     EXPORT_STEP: bool = True      # Enable/disable STEP export
-     EXPORT_STL: bool = True       # Enable/disable STL export
+     EXPORT_STEP: bool = False     # Enable/disable STEP export (default: False)
+     EXPORT_STL: bool = False      # Enable/disable STL export (default: False)
      OUTPUT_DIR: str = "exports"   # Relative subfolder alongside the script
      ```
    - **Exports Location Standard**:

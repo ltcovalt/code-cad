@@ -107,7 +107,7 @@ MAGNET_COUNT: Optional[int] = None
 MAGNET_EDGE_MARGIN: float = 8.0       # Distance from plate ends to magnet centers (mm)
 
 # Export Settings
-EXPORT_STL: bool = True              # Save .stl files on execution
+EXPORT_STL: bool = False              # Save .stl files on execution
 EXPORT_STEP: bool = False             # Save .step files on execution
 # Output directory: Relative paths resolve relative to this script's directory.
 # Use "exports" for an exports/ subfolder, or "." to save directly alongside this script.

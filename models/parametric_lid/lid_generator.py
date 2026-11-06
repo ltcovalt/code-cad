@@ -29,8 +29,8 @@ set_defaults(orbit_control=True)
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STEP: bool = True               # Save .step file on execution
-EXPORT_STL: bool = True                # Save .stl file on execution
+EXPORT_STEP: bool = False               # Save .step file on execution
+EXPORT_STL: bool = False                # Save .stl file on execution
 OUTPUT_DIR: str = "exports"            # Output folder (relative to this script's directory)
 
 
