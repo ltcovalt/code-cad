@@ -59,7 +59,7 @@ class SpacerParams:
     # Set leg_x_length = 0 to generate a straight Leg Y spacer!
     # --------------------------------------------------------------------------
     leg_y_length: float = 100.0          # Length along Y wall in mm (set 0 to omit)
-    leg_y_width: float = 15.5           # Width / gap thickness of Y leg in mm (e.g. side spacer gap)
+    leg_y_width: float = 15.0           # Width / gap thickness of Y leg in mm (e.g. side spacer gap)
 
     # --------------------------------------------------------------------------
     # Corner Radii & Top Edge Treatment
