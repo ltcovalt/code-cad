@@ -15,7 +15,8 @@ Parametric build123d end cap designed for rod and shaft assemblies, such as 1/2"
   - `'chamfer'`: Conical beveled face with adjustable chamfer length.
   - `'round'`: Generously rounded front rim transition.
 - **Easy Press-Fit Lead-In**: 45° internal chamfer at the mouth of the collar bore for effortless alignment and insertion onto rods.
-- **Air-Relief Vent Hole**: Central vent hole prevents air compression / piston backpressure during installation (set `vent_hole_diameter=0.0` to seal).
+- **Invisible Internal Vent Channel**: Longitudinal groove along the internal collar bore vents trapped air backwards out the collar mouth, allowing a 100% solid, flawless front face.
+- **Optional Air-Relief Vent Hole**: Optional coaxial through-hole if a through-bore or tap-out access is desired (defaults to `0.0` disabled).
 - **Optional Finger Grip Flutes**: Scalloped perimeter flutes around the flange for quick grip and twisting during removal.
 
 ---
@@ -32,12 +33,14 @@ Parametric build123d end cap designed for rod and shaft assemblies, such as 1/2"
 | `flange_diameter` | `float` | `32.0` | Outer diameter of retaining flange disk (mm) |
 | `flange_thickness` | `float` | `3.5` | Thickness of the flange disk (mm) |
 | `flange_fillet` | `float` | `1.5` | Stress-relief fillet between collar body and flange underside (mm) |
-| `flange_edge_radius` | `float` | `1.0` | Outer rim edge rounding radius (mm) |
+| `flange_front_radius` | `float` | `1.0` | Front rim edge radius (tip / bed side) (mm, `0.0` for crisp edge) |
+| `flange_rear_radius` | `float` | `1.5` | Rear rim edge radius (collar / spool side) (mm, `0.0` for crisp edge) |
 | `cap_style` | `str` | `"dome"` | End cap style: `'dome'`, `'flat'`, `'chamfer'`, or `'round'` |
 | `dome_height` | `Optional[float]` | `None` | Dome height above flange in mm (`None` = full hemisphere) |
 | `chamfer_length` | `float` | `2.5` | Axial length of 45° conical bevel when using `'chamfer'` style (mm) |
-| `front_edge_radius` | `float` | `1.0` | Front corner fillet radius for `'flat'` and `'round'` styles (mm) |
-| `vent_hole_diameter` | `float` | `2.0` | Coaxial air relief hole diameter in mm (`0.0` to disable) |
+| `vent_hole_diameter` | `float` | `0.0` | Coaxial air relief hole diameter in mm (`0.0` for solid seamless front face) |
+| `vent_channel_width` | `float` | `1.0` | Width of internal collar vent channel along bore (mm, `0.0` to disable) |
+| `vent_channel_depth` | `float` | `0.6` | Radial depth of internal vent channel into collar wall (mm) |
 | `grip_groove_count` | `int` | `0` | Number of scalloped finger grip grooves around perimeter (`0` = smooth) |
 | `grip_groove_radius` | `float` | `1.2` | Radial cut radius of perimeter finger grip grooves (mm) |
 

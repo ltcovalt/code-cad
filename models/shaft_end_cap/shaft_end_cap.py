@@ -39,7 +39,7 @@ except ImportError:
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = False                # Save .stl file on execution (default: False)
+EXPORT_STL: bool = True                # Save .stl file on execution (default: False)
 EXPORT_STEP: bool = False               # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"            # Output folder (relative to this script's directory)
 
@@ -49,7 +49,7 @@ class ShaftEndCapParams:
     """Parameters for the parametric shaft end cap."""
 
     # Shaft / Bore Dimensions
-    shaft_diameter: float = 12.7           # Nominal shaft/rod diameter in mm (12.7 mm = 1/2 inch)
+    shaft_diameter: float = 12.0           # Nominal shaft/rod diameter in mm (12.7 mm = 1/2 inch)
     fit_clearance: float = 0.1             # Diametral press-fit clearance in mm (bore dia = shaft_diameter + fit_clearance)
     collar_length: float = 18.0            # Length of collar sleeve pressing onto shaft (mm)
     collar_wall_thickness: float = 2.4     # Wall thickness of collar cylinder (mm)
@@ -57,18 +57,20 @@ class ShaftEndCapParams:
 
     # Flange (Spool Stop) Dimensions
     flange_diameter: float = 40.0          # Outer diameter of retaining flange (mm)
-    flange_thickness: float = 4          # Axial thickness of flange disc (mm)
-    flange_fillet: float = 2             # Stress-relief fillet radius between collar body and flange underside (mm)
-    flange_edge_radius: float = 2.0        # Corner radius on outer flange rim (mm)
+    flange_thickness: float = 4.0          # Axial thickness of flange disc (mm)
+    flange_fillet: float = 2.0             # Stress-relief fillet radius between collar body and flange underside (mm)
+    flange_front_radius: float = 2.0       # Outer rim fillet radius on front / tip side of flange (mm, 0.0 for crisp edge)
+    flange_rear_radius: float = 2.0        # Outer rim fillet radius on rear / collar side of flange (mm, 0.0 for crisp edge)
 
     # End Cap Tip Style & Geometry
     cap_style: str = "round"                # End cap style: 'dome' (semi-spherical), 'flat', 'chamfer', or 'round'
-    dome_height: Optional[float] = 0    # Height of dome above flange (mm). None defaults to full semi-sphere / hemisphere
+    dome_height: Optional[float] = 0.0     # Height of dome above flange (mm). None defaults to full semi-sphere / hemisphere
     chamfer_length: float = 2.5            # Axial length of 45-deg bevel when cap_style is 'chamfer' (mm)
-    front_edge_radius: float = 1.0         # Corner fillet radius when cap_style is 'flat' or 'round' (mm)
 
     # Air Relief & Handling Features
-    vent_hole_diameter: float = 2.0        # Coaxial air-relief vent hole diameter in mm (0.0 to disable)
+    vent_hole_diameter: float = 0.0        # Coaxial air-relief vent hole diameter in mm (0.0 for seamless solid face)
+    vent_channel_width: float = 1.0        # Width of internal axial vent channel along collar bore in mm (0.0 to disable)
+    vent_channel_depth: float = 0.6        # Radial depth of internal vent channel into collar wall in mm
     grip_groove_count: int = 0             # Number of perimeter grip grooves for finger twisting (0 to disable, e.g. 12)
     grip_groove_radius: float = 1.2        # Radius of scalloped finger grip cuts around flange perimeter (mm)
 
@@ -182,43 +184,36 @@ def create_shaft_end_cap(params: ShaftEndCapParams) -> Part:
                         mode=Mode.ADD,
                     )
 
-        elif style == "round":
-            # For rounded style, front edge receives a generous rounding
-            front_rim_edges = cap.edges().filter_by(
-                lambda e: e.geom_type == GeomType.CIRCLE
-                and abs(e.center().Z - z_flange_front) < 1e-2
-                and abs(e.radius - r_flange) < 1e-2
-            )
-            r_round = max(params.front_edge_radius, 2.0)
-            if front_rim_edges and r_round < t_flange and r_round < (r_flange - r_collar):
-                fillet(front_rim_edges, radius=r_round)
-
-        elif style == "flat":
-            # Clean flat front face with optional front rim fillet
-            if params.front_edge_radius > 0:
+        elif style in ("round", "flat"):
+            # Clean front face with independently configurable front rim radius
+            if params.flange_front_radius > 0:
                 front_rim_edges = cap.edges().filter_by(
                     lambda e: e.geom_type == GeomType.CIRCLE
                     and abs(e.center().Z - z_flange_front) < 1e-2
                     and abs(e.radius - r_flange) < 1e-2
                 )
-                if front_rim_edges and params.front_edge_radius < t_flange:
-                    fillet(front_rim_edges, radius=params.front_edge_radius)
+                r_front = min(params.flange_front_radius, t_flange - 0.2)
+                if front_rim_edges and r_front > 0:
+                    fillet(front_rim_edges, radius=r_front)
         else:
             raise ValueError(
                 f"Unknown cap_style: '{params.cap_style}'. Supported styles are: "
                 f"'dome', 'flat', 'chamfer', 'round'"
             )
 
-        # 5. Flange rim edge fillet (applied if style wasn't already filleted)
-        if style in ("dome", "chamfer") and params.flange_edge_radius > 0:
-            # Under-flange outer corner rounding
+        # 5. Flange Rear Rim Edge Fillet (Collar / Spool side) - applied across all styles
+        if params.flange_rear_radius > 0:
             under_rim_edges = cap.edges().filter_by(
                 lambda e: e.geom_type == GeomType.CIRCLE
                 and abs(e.center().Z - l_collar) < 1e-2
                 and abs(e.radius - r_flange) < 1e-2
             )
-            if under_rim_edges and params.flange_edge_radius < (r_flange - r_collar):
-                fillet(under_rim_edges, radius=params.flange_edge_radius)
+            # Ensure rear radius does not collide with front radius or the collar junction
+            front_r = params.flange_front_radius if style in ("round", "flat") else 0.0
+            max_rear_r = min(t_flange - front_r - 0.1, r_flange - r_collar - params.flange_fillet - 0.1)
+            r_rear = min(params.flange_rear_radius, max_rear_r)
+            if under_rim_edges and r_rear > 0:
+                fillet(under_rim_edges, radius=r_rear)
 
         # 6. Optional Scalloped Grip Grooves around Flange Perimeter
         if params.grip_groove_count > 0 and params.grip_groove_radius > 0:
@@ -249,13 +244,24 @@ def create_shaft_end_cap(params: ShaftEndCapParams) -> Part:
             if mouth_edges:
                 chamfer(mouth_edges, length=params.lead_in_chamfer)
 
-        # 9. Coaxial Air-Relief Vent Hole (Z = 0 through full top of cap)
+        # 9. Coaxial Air-Relief Vent Hole (Z = 0 through full top of cap, optional)
         if params.vent_hole_diameter > 0:
             r_vent = params.vent_hole_diameter / 2.0
             with Locations((0, 0, l_collar - 1.0)):
                 Cylinder(
                     radius=r_vent,
                     height=t_flange + params.effective_dome_height + 10.0,
+                    align=(Align.CENTER, Align.CENTER, Align.MIN),
+                    mode=Mode.SUBTRACT,
+                )
+
+        # 10. Internal Axial Vent Channel along Collar Bore Wall (Invisible from outside)
+        if params.vent_channel_width > 0.0 and params.vent_channel_depth > 0.0:
+            with Locations((r_bore, 0, 0)):
+                Box(
+                    params.vent_channel_depth * 2.0,
+                    params.vent_channel_width,
+                    l_collar * 1.01,
                     align=(Align.CENTER, Align.CENTER, Align.MIN),
                     mode=Mode.SUBTRACT,
                 )

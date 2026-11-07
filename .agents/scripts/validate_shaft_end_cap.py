@@ -21,12 +21,18 @@ def validate():
     print("Beginning validation of shaft_end_cap generator...")
 
     # --------------------------------------------------------------------------
-    # Test 1: Default 1/2" (12.7mm) Rod Cap with Semi-Spherical Dome
+    # Test 1: 1/2" (12.7mm) Rod Cap with Semi-Spherical Dome
     # --------------------------------------------------------------------------
-    p1 = ShaftEndCapParams()
+    p1 = ShaftEndCapParams(
+        shaft_diameter=12.7,
+        flange_diameter=32.0,
+        flange_thickness=3.5,
+        cap_style="dome",
+        dome_height=None,
+    )
     cap1 = create_shaft_end_cap(p1)
     bbox1 = cap1.bounding_box()
-    assert cap1.is_valid, "Default 1/2in dome cap is invalid"
+    assert cap1.is_valid, "1/2in dome cap is invalid"
     # Total height should be collar_length (18) + flange_thickness (3.5) + dome_height (16) = 37.5 mm
     expected_h1 = p1.collar_length + p1.flange_thickness + p1.flange_radius
     assert abs(bbox1.size.Z - expected_h1) < 0.1, (
@@ -35,7 +41,7 @@ def validate():
     assert abs(bbox1.size.X - p1.flange_diameter) < 0.1, (
         f"Test 1 width mismatch: {bbox1.size.X} vs expected {p1.flange_diameter}"
     )
-    print(f"✓ Test 1 Passed: Default 1/2in dome cap (H={bbox1.size.Z:.2f}mm, Dia={bbox1.size.X:.2f}mm, valid={cap1.is_valid})")
+    print(f"✓ Test 1 Passed: 1/2in dome cap (H={bbox1.size.Z:.2f}mm, Dia={bbox1.size.X:.2f}mm, valid={cap1.is_valid})")
 
     # --------------------------------------------------------------------------
     # Test 2: Custom Low-Profile Dome (e.g. 6.0mm dome height)
@@ -60,7 +66,8 @@ def validate():
     p3 = ShaftEndCapParams(
         shaft_diameter=12.7,
         cap_style="flat",
-        front_edge_radius=0.8,
+        flange_front_radius=0.8,
+        flange_rear_radius=1.2,
     )
     cap3 = create_shaft_end_cap(p3)
     bbox3 = cap3.bounding_box()
@@ -78,6 +85,7 @@ def validate():
         shaft_diameter=12.7,
         cap_style="chamfer",
         chamfer_length=3.0,
+        flange_rear_radius=1.0,
     )
     cap4 = create_shaft_end_cap(p4)
     bbox4 = cap4.bounding_box()
@@ -89,12 +97,13 @@ def validate():
     print(f"✓ Test 4 Passed: Chamfer end cap (H={bbox4.size.Z:.2f}mm, valid={cap4.is_valid})")
 
     # --------------------------------------------------------------------------
-    # Test 5: Round Edge Cap Style
+    # Test 5: Round Edge Cap Style (Independent Front and Rear Radii)
     # --------------------------------------------------------------------------
     p5 = ShaftEndCapParams(
         shaft_diameter=12.7,
         cap_style="round",
-        front_edge_radius=2.0,
+        flange_front_radius=1.0,
+        flange_rear_radius=1.8,
     )
     cap5 = create_shaft_end_cap(p5)
     bbox5 = cap5.bounding_box()
@@ -138,7 +147,24 @@ def validate():
     assert cap7.is_valid, "8mm sealed cap is invalid"
     print(f"✓ Test 7 Passed: 8mm sealed cap (H={bbox7.size.Z:.2f}mm, valid={cap7.is_valid})")
 
-    print("\nAll 7 validation tests passed successfully!")
+    # --------------------------------------------------------------------------
+    # Test 8: Internal Axial Vent Channel in Collar (Seamless Solid Face)
+    # --------------------------------------------------------------------------
+    p8 = ShaftEndCapParams(
+        shaft_diameter=12.7,
+        flange_diameter=40.0,
+        flange_thickness=4.0,
+        cap_style="round",
+        vent_hole_diameter=0.0,
+        vent_channel_width=1.0,
+        vent_channel_depth=0.6,
+    )
+    cap8 = create_shaft_end_cap(p8)
+    bbox8 = cap8.bounding_box()
+    assert cap8.is_valid, "Internal vent channel cap is invalid"
+    print(f"✓ Test 8 Passed: Internal vent channel cap (H={bbox8.size.Z:.2f}mm, valid={cap8.is_valid})")
+
+    print("\nAll 8 validation tests passed successfully!")
 
 
 if __name__ == "__main__":
