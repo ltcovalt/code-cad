@@ -122,6 +122,7 @@ def validate():
         flange_diameter=48.0,
         collar_length=25.0,
         flange_thickness=5.0,
+        grip_grooves_enabled=True,
         grip_groove_count=12,
         grip_groove_radius=1.5,
         cap_style="dome",
@@ -139,7 +140,7 @@ def validate():
         flange_diameter=22.0,
         collar_length=14.0,
         flange_thickness=3.0,
-        vent_hole_diameter=0.0,
+        vent_hole_enabled=False,
         cap_style="dome",
     )
     cap7 = create_shaft_end_cap(p7)
@@ -155,7 +156,8 @@ def validate():
         flange_diameter=40.0,
         flange_thickness=4.0,
         cap_style="round",
-        vent_hole_diameter=0.0,
+        vent_hole_enabled=False,
+        vent_channel_enabled=True,
         vent_channel_width=1.0,
         vent_channel_depth=0.6,
     )

@@ -39,7 +39,7 @@ except ImportError:
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = True                # Save .stl file on execution (default: False)
+EXPORT_STL: bool = False                # Save .stl file on execution (default: False)
 EXPORT_STEP: bool = False               # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"            # Output folder (relative to this script's directory)
 
@@ -68,10 +68,13 @@ class ShaftEndCapParams:
     chamfer_length: float = 2.5            # Axial length of 45-deg bevel when cap_style is 'chamfer' (mm)
 
     # Air Relief & Handling Features
-    vent_hole_diameter: float = 0.0        # Coaxial air-relief vent hole diameter in mm (0.0 for seamless solid face)
-    vent_channel_width: float = 1.0        # Width of internal axial vent channel along collar bore in mm (0.0 to disable)
+    vent_hole_enabled: bool = False        # Master toggle for coaxial air-relief through-hole
+    vent_hole_diameter: float = 2.0        # Coaxial air-relief vent hole diameter in mm
+    vent_channel_enabled: bool = True      # Master toggle for invisible internal axial vent channel
+    vent_channel_width: float = 1.0        # Width of internal axial vent channel along collar bore in mm
     vent_channel_depth: float = 0.6        # Radial depth of internal vent channel into collar wall in mm
-    grip_groove_count: int = 0             # Number of perimeter grip grooves for finger twisting (0 to disable, e.g. 12)
+    grip_grooves_enabled: bool = False     # Master toggle for perimeter scalloped finger grip grooves
+    grip_groove_count: int = 12            # Number of perimeter grip grooves for finger twisting
     grip_groove_radius: float = 1.2        # Radius of scalloped finger grip cuts around flange perimeter (mm)
 
     @property
@@ -216,7 +219,7 @@ def create_shaft_end_cap(params: ShaftEndCapParams) -> Part:
                 fillet(under_rim_edges, radius=r_rear)
 
         # 6. Optional Scalloped Grip Grooves around Flange Perimeter
-        if params.grip_groove_count > 0 and params.grip_groove_radius > 0:
+        if params.grip_grooves_enabled and params.grip_groove_count > 0 and params.grip_groove_radius > 0:
             with PolarLocations(radius=r_flange, count=params.grip_groove_count):
                 Cylinder(
                     radius=params.grip_groove_radius,
@@ -245,7 +248,7 @@ def create_shaft_end_cap(params: ShaftEndCapParams) -> Part:
                 chamfer(mouth_edges, length=params.lead_in_chamfer)
 
         # 9. Coaxial Air-Relief Vent Hole (Z = 0 through full top of cap, optional)
-        if params.vent_hole_diameter > 0:
+        if params.vent_hole_enabled and params.vent_hole_diameter > 0:
             r_vent = params.vent_hole_diameter / 2.0
             with Locations((0, 0, l_collar - 1.0)):
                 Cylinder(
@@ -256,7 +259,7 @@ def create_shaft_end_cap(params: ShaftEndCapParams) -> Part:
                 )
 
         # 10. Internal Axial Vent Channel along Collar Bore Wall (Invisible from outside)
-        if params.vent_channel_width > 0.0 and params.vent_channel_depth > 0.0:
+        if params.vent_channel_enabled and params.vent_channel_width > 0.0 and params.vent_channel_depth > 0.0:
             with Locations((r_bore, 0, 0)):
                 Box(
                     params.vent_channel_depth * 2.0,

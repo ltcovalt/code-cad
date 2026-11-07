@@ -25,23 +25,26 @@ Parametric build123d end cap designed for rod and shaft assemblies, such as 1/2"
 
 | Parameter | Type | Default | Description |
 |:---|:---:|:---:|:---|
-| `shaft_diameter` | `float` | `12.7` | Nominal shaft/rod diameter in mm (12.7 mm = 1/2 inch) |
-| `fit_clearance` | `float` | `0.2` | Diametral fit clearance in mm (bore = `shaft_diameter + fit_clearance`) |
+| `shaft_diameter` | `float` | `12.0` | Nominal shaft/rod diameter in mm (`12.7 mm` = 1/2 inch) |
+| `fit_clearance` | `float` | `0.1` | Diametral fit clearance in mm (bore = `shaft_diameter + fit_clearance`) |
 | `collar_length` | `float` | `18.0` | Insertion depth of the collar sleeve pressing onto the rod (mm) |
 | `collar_wall_thickness` | `float` | `2.4` | Wall thickness of the collar sleeve (mm) |
 | `lead_in_chamfer` | `float` | `1.0` | Internal entry chamfer at collar mouth for easy push-on fit (mm) |
-| `flange_diameter` | `float` | `32.0` | Outer diameter of retaining flange disk (mm) |
-| `flange_thickness` | `float` | `3.5` | Thickness of the flange disk (mm) |
-| `flange_fillet` | `float` | `1.5` | Stress-relief fillet between collar body and flange underside (mm) |
-| `flange_front_radius` | `float` | `1.0` | Front rim edge radius (tip / bed side) (mm, `0.0` for crisp edge) |
-| `flange_rear_radius` | `float` | `1.5` | Rear rim edge radius (collar / spool side) (mm, `0.0` for crisp edge) |
-| `cap_style` | `str` | `"dome"` | End cap style: `'dome'`, `'flat'`, `'chamfer'`, or `'round'` |
-| `dome_height` | `Optional[float]` | `None` | Dome height above flange in mm (`None` = full hemisphere) |
+| `flange_diameter` | `float` | `40.0` | Outer diameter of retaining flange disk (mm) |
+| `flange_thickness` | `float` | `4.0` | Thickness of the flange disk (mm) |
+| `flange_fillet` | `float` | `2.0` | Stress-relief fillet between collar body and flange underside (mm) |
+| `flange_front_radius` | `float` | `2.0` | Front rim edge radius (tip / bed side) (mm, `0.0` for crisp edge) |
+| `flange_rear_radius` | `float` | `2.0` | Rear rim edge radius (collar / spool side) (mm, `0.0` for crisp edge) |
+| `cap_style` | `str` | `"round"` | End cap style: `'dome'`, `'flat'`, `'chamfer'`, or `'round'` |
+| `dome_height` | `Optional[float]` | `0.0` | Dome height above flange in mm (`None` or `0.0` = full hemisphere) |
 | `chamfer_length` | `float` | `2.5` | Axial length of 45° conical bevel when using `'chamfer'` style (mm) |
-| `vent_hole_diameter` | `float` | `0.0` | Coaxial air relief hole diameter in mm (`0.0` for solid seamless front face) |
-| `vent_channel_width` | `float` | `1.0` | Width of internal collar vent channel along bore (mm, `0.0` to disable) |
+| `vent_hole_enabled` | `bool` | `False` | Master toggle: coaxial air-relief through-hole |
+| `vent_hole_diameter` | `float` | `2.0` | Coaxial air-relief hole diameter in mm when `vent_hole_enabled=True` |
+| `vent_channel_enabled`| `bool` | `True` | Master toggle: invisible internal axial vent channel along collar bore |
+| `vent_channel_width` | `float` | `1.0` | Width of internal collar vent channel along bore (mm) |
 | `vent_channel_depth` | `float` | `0.6` | Radial depth of internal vent channel into collar wall (mm) |
-| `grip_groove_count` | `int` | `0` | Number of scalloped finger grip grooves around perimeter (`0` = smooth) |
+| `grip_grooves_enabled`| `bool` | `False` | Master toggle: scalloped finger grip grooves around flange perimeter |
+| `grip_groove_count` | `int` | `12` | Number of scalloped finger grip grooves around perimeter |
 | `grip_groove_radius` | `float` | `1.2` | Radial cut radius of perimeter finger grip grooves (mm) |
 
 ---
