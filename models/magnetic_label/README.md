@@ -19,7 +19,8 @@ A fully parametric 3D printable magnetic label generator built with `build123d`.
   - Configurable press-fit tolerance and sub-flush pocket depth allowance.
   - Symmetrical auto-spacing across the plate or manual magnet count/positions.
   - Automatic base thickness check to guarantee minimum solid floor thickness behind magnets.
-- **Perimeter Styling**: Rounded corners (`CORNER_RADIUS`), top chamfer bevel (`TOP_EDGE_CHAMFER`), and optional raised border rim (`BORDER_RIM`).
+- **Perimeter Styling**: Rounded corners (`corner_radius`), top chamfer bevel (`top_chamfer`), and optional raised border rim (`border_rim`).
+- **Master Magnet Toggle**: Enable or disable rear magnet pockets (`magnets_enabled = True / False`) without losing magnet diameter/thickness settings.
 - **Batch Processing**: Supply a Python list of strings to batch-generate and export a whole set of labels in one run.
 
 ---

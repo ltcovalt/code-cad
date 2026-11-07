@@ -124,6 +124,7 @@ class MagneticLabelParams:
     min_floor_thickness: float = 0.8       # Minimum solid plastic floor thickness behind magnets (mm)
 
     # Magnet Pocket Settings
+    magnets_enabled: bool = True           # Master toggle to enable/disable rear magnet pockets
     magnet_diameter: float = 10.0          # Nominal magnet diameter in mm
     magnet_thickness: float = 2.0          # Nominal magnet thickness in mm
     magnet_clearance: float = 0.0          # Press-fit diameter tolerance for 3D printing (mm)
@@ -179,7 +180,7 @@ def calculate_dimensions(params: MagneticLabelParams) -> Tuple[float, float, flo
         plate_h = params.height
 
     # Ensure base thickness is sufficient for magnet pocket + floor thickness
-    pocket_depth = params.magnet_thickness + params.pocket_depth_offset
+    pocket_depth = (params.magnet_thickness + params.pocket_depth_offset) if params.magnets_enabled else 0.0
     mode = TextMode.from_str(params.text_mode) if isinstance(params.text_mode, str) else params.text_mode
     
     # In debossed mode, letters cut into top face, requiring extra safety margin
@@ -199,6 +200,9 @@ def calculate_magnet_positions(
     Calculates symmetrical press-fit magnet center coordinates (X, Y).
     Supports custom positions, explicit count, or automatic aspect-ratio spacing.
     """
+    if not params.magnets_enabled:
+        return []
+
     # 1. User supplied custom coordinates
     if params.magnet_positions is not None:
         return list(params.magnet_positions)
@@ -271,13 +275,14 @@ def build_magnetic_label(params: MagneticLabelParams) -> GeneratedLabel:
                 chamfer(top_face.edges(), length=max_chamfer)
 
         # 1c. Rear magnet press-fit pockets (cut from Z=0 upwards)
-        with Locations(magnet_coords):
-            Cylinder(
-                radius=pocket_radius,
-                height=pocket_depth,
-                align=(Align.CENTER, Align.CENTER, Align.MIN),
-                mode=Mode.SUBTRACT,
-            )
+        if magnet_coords:
+            with Locations(magnet_coords):
+                Cylinder(
+                    radius=pocket_radius,
+                    height=pocket_depth,
+                    align=(Align.CENTER, Align.CENTER, Align.MIN),
+                    mode=Mode.SUBTRACT,
+                )
 
         # 1d. Optional raised border rim
         if params.border_rim and params.border_width > 0:
@@ -391,10 +396,6 @@ def create_magnetic_label(params: MagneticLabelParams) -> Compound | Part | Soli
     if label.text_part is not None:
         return Compound(children=[label.base_part, label.text_part])
     return label.base_part
-
-
-# Generator alias
-create_label = create_magnetic_label
 
 
 # ==============================================================================
