@@ -52,3 +52,6 @@ When building CAD models in this repository:
        ```
 4. **Model Validation**: Validate models by running python scripts with `ocp_viewer` / `ocp_vscode` `show()` or checking export operations.
 5. **Clean Workspace Rule**: Do NOT create temporary test or validation scripts in the root project directory. Store reusable test/utility scripts inside `.agents/scripts/` or delete temporary scratch scripts immediately after validation completes.
+6. **Git & Commit Protocol**:
+   - Never commit or push changes without first presenting a full recap/summary explaining the solution, and waiting for explicit user approval to proceed.
+   - **Per-Model Commit Isolation**: Always keep commits for each model separate (scoping model changes to their respective `models/<model_name>/` directory and related index entry, and keeping repo-level config/rule changes in separate commits) so the git history for any specific model directory remains clean and easy to inspect.
