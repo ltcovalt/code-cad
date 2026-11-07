@@ -15,12 +15,12 @@ import sys
 import tempfile
 
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-models_dir = os.path.join(repo_root, "models", "parametric_lid")
+models_dir = os.path.join(repo_root, "models", "container_lid")
 if models_dir not in sys.path:
     sys.path.append(models_dir)
 
 from build123d import export_step, export_stl
-from parametric_lid import (
+from container_lid import (
     LidParams,
     PYREX_PRESETS,
     ANCHOR_PRESETS,

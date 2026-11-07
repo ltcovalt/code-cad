@@ -1,4 +1,4 @@
-# Parametric Container Lid Generator (`build123d`) [DRAFT / WIP]
+# Container Lid Generator (`build123d`) [DRAFT / WIP]
 
 > [!NOTE]
 > **Status: Work In Progress (Draft / WIP)**
@@ -71,15 +71,15 @@ Designed to support:
 
 ```python
 from build123d import *
-from parametric_lid import LidParams, PYREX_PRESETS, create_lid, export_lid_files
+from container_lid import ContainerLidParams, PYREX_PRESETS, create_container_lid
 
 # 1. Using a Pyrex preset (4-Cup Round in TPU)
 params = PYREX_PRESETS["pyrex_round_4_cup"]
 params.material = "tpu"
-lid = build_lid(params)
+lid = create_container_lid(params)
 
 # 2. Custom Rectangular Dish in PCTG
-custom_rect = LidParams(
+custom_rect = ContainerLidParams(
     shape="rectangular",
     material="pctg",
     length=195.0,
@@ -87,8 +87,5 @@ custom_rect = LidParams(
     corner_radius=22.0,
     rim_lip_height=5.2,
 )
-pctg_lid = build_lid(custom_rect)
-
-# 3. Export to STEP and STL
-export_lid_files(lid, "pyrex_4cup_tpu_lid")
+pctg_lid = create_container_lid(custom_rect)
 ```

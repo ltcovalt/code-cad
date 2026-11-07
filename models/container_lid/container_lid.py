@@ -42,8 +42,8 @@ OUTPUT_DIR: str = "exports"            # Output folder (relative to this script'
 
 
 @dataclass
-class LidParams:
-    """Parameters for parametric container lid generation."""
+class ContainerLidParams:
+    """Parameters for container lid generation."""
 
     # Material & Primary Fit Mode
     material: str = "tpu"               # "tpu" (flexible stretch) or "pctg" / "petg" / "rigid" (compliant flex slots)
@@ -116,11 +116,11 @@ class LidParams:
     rect_slots_long_side: int = 2       # Number of relief slots along each long side
     rect_slots_short_side: int = 1      # Number of relief slots along each short side
 
-    def get_effective_params(self) -> "LidParams":
+    def get_effective_params(self) -> "ContainerLidParams":
         """Return a copy of params with auto-resolved defaults based on active material, rim style, and units."""
         is_rigid = self.material.lower() in ("pctg", "petg", "rigid", "pla")
         is_smooth = self.rim_style.lower() in ("smooth", "straight", "flat", "no_rim", "no_lip")
-        p = LidParams(**self.__dict__)
+        p = ContainerLidParams(**self.__dict__)
 
         # Convert inch measurements to mm if provided
         if p.diameter_in is not None:
@@ -150,6 +150,10 @@ class LidParams:
         if p.flex_slots is None:
             p.flex_slots = is_rigid and not is_smooth
         return p
+
+
+# Type alias
+LidParams = ContainerLidParams
 
 
 # Verified Presets for Popular Pyrex Food Storage Containers
@@ -621,8 +625,8 @@ def build_rectangular_lid(p: LidParams) -> Solid:
     return rect_part.part
 
 
-def create_lid(params: LidParams) -> Solid:
-    """Standalone generator function returning lid CAD solid without side effects."""
+def create_container_lid(params: ContainerLidParams) -> Solid:
+    """Standalone generator function returning container lid CAD solid without side effects."""
     p = params.get_effective_params()
     shape_lower = p.shape.lower()
     if shape_lower == "round":
@@ -633,14 +637,14 @@ def create_lid(params: LidParams) -> Solid:
         raise ValueError(f"Unsupported shape: {p.shape}. Choose 'round' or 'rectangular'.")
 
 
-# Backwards compatibility alias
-build_lid = create_lid
+# Generator alias
+create_lid = create_container_lid
 
 
 if __name__ == "__main__":
     # Instantiate with no overrides so dataclass defaults take effect directly
-    params = LidParams()
-    lid = create_lid(params)
+    params = ContainerLidParams()
+    lid = create_container_lid(params)
 
     # Standardized exports
     if EXPORT_STEP or EXPORT_STL:
@@ -652,7 +656,7 @@ if __name__ == "__main__":
         else:
             dim_str = f"{p_eff.length:.0f}x{p_eff.width:.0f}mm"
         variant = f"{p_eff.shape.lower()}_{p_eff.material.lower()}"
-        stem = f"lid_{dim_str}_{variant}"
+        stem = f"container_lid_{dim_str}_{variant}"
 
         if EXPORT_STL:
             stl_file = exports_dir / f"{stem}.stl"

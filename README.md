@@ -48,9 +48,9 @@ cad/
 ├── README.md                   # Repository overview (this file)
 ├── docs/                       # Manuals and general reference PDFs
 ├── models/                     # Parametric generator projects
+│   ├── container_lid/          # Container lid generator (Pyrex, etc.)
 │   ├── gridfinity_spacer/      # Custom Gridfinity drawer fitment spacers
-│   ├── magnetic_label/         # Parametric magnetic label generator
-│   ├── parametric_lid/         # Parametric container lid generator (Pyrex, etc.)
+│   ├── magnetic_label/         # Magnetic label generator
 │   ├── rack_bracket/           # 19" EIA-310 rackmount brackets (1U, 2U+)
 │   └── shaft_end_cap/          # Retention end caps for cylindrical shelving rods
 └── .agents/                    # Agent skills, references, and validation scripts
@@ -62,10 +62,10 @@ cad/
 
 | Model | Description | Output Formats |
 | :--- | :--- | :--- |
+| **[Container Lid](models/container_lid/)** | Airtight container lid generator with sealing bead, stacking rim, and pull tab. Built-in presets for Pyrex rectangular and round glass dishes. | STL, STEP |
 | **[Gridfinity Spacer](models/gridfinity_spacer/)** | Precision drawer spacer to eliminate play around Gridfinity baseplates. Supports front/back/side positions, finger scoops, and hollow underside. | STL, STEP |
-| **[Magnetic Label](models/magnetic_label/)** | Parametric magnetic label generator with auto-sizing to text, embossed/debossed/flush inlay styles, and press-fit round magnet pockets. | STL, STEP (Single & Multi-body) |
-| **[Parametric Lid](models/parametric_lid/)** | Airtight container lid generator with sealing bead, stacking rim, and pull tab. Built-in presets for Pyrex rectangular and round glass dishes. | STL, STEP |
-| **[Rackmount Brackets](models/rack_bracket/)** | Parametric 19-inch rackmount L-brackets (1U, 2U, custom lengths) with EIA-310 mounting slots, M4 thread-in holes, and honeycomb cutouts. | STL, STEP |
+| **[Magnetic Label](models/magnetic_label/)** | Magnetic label generator with auto-sizing to text, embossed/debossed/flush inlay styles, and press-fit round magnet pockets. | STL, STEP (Single & Multi-body) |
+| **[Rackmount Brackets](models/rack_bracket/)** | 19-inch rackmount L-brackets (1U, 2U, custom lengths) with EIA-310 mounting slots, M4 thread-in holes, and honeycomb cutouts. | STL, STEP |
 | **[Shaft End Cap](models/shaft_end_cap/)** | Press-fit retention end caps for spool storage rods with dome/flat/chamfer styles, internal lead-in chamfer, and optional grip flutes. | STL, STEP |
 
 ---

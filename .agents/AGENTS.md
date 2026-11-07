@@ -7,7 +7,7 @@ When building CAD models in this repository:
 3. **Model Script Architecture (No CLI, Generator-Ready)**:
    - **No CLI Interfaces**: Do NOT add CLI argument parsers (`argparse`, `click`, `sys.argv`). The user interacts with scripts directly by tweaking parameters/variables in the code.
    - **Parametric `@dataclass` as Single Source of Truth**:
-     - Define all geometric and feature parameters at the top of the file in a dedicated dataclass named `<Model>Params` (e.g. `RackBracketParams`, `LidParams`).
+     - Define all geometric and feature parameters at the top of the file in a dedicated dataclass named `<Model>Params` (e.g. `RackBracketParams`, `ContainerLidParams`).
      - Provide clear type annotations, default values, and comments for all fields.
      - Avoid redundant alias properties or duplicate getters.
    - **Decoupled Generator Function**:
@@ -25,7 +25,7 @@ When building CAD models in this repository:
    - **Standardized Export Filename Convention**:
      Export filenames must follow the pattern:
      `<model_name>_<primary_dimensions>_<variant_or_style>.<ext>`
-     in lowercase `snake_case` (e.g. `rack_bracket_2u_hex.stl`, `shaft_end_cap_12.7mm_round.stl`, `magnetic_label_100x16mm_fasteners_embossed_base.stl`, `lid_150mm_round_tpu.stl`, `gridfinity_spacer_100x100x3mm_corner.stl`).
+     in lowercase `snake_case` (e.g. `rack_bracket_2u_hex.stl`, `shaft_end_cap_12.7mm_round.stl`, `magnetic_label_100x16mm_fasteners_embossed_base.stl`, `container_lid_150mm_round_tpu.stl`, `gridfinity_spacer_100x100x3mm_corner.stl`).
      This ensures immediate identification across slicers, file managers, and future web generator download endpoints.
    - **Strict Standalone Architecture (No Compatibility Shims or Legacy Wrappers)**:
      - Every model script must be completely self-contained in its canonical file: `models/<model_name>/<model_name>.py`.
