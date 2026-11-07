@@ -21,12 +21,11 @@ if models_dir not in sys.path:
 
 from build123d import export_step, export_stl
 from container_lid import (
-    LidParams,
+    ContainerLidParams,
     PYREX_PRESETS,
     ANCHOR_PRESETS,
     CONTAINER_PRESETS,
-    create_lid,
-    build_lid,
+    create_container_lid,
 )
 
 
@@ -39,7 +38,7 @@ def run_lid_validation():
     print("\n[Test 1] Round TPU Lid (Pyrex 4-Cup)...")
     p1 = PYREX_PRESETS["pyrex_round_4_cup"]
     p1.material = "tpu"
-    lid1 = build_lid(p1)
+    lid1 = create_container_lid(p1)
     assert lid1.is_valid, "Round TPU lid is invalid"
     assert lid1.volume > 20000, f"Unexpected volume: {lid1.volume}"
     print(f"✓ Passed! Volume = {lid1.volume:.1f} mm^3")
@@ -48,14 +47,14 @@ def run_lid_validation():
     print("\n[Test 2] Rectangular TPU Lid (Pyrex 3-Cup with Corner Tab)...")
     p2 = PYREX_PRESETS["pyrex_rect_3_cup"]
     p2.material = "tpu"
-    lid2 = build_lid(p2)
+    lid2 = create_container_lid(p2)
     assert lid2.is_valid, "Rectangular TPU lid is invalid"
     assert lid2.volume > 30000, f"Unexpected volume: {lid2.volume}"
     print(f"✓ Passed! Volume = {lid2.volume:.1f} mm^3")
 
     # Test 3: Round PCTG Lid with Flex Slots
     print("\n[Test 3] Round PCTG Lid with Compliant Flexure Slots...")
-    p3 = LidParams(
+    p3 = ContainerLidParams(
         shape="round",
         diameter=150.0,
         rim_lip_height=5.2,
@@ -63,7 +62,7 @@ def run_lid_validation():
         skirt_height=10.5,
         material="pctg",
     )
-    lid3 = build_lid(p3)
+    lid3 = create_container_lid(p3)
     eff_p3 = p3.get_effective_params()
     assert lid3.is_valid, "Round PCTG lid is invalid"
     assert eff_p3.flex_slots is True
@@ -73,7 +72,7 @@ def run_lid_validation():
 
     # Test 4: Rectangular PCTG Lid with Flex Slots
     print("\n[Test 4] Rectangular PCTG Lid with Cantilever Flex Slots...")
-    p4 = LidParams(
+    p4 = ContainerLidParams(
         shape="rectangular",
         length=182.0,
         width=132.0,
@@ -83,7 +82,7 @@ def run_lid_validation():
         skirt_height=10.0,
         material="pctg",
     )
-    lid4 = build_lid(p4)
+    lid4 = create_container_lid(p4)
     eff_p4 = p4.get_effective_params()
     assert lid4.is_valid, "Rectangular PCTG lid is invalid"
     assert eff_p4.flex_slots is True
@@ -91,7 +90,7 @@ def run_lid_validation():
 
     # Test 5: Square Container Lid (Length == Width)
     print("\n[Test 5] Square Container Lid...")
-    p5 = LidParams(
+    p5 = ContainerLidParams(
         shape="rectangular",
         material="tpu",
         length=140.0,
@@ -99,13 +98,13 @@ def run_lid_validation():
         corner_radius=15.0,
         rim_lip_height=5.0,
     )
-    lid5 = build_lid(p5)
+    lid5 = create_container_lid(p5)
     assert lid5.is_valid, "Square lid is invalid"
     print(f"✓ Passed! Volume = {lid5.volume:.1f} mm^3")
 
     # Test 6: Custom Dimension Overrides (Minimal lid, no seal ring, no stacking rim)
     print("\n[Test 6] Minimal Flat Custom Round Lid...")
-    p6 = LidParams(
+    p6 = ContainerLidParams(
         shape="round",
         material="tpu",
         diameter=80.0,
@@ -114,7 +113,7 @@ def run_lid_validation():
         skirt_height=7.0,
         pull_tab=True,
     )
-    lid6 = build_lid(p6)
+    lid6 = create_container_lid(p6)
     assert lid6.is_valid, "Minimal custom lid is invalid"
     print(f"✓ Passed! Volume = {lid6.volume:.1f} mm^3")
 
@@ -136,30 +135,30 @@ def run_lid_validation():
     # Test 8: Anchor Hocking Preset
     print("\n[Test 8] Anchor Hocking 4-Cup Round Preset...")
     p8 = ANCHOR_PRESETS["anchor_round_4_cup"]
-    lid8 = build_lid(p8)
+    lid8 = create_container_lid(p8)
     assert lid8.is_valid, "Anchor Hocking lid is invalid"
     print(f"✓ Passed! Volume = {lid8.volume:.1f} mm^3")
 
     # Test 9: Inch inputs (e.g. 6.0 inch diameter)
     print("\n[Test 9] Inch inputs conversion...")
-    p9 = LidParams(shape="round", diameter_in=6.0)
+    p9 = ContainerLidParams(shape="round", diameter_in=6.0)
     eff9 = p9.get_effective_params()
     assert abs(eff9.diameter - 152.4) < 1e-4, f"Expected 152.4mm, got {eff9.diameter}"
-    lid9 = build_lid(p9)
+    lid9 = create_container_lid(p9)
     assert lid9.is_valid, "Inch-specified lid is invalid"
     print(f"✓ Passed! 6.0 in -> {eff9.diameter:.1f} mm, Volume = {lid9.volume:.1f} mm^3")
 
     # Test 10: Test Ring Gauge Mode (low filament fit-check)
     print("\n[Test 10] Test Ring Gauge Mode (8-minute fit-check)...")
-    p10 = LidParams(shape="round", diameter=150.0, test_ring=True)
-    lid10 = build_lid(p10)
+    p10 = ContainerLidParams(shape="round", diameter=150.0, test_ring=True)
+    lid10 = create_container_lid(p10)
     assert lid10.is_valid, "Test ring is invalid"
     assert lid10.volume < lid1.volume * 0.45, "Test ring volume should be significantly lower than full lid"
     print(f"✓ Passed! Full lid volume = {lid1.volume:.1f} mm^3 vs Test ring = {lid10.volume:.1f} mm^3 (uses ~65% less filament!)")
 
     # Test 11: Smooth Round Container Lid (No rim lip, uses friction wiper ribs)
     print("\n[Test 11] Smooth Round Container Lid (rim_style='smooth')...")
-    p11 = LidParams(
+    p11 = ContainerLidParams(
         shape="round",
         diameter=110.0,
         rim_style="smooth",
@@ -168,13 +167,13 @@ def run_lid_validation():
     eff11 = p11.get_effective_params()
     assert eff11.snap_ridge is False, "Snap ridge should be disabled for smooth rim"
     assert eff11.friction_ribs is True, "Friction ribs should be auto-enabled for smooth rim"
-    lid11 = build_lid(p11)
+    lid11 = create_container_lid(p11)
     assert lid11.is_valid, "Smooth round lid is invalid"
     print(f"✓ Passed! Volume = {lid11.volume:.1f} mm^3 (Wiper friction seal active)")
 
     # Test 12: Smooth Rectangular Container Lid (No rim lip)
     print("\n[Test 12] Smooth Rectangular Container Lid (rim_style='smooth')...")
-    p12 = LidParams(
+    p12 = ContainerLidParams(
         shape="rectangular",
         length=160.0,
         width=110.0,
@@ -182,7 +181,7 @@ def run_lid_validation():
         rim_style="smooth",
         material="tpu",
     )
-    lid12 = build_lid(p12)
+    lid12 = create_container_lid(p12)
     assert lid12.is_valid, "Smooth rectangular lid is invalid"
     print(f"✓ Passed! Volume = {lid12.volume:.1f} mm^3 (Wiper friction seal active)")
 

@@ -34,7 +34,7 @@ Designed to support:
 
 ---
 
-## Configurable Parameters (`LidParams`)
+## Configurable Parameters (`ContainerLidParams`)
 
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |

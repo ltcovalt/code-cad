@@ -152,41 +152,37 @@ class ContainerLidParams:
         return p
 
 
-# Type alias
-LidParams = ContainerLidParams
-
-
 # Verified Presets for Popular Pyrex Food Storage Containers
-PYREX_PRESETS: Dict[str, LidParams] = {
-    "pyrex_round_1_cup": LidParams(
+PYREX_PRESETS: Dict[str, ContainerLidParams] = {
+    "pyrex_round_1_cup": ContainerLidParams(
         shape="round",
         diameter=98.0,
         rim_lip_height=4.5,
         glass_wall_thickness=3.8,
         skirt_height=9.0,
     ),
-    "pyrex_round_2_cup": LidParams(
+    "pyrex_round_2_cup": ContainerLidParams(
         shape="round",
         diameter=120.0,
         rim_lip_height=5.0,
         glass_wall_thickness=4.0,
         skirt_height=10.0,
     ),
-    "pyrex_round_4_cup": LidParams(
+    "pyrex_round_4_cup": ContainerLidParams(
         shape="round",
         diameter=150.0,
         rim_lip_height=5.2,
         glass_wall_thickness=4.2,
         skirt_height=10.5,
     ),
-    "pyrex_round_7_cup": LidParams(
+    "pyrex_round_7_cup": ContainerLidParams(
         shape="round",
         diameter=185.0,
         rim_lip_height=5.5,
         glass_wall_thickness=4.5,
         skirt_height=11.5,
     ),
-    "pyrex_rect_3_cup": LidParams(
+    "pyrex_rect_3_cup": ContainerLidParams(
         shape="rectangular",
         length=182.0,
         width=132.0,
@@ -195,7 +191,7 @@ PYREX_PRESETS: Dict[str, LidParams] = {
         glass_wall_thickness=4.0,
         skirt_height=10.0,
     ),
-    "pyrex_rect_6_cup": LidParams(
+    "pyrex_rect_6_cup": ContainerLidParams(
         shape="rectangular",
         length=225.0,
         width=175.0,
@@ -204,7 +200,7 @@ PYREX_PRESETS: Dict[str, LidParams] = {
         glass_wall_thickness=4.5,
         skirt_height=11.0,
     ),
-    "pyrex_rect_11_cup": LidParams(
+    "pyrex_rect_11_cup": ContainerLidParams(
         shape="rectangular",
         length=280.0,
         width=200.0,
@@ -216,36 +212,36 @@ PYREX_PRESETS: Dict[str, LidParams] = {
 }
 
 # Verified Presets for Anchor Hocking (TrueSeal / SnugFit) Food Storage Containers
-ANCHOR_PRESETS: Dict[str, LidParams] = {
-    "anchor_round_1_cup": LidParams(
+ANCHOR_PRESETS: Dict[str, ContainerLidParams] = {
+    "anchor_round_1_cup": ContainerLidParams(
         shape="round",
         diameter=96.0,
         rim_lip_height=4.5,
         glass_wall_thickness=3.8,
         skirt_height=9.0,
     ),
-    "anchor_round_2_cup": LidParams(
+    "anchor_round_2_cup": ContainerLidParams(
         shape="round",
         diameter=122.0,
         rim_lip_height=4.8,
         glass_wall_thickness=4.0,
         skirt_height=10.0,
     ),
-    "anchor_round_4_cup": LidParams(
+    "anchor_round_4_cup": ContainerLidParams(
         shape="round",
         diameter=152.0,
         rim_lip_height=5.2,
         glass_wall_thickness=4.2,
         skirt_height=10.5,
     ),
-    "anchor_round_7_cup": LidParams(
+    "anchor_round_7_cup": ContainerLidParams(
         shape="round",
         diameter=186.0,
         rim_lip_height=5.5,
         glass_wall_thickness=4.5,
         skirt_height=11.5,
     ),
-    "anchor_rect_4_75_cup": LidParams(
+    "anchor_rect_4_75_cup": ContainerLidParams(
         shape="rectangular",
         length=195.0,
         width=148.0,
@@ -257,10 +253,10 @@ ANCHOR_PRESETS: Dict[str, LidParams] = {
 }
 
 # Combined dictionary of all container presets
-CONTAINER_PRESETS: Dict[str, LidParams] = {**PYREX_PRESETS, **ANCHOR_PRESETS}
+CONTAINER_PRESETS: Dict[str, ContainerLidParams] = {**PYREX_PRESETS, **ANCHOR_PRESETS}
 
 
-def build_round_lid(p: LidParams) -> Solid:
+def build_round_lid(p: ContainerLidParams) -> Solid:
     """Build a round container lid using build123d."""
     r_inner = (p.diameter + p.fit_tolerance) / 2.0
     r_outer = r_inner + p.skirt_wall_thickness
@@ -406,7 +402,7 @@ def build_round_lid(p: LidParams) -> Solid:
     return round_part.part
 
 
-def build_rectangular_lid(p: LidParams) -> Solid:
+def build_rectangular_lid(p: ContainerLidParams) -> Solid:
     """Build a rectangular or square container lid using build123d."""
     l_inner = p.length + p.fit_tolerance
     w_inner = p.width + p.fit_tolerance
@@ -635,10 +631,6 @@ def create_container_lid(params: ContainerLidParams) -> Solid:
         return build_rectangular_lid(p)
     else:
         raise ValueError(f"Unsupported shape: {p.shape}. Choose 'round' or 'rectangular'.")
-
-
-# Generator alias
-create_lid = create_container_lid
 
 
 if __name__ == "__main__":
