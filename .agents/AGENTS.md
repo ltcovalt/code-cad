@@ -9,6 +9,7 @@ When building CAD models in this repository:
    - **Parametric `@dataclass` as Single Source of Truth**:
      - Define all geometric and feature parameters at the top of the file in a dedicated dataclass named `<Model>Params` (e.g. `RackBracketParams`, `ContainerLidParams`).
      - Provide clear type annotations, default values, and comments for all fields.
+     - **Uniform Feature Toggle Pattern (`*_enabled` Booleans)**: Group optional or toggleable features into logical sections in the dataclass and lead each section with a master boolean toggle (e.g. `label_enabled: bool = True`, `scoop_enabled: bool = True`, `dividers_enabled: bool = False`, `overhang_enabled: bool = False`). This allows users to quickly toggle entire features on and off during testing without losing their tuned dimensional values, and maps 1:1 to section toggles in a future web generator UI.
      - Avoid redundant alias properties or duplicate getters.
    - **Decoupled Generator Function**:
      - Implement CAD logic as a standalone generator function `create_<model>(params: <Model>Params) -> Part | Compound | Solid`.
