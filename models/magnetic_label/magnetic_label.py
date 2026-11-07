@@ -13,7 +13,7 @@ Features:
     * Auto-spaced along the width or manual magnet count/positions.
     * Calibrated press-fit clearance and sub-flush pocket depth.
     * Automatic plate thickness verification to guarantee solid floor behind magnets.
-- Visual display: Integrated ocp_vscode viewer preview with contrasting part colors
+- Visual display: Integrated ocp_viewer / ocp_vscode viewer preview with contrasting part colors
   and semi-transparent magnets inside the pockets.
 """
 
@@ -34,16 +34,20 @@ if os.path.isdir("build123d") and sys.path and sys.path[0] in ("", "."):
 from build123d import *
 
 try:
-    from ocp_vscode import Camera, set_defaults, show, show_object
-    HAS_OCP_VSCODE = True
+    from ocp_viewer import Camera, set_defaults, show, show_object
+    HAS_OCP_VIEWER = True
 except ImportError:
-    HAS_OCP_VSCODE = False
+    try:
+        from ocp_vscode import Camera, set_defaults, show, show_object
+        HAS_OCP_VIEWER = True
+    except ImportError:
+        HAS_OCP_VIEWER = False
 
 
 # ==============================================================================
 # USER-EDITABLE CONFIGURATION (Quick-Change Variables)
 # ==============================================================================
-# Modify these top-level settings and run this script to preview in ocp_vscode.
+# Modify these top-level settings and run this script to preview in ocp_viewer / ocp_vscode.
 
 # Label Text:
 # - Set LABEL_TEXT for single label generation.
@@ -519,7 +523,7 @@ def batch_generate(
         output_dir: Directory where exported STL/STEP files will be stored.
         do_export_stl: Whether to export STL files for all generated labels.
         do_export_step: Whether to export STEP files for all generated labels.
-        preview_grid: Whether to arrange and preview all generated labels in ocp_vscode.
+        preview_grid: Whether to arrange and preview all generated labels in the viewer.
         grid_gap: Vertical gap between labels when displayed in the 3D viewer (mm).
 
     Returns:
@@ -558,10 +562,10 @@ def batch_generate(
             for f in files:
                 print(f"       -> Saved: {f}")
 
-    # Arrange and show all labels in ocp_vscode viewer
-    if preview_grid and HAS_OCP_VSCODE and results:
+    # Arrange and show all labels in ocp_viewer / ocp_vscode viewer
+    if preview_grid and HAS_OCP_VIEWER and results:
         set_defaults(orbit_control=True)
-        print(f"\nArranging {len(results)} labels in ocp_vscode viewer...")
+        print(f"\nArranging {len(results)} labels in viewer...")
 
         display_items = []
         current_y = 0.0
@@ -589,7 +593,7 @@ def batch_generate(
             colors=[item[2] for item in display_items],
             reset_camera=Camera.KEEP,
         )
-        print("All batch labels displayed in ocp_vscode!")
+        print("All batch labels displayed in viewer!")
 
     print("=" * 65)
     return results
@@ -673,10 +677,10 @@ def main():
         )
         print(f" Exported files:    {files}")
 
-    # Preview in ocp_vscode
-    if HAS_OCP_VSCODE:
+    # Preview in ocp_viewer / ocp_vscode
+    if HAS_OCP_VIEWER:
         set_defaults(orbit_control=True)
-        print("\nSending 3D model to ocp_vscode viewer...")
+        print("\nSending 3D model to viewer...")
 
         display_items = []
         
@@ -694,16 +698,16 @@ def main():
         for i, mag in enumerate(label.magnet_solids):
             display_items.append((mag, f"Magnet {i+1} (Press-fit)", (190, 195, 200)))
 
-        # Show in ocp_vscode
+        # Show in viewer
         show(
             *[item[0] for item in display_items],
             names=[item[1] for item in display_items],
             colors=[item[2] for item in display_items],
             reset_camera=Camera.KEEP,
         )
-        print("Model displayed in ocp_vscode!")
+        print("Model displayed in viewer!")
     else:
-        print("\nNote: ocp_vscode is not installed; skipping interactive 3D preview.")
+        print("\nNote: ocp_viewer / ocp_vscode is not installed; skipping interactive 3D preview.")
 
     print("=" * 65)
 

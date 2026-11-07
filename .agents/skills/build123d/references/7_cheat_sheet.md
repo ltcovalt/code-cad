@@ -28,7 +28,10 @@
 ```python
 from dataclasses import dataclass
 from build123d import *
-from ocp_vscode import show
+try:
+    from ocp_viewer import show
+except ImportError:
+    from ocp_vscode import show
 
 @dataclass
 class PartConfig:

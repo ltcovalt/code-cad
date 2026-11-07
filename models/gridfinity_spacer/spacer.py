@@ -22,13 +22,18 @@ from typing import Optional
 from build123d import *
 
 try:
-    from ocp_vscode import set_defaults, show
+    from ocp_viewer import set_defaults, show
     set_defaults(orbit_control=True)
     HAS_OCP_VIEWER = True
-except Exception:
-    HAS_OCP_VIEWER = False
-    def show(*args, **kwargs):
-        pass
+except ImportError:
+    try:
+        from ocp_vscode import set_defaults, show
+        set_defaults(orbit_control=True)
+        HAS_OCP_VIEWER = True
+    except Exception:
+        HAS_OCP_VIEWER = False
+        def show(*args, **kwargs):
+            pass
 
 # ==============================================================================
 # Standardized Export Configuration

@@ -27,6 +27,18 @@ When building CAD models in this repository:
      - Instantiate `params = <Model>Params()` with **no hardcoded arguments** so that editing the dataclass defaults at the top of the file immediately takes effect.
      - Call the generator function: `part = create_<model>(params)`.
      - Export STEP/STL according to `EXPORT_STEP` and `EXPORT_STL` into `OUTPUT_DIR`.
-     - Display the part via `ocp_vscode`'s `show(part)`.
-4. **Model Validation**: Validate models by running python scripts with `ocp_vscode` `show()` or checking export operations.
+     - Display the part via `show(part)` using a dual-compatible import (`ocp_viewer` preferred, falling back to `ocp_vscode`):
+       ```python
+       try:
+           from ocp_viewer import set_defaults, show
+           set_defaults(orbit_control=True)
+       except ImportError:
+           try:
+               from ocp_vscode import set_defaults, show
+               set_defaults(orbit_control=True)
+           except ImportError:
+               def show(*args, **kwargs):
+                   pass
+       ```
+4. **Model Validation**: Validate models by running python scripts with `ocp_viewer` / `ocp_vscode` `show()` or checking export operations.
 5. **Clean Workspace Rule**: Do NOT create temporary test or validation scripts in the root project directory. Store reusable test/utility scripts inside `.agents/scripts/` or delete temporary scratch scripts immediately after validation completes.

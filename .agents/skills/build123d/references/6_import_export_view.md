@@ -36,12 +36,19 @@ imported_mesh = import_stl("mesh.stl")
 
 ---
 
-## 3. Visualization with `ocp_vscode`
+## 3. Visualization with `ocp_viewer` / `ocp_vscode`
 
-In VS Code with the OCP CAD Viewer extension:
+### Standalone (Neovim / Browser) with `ocp_viewer`:
+Start the standalone viewer server (`python -m ocp_viewer` at `http://127.0.0.1:3939`), then in your script:
 
 ```python
-from ocp_vscode import show, show_object, set_port
+try:
+    from ocp_viewer import show, show_object, set_port
+except ImportError:
+    from ocp_vscode import show, show_object, set_port
 
 show(part, names=["Main Part"])
 ```
+
+### In VS Code with the OCP CAD Viewer extension:
+Open the viewer panel in VS Code, and run the same script.

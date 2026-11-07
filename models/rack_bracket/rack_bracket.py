@@ -11,9 +11,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 from build123d import *
-from ocp_vscode import set_defaults, show
-
-set_defaults(orbit_control=True)
+try:
+    from ocp_viewer import set_defaults, show
+    set_defaults(orbit_control=True)
+except ImportError:
+    try:
+        from ocp_vscode import set_defaults, show
+        set_defaults(orbit_control=True)
+    except ImportError:
+        def show(*args, **kwargs):
+            pass
 
 # ==============================================================================
 # Standardized Export Configuration

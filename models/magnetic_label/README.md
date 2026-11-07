@@ -32,7 +32,7 @@ Open `magnetic_label.py`, adjust the parameters at the top of the file, and run:
 python3 magnetic_label.py
 ```
 
-If you have the **OCP CAD Viewer** extension open in VS Code, an interactive 3D preview with contrasting colors and metallic magnet placement will display automatically.
+If you have the standalone viewer running (`python -m ocp_viewer` at `http://127.0.0.1:3939`) or the **OCP CAD Viewer** extension open in VS Code, an interactive 3D preview with contrasting colors and metallic magnet placement will display automatically.
 
 ---
 

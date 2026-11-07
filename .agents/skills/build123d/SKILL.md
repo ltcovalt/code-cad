@@ -34,7 +34,7 @@ This skill is **automatically invoked** whenever you request a build123d modelin
      - Instantiate `params = <Model>Params()` with no hardcoded parameter overrides so the defaults at the top of the file directly govern execution.
      - Call the generator function.
      - Export STEP/STL according to `EXPORT_STEP` and `EXPORT_STL` into `OUTPUT_DIR`.
-     - View with `show(part)` from `ocp_vscode`.
+     - View with `show(part)` from `ocp_viewer` (or fallback to `ocp_vscode`).
 2. **Prefer Builder API**: Use `with BuildPart()`, `with BuildSketch()`, and `with BuildLine()` context managers unless algebra syntax (`+`, `-`, `&`) is explicitly requested.
 3. **Topology Selectors**: Use `part.faces().sort_by(Axis.Z)[-1]` or `part.edges().filter_by(Axis.Z)` to select edges/faces robustly without hardcoded indices.
 4. **Operations Chain**: Perform fillets and chamfers as the final step in part generation.
