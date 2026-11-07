@@ -33,7 +33,7 @@ All geometric parameters are defined in [`GridfinityBinParams`](file:///home/luk
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `grid_x` | `int` | `1` | Number of grid units along X (width) |
-| `grid_y` | `int` | `1` | Number of grid units along Y (length/depth) |
+| `grid_y` | `int` | `2` | Number of grid units along Y (length/depth) |
 | `grid_z` | `int` | `4` | Number of height units along Z |
 | `unit_size` | `float` | `42.0` | Base XY grid pitch in mm (standard Gridfinity = $42.0\,\text{mm}$) |
 | `unit_z` | `float` | `7.0` | Height Z unit pitch in mm (standard Gridfinity = $7.0\,\text{mm}$) |
@@ -41,12 +41,12 @@ All geometric parameters are defined in [`GridfinityBinParams`](file:///home/luk
 | `wall_thickness` | `float` | `1.2` | Exterior wall thickness in mm (3 perimeters w/ $0.4\,\text{mm}$ nozzle) |
 | `floor_thickness` | `float` | `2.0` | Solid floor thickness above base feet sockets in mm |
 | `corner_radius` | `float` | `3.75` | Outer vertical corner radius in mm ($4.0\,\text{mm} - 0.25\,\text{mm}$ inset) |
-| `magnet_holes` | `bool` | `False` | Adds 4 corner pockets per foot cell for $6\times 2\,\text{mm}$ magnets |
-| `screw_holes` | `bool` | `False` | Adds through-holes for M3 mounting bolts |
-| `stackable` | `bool` | `True` | Adds continuous upper stacking lip for bin nesting |
+| `magnet_holes` | `bool` | `False` | Master toggle: adds 4 corner pockets per foot cell for $6\times 2\,\text{mm}$ magnets |
+| `screw_holes` | `bool` | `False` | Master toggle: adds through-holes for M3 mounting bolts |
+| `stackable` | `bool` | `True` | Master toggle: adds continuous upper stacking lip for bin nesting |
 | `lip_height` | `float` | `3.8` | Printable stacking lip height above `body_h` in mm |
 | `lip_top_flat` | `float` | `0.6` | Flat top rim width in mm (avoids fragile knife-edge) |
-| `label_enabled` | `bool` | `True` | Adds Pred-compatible printable label shelf & recessed socket |
+| `label_enabled` | `bool` | `True` | Master toggle: adds Pred-compatible printable label shelf & recessed socket |
 | `label_wall` | `str` | `"back"` | Compartment wall (`"back"` or `"front"`) where label shelf mounts |
 | `label_style` | `str` | `"per_column"` | `"per_column"` (slot per unit) or `"full_width"` (one wide slot) |
 | `label_height` | `float` | `11.5` | Label plate depth (Y) in mm (fits $\sim 11.3\,\text{mm}$ Pred label) |
@@ -59,11 +59,14 @@ All geometric parameters are defined in [`GridfinityBinParams`](file:///home/luk
 | `label_overhang_angle`| `float`| `35.0` | Support fin angle underneath the label shelf in degrees |
 | `label_tab_width` | `float` | `6.5` | Width (Y) of side snap-in retention tab slots in mm (fits $\sim 5.9\,\text{mm}$ tab) |
 | `label_tab_extension`| `float` | `0.8` | Extension (X) of side retention tab notches per side in mm |
+| `scoop_enabled` | `bool` | `True` | Master toggle: enables/disables all ergonomic finger scoops |
 | `scoop_front_radius`| `float` | `12.0` | Front ($-Y$) concave finger scoop radius in mm (`0.0` to disable) |
 | `scoop_back_radius` | `float` | `6.0` | Back ($+Y$) concave finger scoop radius in mm (`0.0` to disable) |
-| `compartments_x`| `int` | `1` | Number of interior compartments along X |
-| `compartments_y`| `int` | `1` | Number of interior compartments along Y |
+| `dividers_enabled` | `bool` | `False` | Master toggle: enables/disables interior dividing walls |
+| `dividers_x` | `int` | `0` | Number of interior divider walls along X (`0` = undivided) |
+| `dividers_y` | `int` | `1` | Number of interior divider walls along Y (`0` = undivided) |
 | `divider_thickness` | `float`| `1.2` | Wall thickness of internal dividing walls in mm |
+| `overhang_enabled` | `bool` | `False` | Master toggle: enables/disables drawer spacer gap overhangs |
 | `overhang_front`| `float` | `0.0` | Body extension past front ($-Y$) grid boundary in mm |
 | `overhang_back` | `float` | `0.0` | Body extension past back ($+Y$) grid boundary in mm |
 | `overhang_left` | `float` | `0.0` | Body extension past left ($-X$) grid boundary in mm |

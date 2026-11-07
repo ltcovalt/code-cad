@@ -45,8 +45,8 @@ class GridfinityBinParams:
     # --------------------------------------------------------------------------
     # Grid Units & Pitch
     # --------------------------------------------------------------------------
-    grid_x: int = 1                     # Number of grid units along X (width)
-    grid_y: int = 1                     # Number of grid units along Y (length/depth)
+    grid_x: int = 2                     # Number of grid units along X (width)
+    grid_y: int = 2                     # Number of grid units along Y (length/depth)
     grid_z: int = 4                     # Number of height units along Z
     unit_size: float = 42.0             # Base XY grid pitch in mm (standard Gridfinity = 42.0mm)
     unit_z: float = 7.0                 # Height Z unit pitch in mm (standard Gridfinity = 7.0mm)
@@ -97,19 +97,22 @@ class GridfinityBinParams:
     # --------------------------------------------------------------------------
     # Ergonomic Finger Scoops
     # --------------------------------------------------------------------------
-    scoop_front_radius: float = 12.0     # Radius of front (-Y) finger scoop in mm (0.0 to disable)
+    scoop_enabled: bool = True          # Master toggle to enable/disable all finger scoops
+    scoop_front_radius: float = 12.0    # Radius of front (-Y) finger scoop in mm (0.0 to disable)
     scoop_back_radius: float = 6.0      # Radius of back (+Y) finger scoop in mm (0.0 to disable)
 
     # --------------------------------------------------------------------------
-    # Interior Compartments (Dividers)
+    # Interior Dividers
     # --------------------------------------------------------------------------
-    compartments_x: int = 1             # Number of interior compartments along X (1 = undivided)
-    compartments_y: int = 1             # Number of interior compartments along Y (1 = undivided)
+    dividers_enabled: bool = True      # Master toggle to enable/disable interior dividing walls
+    dividers_x: int = 1                 # Number of interior divider walls along X (0 = undivided)
+    dividers_y: int = 0                 # Number of interior divider walls along Y (0 = undivided)
     divider_thickness: float = 1.2      # Wall thickness of internal dividing walls in mm
 
     # --------------------------------------------------------------------------
     # Drawer Spacer Gap Overhangs (Fills dead space above baseplate padding)
     # --------------------------------------------------------------------------
+    overhang_enabled: bool = False      # Master toggle to enable/disable drawer spacer overhangs
     overhang_front: float = 0.0         # Body extension past front (-Y) grid boundary in mm
     overhang_back: float = 0.0          # Body extension past back (+Y) grid boundary in mm
     overhang_left: float = 0.0          # Body extension past left (-X) grid boundary in mm
@@ -180,10 +183,13 @@ def _compute_envelope(params: GridfinityBinParams) -> _BinEnvelope:
     base_w = gx * pitch_xy - clr
     base_l = gy * pitch_xy - clr
 
-    ov_f = max(0.0, params.overhang_front)
-    ov_b = max(0.0, params.overhang_back)
-    ov_l = max(0.0, params.overhang_left)
-    ov_r = max(0.0, params.overhang_right)
+    if params.overhang_enabled:
+        ov_f = max(0.0, params.overhang_front)
+        ov_b = max(0.0, params.overhang_back)
+        ov_l = max(0.0, params.overhang_left)
+        ov_r = max(0.0, params.overhang_right)
+    else:
+        ov_f = ov_b = ov_l = ov_r = 0.0
     max_ov = max(ov_f, ov_b, ov_l, ov_r)
     has_overhang = max_ov > 0.0
 
@@ -208,8 +214,12 @@ def _compute_envelope(params: GridfinityBinParams) -> _BinEnvelope:
 
     t_wall = params.wall_thickness
     t_div = params.divider_thickness
-    cx_count = max(1, params.compartments_x)
-    cy_count = max(1, params.compartments_y)
+    if params.dividers_enabled:
+        cx_count = max(0, params.dividers_x) + 1
+        cy_count = max(0, params.dividers_y) + 1
+    else:
+        cx_count = 1
+        cy_count = 1
 
     inner_w = top_w - 2.0 * t_wall
     inner_l = top_l - 2.0 * t_wall
@@ -558,6 +568,8 @@ def create_compartment_scoops(params: GridfinityBinParams) -> Optional[Part]:
     interior overhang wall), and clips strictly to the tapered interior cavity so
     a scoop never protrudes outside an overhang.
     """
+    if not params.scoop_enabled:
+        return None
     r_front = max(0.0, params.scoop_front_radius)
     r_back = max(0.0, params.scoop_back_radius)
     if r_front <= 0.0 and r_back <= 0.0:

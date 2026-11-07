@@ -60,27 +60,30 @@ def validate():
     )
     print(f"✓ Confirmed scoop surface is an exact cylinder with radii={radii}mm")
 
-    # Verify independent front and back scoops (including different radii and both=0 disabled)
-    p_none = GridfinityBinParams(scoop_front_radius=0.0, scoop_back_radius=0.0)
+    # Verify independent front and back scoops (including master scoop_enabled=False and both=0 disabled)
+    assert create_compartment_scoops(GridfinityBinParams(scoop_enabled=False)) is None, (
+        "Expected None when scoop_enabled is False"
+    )
+    p_none = GridfinityBinParams(scoop_enabled=True, scoop_front_radius=0.0, scoop_back_radius=0.0)
     assert create_compartment_scoops(p_none) is None, "Expected None when both scoop radii are 0.0"
 
-    p_single = GridfinityBinParams(scoop_front_radius=6.0, scoop_back_radius=0.0)
+    p_single = GridfinityBinParams(scoop_enabled=True, scoop_front_radius=6.0, scoop_back_radius=0.0)
     scoops_single = create_compartment_scoops(p_single)
-    p_both_sym = GridfinityBinParams(scoop_front_radius=6.0, scoop_back_radius=6.0)
+    p_both_sym = GridfinityBinParams(scoop_enabled=True, scoop_front_radius=6.0, scoop_back_radius=6.0)
     scoops_both = create_compartment_scoops(p_both_sym)
     assert scoops_single is not None and scoops_both is not None and scoops_both.is_valid
     assert abs(scoops_both.volume - 2.0 * scoops_single.volume) < 1.0, (
         f"Expected symmetric front+back scoop volume ({scoops_both.volume:.1f}) == 2x single scoop ({scoops_single.volume:.1f})"
     )
 
-    p_asym = GridfinityBinParams(scoop_front_radius=6.0, scoop_back_radius=10.0)
+    p_asym = GridfinityBinParams(scoop_enabled=True, scoop_front_radius=6.0, scoop_back_radius=10.0)
     scoops_asym = create_compartment_scoops(p_asym)
     assert scoops_asym is not None and scoops_asym.is_valid
     asym_radii = [round(f.radius, 4) for f in scoops_asym.faces().filter_by(GeomType.CYLINDER) if f.radius is not None]
     assert any(abs(r - 6.0) < 1e-3 for r in asym_radii) and any(abs(r - 10.0) < 1e-3 for r in asym_radii), (
         f"Expected both 6.0mm and 10.0mm cylindrical scoop faces, found {asym_radii}"
     )
-    print(f"✓ Confirmed independent front & back scoop radii (asymmetric radii={sorted(set(asym_radii))}mm)")
+    print(f"✓ Confirmed scoop_enabled toggle & independent front/back scoop radii (radii={sorted(set(asym_radii))}mm)")
 
     # Verify auto-calculated label fins vs manual override
     labels_auto_3 = create_label_holders(GridfinityBinParams(label_fin_count=None, label_fin_max_span=12.0))
@@ -94,19 +97,20 @@ def validate():
     print("✓ Confirmed label_fin_count auto-calculation (via label_fin_max_span) and manual override")
 
     # 3. Test full composed default bin
+    expected_x1 = p1.grid_x * p1.unit_size - p1.grid_clearance
+    expected_y1 = p1.grid_y * p1.unit_size - p1.grid_clearance
     expected_top_z = p1.grid_z * p1.unit_z + p1.lip_height
     bin1 = create_gridfinity_bin(p1)
     bbox1 = bin1.bounding_box()
     assert bin1.is_valid and len(bin1.solids()) == 1, "Default bin must be a single valid solid"
-    assert abs(bbox1.size.X - 41.5) < 0.05, f"Expected X=41.5, got {bbox1.size.X}"
-    assert abs(bbox1.size.Y - 41.5) < 0.05, f"Expected Y=41.5, got {bbox1.size.Y}"
+    assert abs(bbox1.size.X - expected_x1) < 0.05, f"Expected X={expected_x1}, got {bbox1.size.X}"
+    assert abs(bbox1.size.Y - expected_y1) < 0.05, f"Expected Y={expected_y1}, got {bbox1.size.Y}"
     assert abs(bbox1.size.Z - expected_top_z) < 0.05, f"Expected Z={expected_top_z}, got {bbox1.size.Z}"
 
     # Verify the side tab slot at x = 18.6mm (underneath the x = 18.15mm stacking lip overhang)
-    # is completely open at mid-slot height z = body_h - label_thickness / 2 across the full 6.5mm tab width
+    # is completely open at mid-height of label tab slot
     z_mid_slot = p1.grid_z * p1.unit_z - p1.label_thickness / 2.0
     sec_slot = section(bin1, Plane.XY.offset(z_mid_slot))
-    slot_bbox = sec_slot.bounding_box()
     assert sec_slot.faces(), "Expected valid XY cross-section at mid-height of label tab slot"
     print(
         f"✓ Test 1 Passed: Default {p1.grid_x}x{p1.grid_y}x{p1.grid_z}u bin "
@@ -119,7 +123,9 @@ def validate():
         grid_x=1,
         grid_y=1,
         grid_z=3,
+        overhang_enabled=True,
         overhang_front=12.0,
+        scoop_enabled=True,
         scoop_front_radius=10.0,
         scoop_back_radius=6.0,
     )
@@ -148,10 +154,13 @@ def validate():
         grid_y=2,
         grid_z=4,
         unit_z=8.0,
+        scoop_enabled=True,
         scoop_front_radius=8.0,
         scoop_back_radius=5.0,
-        compartments_x=2,
-        compartments_y=2,
+        dividers_enabled=True,
+        dividers_x=1,
+        dividers_y=1,
+        overhang_enabled=True,
         overhang_front=5.0,
         overhang_right=3.0,
     )
