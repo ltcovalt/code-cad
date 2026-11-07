@@ -38,8 +38,8 @@ except ImportError:
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STEP: bool = False     # Save .step file on execution (default: False)
 EXPORT_STL: bool = False      # Save .stl file on execution (default: False)
+EXPORT_STEP: bool = False     # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"   # Relative subfolder alongside this script
 
 
@@ -91,40 +91,12 @@ class SpacerParams:
     finger_notch_radius: float = 12.0   # Radius of spherical scoop cutter in mm
     finger_notch_depth: float = 2.5     # Depth of scoop recess from top surface in mm
 
-    # --------------------------------------------------------------------------
-    # Optional / Backwards Compatibility Aliases
-    # --------------------------------------------------------------------------
-    spacer_type: Optional[str] = None   # Optional override: "straight" or "corner" (auto-inferred if None)
-    straight_leg: Optional[str] = None  # Optional: "x" or "y" if spacer_type="straight" and both lengths > 0
-    x: Optional[float] = None           # Legacy alias: sets leg_x_length
-    y: Optional[float] = None           # Legacy alias: sets leg_x_width
-    z: Optional[float] = None           # Legacy alias: sets height
-
-    def __post_init__(self):
-        """Handle legacy or convenience aliases."""
-        if self.z is not None:
-            self.height = self.z
-        if self.x is not None:
-            self.leg_x_length = self.x
-        if self.y is not None:
-            self.leg_x_width = self.y
-
-        # Handle explicit spacer_type="straight" when user didn't zero out a leg
-        if self.spacer_type is not None:
-            st = self.spacer_type.strip().lower()
-            if st in ("straight", "linear", "line", "bar"):
-                if self.leg_x_length > 0 and self.leg_y_length > 0:
-                    if self.straight_leg and self.straight_leg.lower() == "y":
-                        self.leg_x_length = 0.0
-                    else:
-                        self.leg_y_length = 0.0
-
 
 # Type alias
 GridfinitySpacerParams = SpacerParams
 
 
-def create_spacer(params: SpacerParams) -> Solid:
+def create_gridfinity_spacer(params: SpacerParams) -> Solid:
     """
     Decoupled generator function for Gridfinity drawer gap spacers.
 
@@ -261,30 +233,40 @@ def create_spacer(params: SpacerParams) -> Solid:
 
 
 # Generator alias
-create_gridfinity_spacer = create_spacer
+create_spacer = create_gridfinity_spacer
 
 
 if __name__ == "__main__":
     # Single source of truth: dataclass defaults take effect directly
     params = SpacerParams()
-    spacer = create_spacer(params)
+    spacer = create_gridfinity_spacer(params)
 
     # Standardized exports to the exports/ directory alongside this script
     if EXPORT_STEP or EXPORT_STL:
         exports_path = Path(__file__).resolve().parent / OUTPUT_DIR
         exports_path.mkdir(parents=True, exist_ok=True)
-        kind_name = "corner" if (params.leg_x_length > 0 and params.leg_y_length > 0) else "straight"
-        base_name = f"gridfinity_{kind_name}_spacer"
+        is_corner = (params.leg_x_length > 0 and params.leg_y_length > 0)
+        if is_corner:
+            dim_str = f"{int(params.leg_x_length)}x{int(params.leg_y_length)}x{int(params.height)}mm"
+            variant = "corner"
+        elif params.leg_x_length > 0:
+            dim_str = f"{int(params.leg_x_length)}x{int(params.leg_x_width)}x{int(params.height)}mm"
+            variant = "straight_x"
+        else:
+            dim_str = f"{int(params.leg_y_length)}x{int(params.leg_y_width)}x{int(params.height)}mm"
+            variant = "straight_y"
 
-        if EXPORT_STEP:
-            step_file = exports_path / f"{base_name}.step"
-            export_step(spacer, str(step_file))
-            print(f"Exported STEP: {step_file}")
+        stem = f"gridfinity_spacer_{dim_str}_{variant}"
 
         if EXPORT_STL:
-            stl_file = exports_path / f"{base_name}.stl"
+            stl_file = exports_path / f"{stem}.stl"
             export_stl(spacer, str(stl_file))
             print(f"Exported STL:  {stl_file}")
+
+        if EXPORT_STEP:
+            step_file = exports_path / f"{stem}.step"
+            export_step(spacer, str(step_file))
+            print(f"Exported STEP: {step_file}")
 
     # Display in ocp_vscode viewer if available
     show(spacer)

@@ -26,7 +26,7 @@ A fully parametric 3D printable magnetic label generator built with `build123d`.
 
 ## Quick Start
 
-Open `magnetic_label.py`, adjust the parameters at the top of the file, and run:
+Open `magnetic_label.py`, adjust `MagneticLabelParams` at the top of the file, and run:
 
 ```bash
 python3 magnetic_label.py

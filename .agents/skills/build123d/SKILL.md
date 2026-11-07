@@ -24,16 +24,20 @@ This skill is **automatically invoked** whenever you request a build123d modelin
    - **Standardized Export Variables**:
      Every script must standardize on these exact top-level variable names to control exports, and they **must always be set to `False` by default**:
      ```python
-     EXPORT_STEP: bool = False     # Enable/disable STEP export (default: False)
      EXPORT_STL: bool = False      # Enable/disable STL export (default: False)
+     EXPORT_STEP: bool = False     # Enable/disable STEP export (default: False)
      OUTPUT_DIR: str = "exports"   # Relative subfolder alongside the script
      ```
    - **Exports Location Standard**:
      Always default to saving exports inside an `exports/` directory located alongside the source `.py` script (`Path(__file__).resolve().parent / OUTPUT_DIR`). Never dump export files in the repository root or current working directory.
+   - **Standardized Export Filename Convention**:
+     Export filenames must follow `<model_name>_<primary_dimensions>_<variant_or_style>.<ext>` in lowercase `snake_case` (e.g. `rack_bracket_2u_hex.stl`, `shaft_end_cap_12.7mm_round.stl`, `magnetic_label_100x16mm_fasteners_embossed_base.stl`).
+   - **Strict Standalone Rule (No Shims or Legacy Wrappers)**:
+     Every model script must be completely self-contained in its canonical file `models/<model_name>/<model_name>.py`. Never create backwards-compatibility shims, redirect files, deprecated alias modules, or legacy parameter aliases inside `@dataclass` definitions. Delete obsolete files cleanly.
    - **Clean Execution Block**: In `if __name__ == "__main__":`:
      - Instantiate `params = <Model>Params()` with no hardcoded parameter overrides so the defaults at the top of the file directly govern execution.
      - Call the generator function.
-     - Export STEP/STL according to `EXPORT_STEP` and `EXPORT_STL` into `OUTPUT_DIR`.
+     - Export STL/STEP according to `EXPORT_STL` and `EXPORT_STEP` into `OUTPUT_DIR`.
      - View with `show(part)` from `ocp_viewer` (or fallback to `ocp_vscode`).
 2. **Prefer Builder API**: Use `with BuildPart()`, `with BuildSketch()`, and `with BuildLine()` context managers unless algebra syntax (`+`, `-`, `&`) is explicitly requested.
 3. **Topology Selectors**: Use `part.faces().sort_by(Axis.Z)[-1]` or `part.edges().filter_by(Axis.Z)` to select edges/faces robustly without hardcoded indices.

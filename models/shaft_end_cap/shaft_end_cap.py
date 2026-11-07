@@ -25,11 +25,22 @@ from typing import Optional
 
 from build123d import *
 
+try:
+    from ocp_viewer import set_defaults, show
+    set_defaults(orbit_control=True)
+except ImportError:
+    try:
+        from ocp_vscode import set_defaults, show
+        set_defaults(orbit_control=True)
+    except ImportError:
+        def show(*args, **kwargs):
+            pass
+
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STEP: bool = False               # Save .step file on execution
-EXPORT_STL: bool = True                # Save .stl file on execution
+EXPORT_STL: bool = False                # Save .stl file on execution (default: False)
+EXPORT_STEP: bool = False               # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"            # Output folder (relative to this script's directory)
 
 
@@ -266,22 +277,14 @@ if __name__ == "__main__":
         safe_style = params.cap_style.lower().replace(" ", "_")
         stem = f"shaft_end_cap_{params.shaft_diameter:.1f}mm_{safe_style}"
 
-        if EXPORT_STEP:
-            step_file = exports_path / f"{stem}.step"
-            export_step(cap_part, str(step_file))
-            print(f"Exported STEP: {step_file}")
-
         if EXPORT_STL:
             stl_file = exports_path / f"{stem}.stl"
             export_stl(cap_part, str(stl_file))
             print(f"Exported STL:  {stl_file}")
 
-    try:
-        try:
-            from ocp_viewer import set_defaults, show
-        except ImportError:
-            from ocp_vscode import set_defaults, show
-        set_defaults(orbit_control=True)
-        show(cap_part)
-    except Exception:
-        print("Model created successfully. (ocp_viewer/ocp_vscode viewer not connected)")
+        if EXPORT_STEP:
+            step_file = exports_path / f"{stem}.step"
+            export_step(cap_part, str(step_file))
+            print(f"Exported STEP: {step_file}")
+
+    show(cap_part)

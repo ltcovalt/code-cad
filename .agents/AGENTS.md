@@ -16,17 +16,27 @@ When building CAD models in this repository:
    - **Standardized Export Variables**:
      Every model script must standardize on these exact top-level variable names to control exports, and they **must always be set to `False` by default**:
      ```python
-     EXPORT_STEP: bool = False     # Enable/disable STEP file export (default: False)
      EXPORT_STL: bool = False      # Enable/disable STL file export (default: False)
+     EXPORT_STEP: bool = False     # Enable/disable STEP file export (default: False)
      OUTPUT_DIR: str = "exports"   # Relative subfolder alongside the script
      ```
    - **Exports Location Standard**:
      Always default to saving exports inside an `exports/` directory located alongside the source `.py` script (e.g. `Path(__file__).resolve().parent / OUTPUT_DIR`), creating the directory if it does not exist. Never export directly into the repository root or current working directory.
+   - **Standardized Export Filename Convention**:
+     Export filenames must follow the pattern:
+     `<model_name>_<primary_dimensions>_<variant_or_style>.<ext>`
+     in lowercase `snake_case` (e.g. `rack_bracket_2u_hex.stl`, `shaft_end_cap_12.7mm_round.stl`, `magnetic_label_100x16mm_fasteners_embossed_base.stl`, `lid_150mm_round_tpu.stl`, `gridfinity_spacer_100x100x3mm_corner.stl`).
+     This ensures immediate identification across slicers, file managers, and future web generator download endpoints.
+   - **Strict Standalone Architecture (No Compatibility Shims or Legacy Wrappers)**:
+     - Every model script must be completely self-contained in its canonical file: `models/<model_name>/<model_name>.py`.
+     - **Never create backwards-compatibility shims, wrapper scripts, redirect files, or deprecated alias modules** (e.g. do not create `spacer.py` alongside `gridfinity_spacer.py`). When refactoring, renaming, or migrating, rename cleanly and delete obsolete files.
+     - **Never retain legacy parameter aliases, duplicate getters, or forwarding shims in `@dataclass` definitions** (e.g. do not keep deprecated `x`, `y`, `z` fields or `__post_init__` alias mappings). Remove dead fields directly.
+     - Scripts must remain concise and zero-dependency beyond `build123d` and `ocp_viewer`/`ocp_vscode`.
    - **Clean `__main__` Block Without Parameter Overrides**:
      In the `if __name__ == "__main__":` block:
      - Instantiate `params = <Model>Params()` with **no hardcoded arguments** so that editing the dataclass defaults at the top of the file immediately takes effect.
      - Call the generator function: `part = create_<model>(params)`.
-     - Export STEP/STL according to `EXPORT_STEP` and `EXPORT_STL` into `OUTPUT_DIR`.
+     - Export STL/STEP according to `EXPORT_STL` and `EXPORT_STEP` into `OUTPUT_DIR`.
      - Display the part via `show(part)` using a dual-compatible import (`ocp_viewer` preferred, falling back to `ocp_vscode`):
        ```python
        try:

@@ -19,13 +19,14 @@ models_dir = os.path.join(repo_root, "models", "parametric_lid")
 if models_dir not in sys.path:
     sys.path.append(models_dir)
 
-from lid_generator import (
+from build123d import export_step, export_stl
+from parametric_lid import (
     LidParams,
     PYREX_PRESETS,
     ANCHOR_PRESETS,
     CONTAINER_PRESETS,
+    create_lid,
     build_lid,
-    export_lid_files,
 )
 
 
@@ -120,7 +121,10 @@ def run_lid_validation():
     # Test 7: Export STEP and STL
     print("\n[Test 7] Verifying STEP and STL file export...")
     with tempfile.TemporaryDirectory() as tmp_dir:
-        step_f, stl_f = export_lid_files(lid1, "test_lid_export", tmp_dir)
+        step_f = os.path.join(tmp_dir, "test_lid_export.step")
+        stl_f = os.path.join(tmp_dir, "test_lid_export.stl")
+        export_step(lid1, step_f)
+        export_stl(lid1, stl_f)
         assert os.path.exists(step_f), "STEP file was not created"
         assert os.path.exists(stl_f), "STL file was not created"
         step_size = os.path.getsize(step_f)

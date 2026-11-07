@@ -1,5 +1,5 @@
 """
-Validation script for models/gridfinity_spacer/spacer.py
+Validation script for models/gridfinity_spacer/gridfinity_spacer.py
 Validates length=0 straight spacer generation, independent leg dimensions,
 corner pieces, hollow underside mode, and error handling.
 """
@@ -13,7 +13,7 @@ models_dir = os.path.join(repo_root, "models", "gridfinity_spacer")
 if models_dir not in sys.path:
     sys.path.append(models_dir)
 
-from spacer import SpacerParams, create_spacer
+from gridfinity_spacer import SpacerParams, create_spacer
 
 
 def validate():

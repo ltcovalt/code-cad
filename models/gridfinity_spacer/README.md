@@ -60,21 +60,21 @@ Wx |   |     (0,0)  +------------------------+
 
 ## Usage
 
-Configure the parameters in `SpacerParams` at the top of [`spacer.py`](file:///models/gridfinity_spacer/spacer.py) and execute the script:
+Configure the parameters in `SpacerParams` at the top of [`gridfinity_spacer.py`](file:///models/gridfinity_spacer/gridfinity_spacer.py) and execute the script:
 
 ```bash
-python spacer.py
+python gridfinity_spacer.py
 ```
 
 Generated `.step` and `.stl` files are automatically saved to `models/gridfinity_spacer/exports/`.
 
 ### Export Configuration
 
-At the top of [`spacer.py`](file:///models/gridfinity_spacer/spacer.py), exports can be toggled using standard configuration variables:
+At the top of [`gridfinity_spacer.py`](file:///models/gridfinity_spacer/gridfinity_spacer.py), exports can be toggled using standard configuration variables:
 
 ```python
-EXPORT_STEP: bool = False              # Save .step file on execution (default: False)
 EXPORT_STL: bool = False               # Save .stl file on execution (default: False)
+EXPORT_STEP: bool = False              # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"            # Output folder alongside this script
 ```
 
@@ -83,7 +83,7 @@ OUTPUT_DIR: str = "exports"            # Output folder alongside this script
 ## Python / Scripting API
 
 ```python
-from models.gridfinity_spacer.spacer import SpacerParams, create_spacer
+from models.gridfinity_spacer.gridfinity_spacer import SpacerParams, create_spacer
 
 # 1. Corner Piece (15.5mm Front gap, 15.0mm Side gap)
 corner_params = SpacerParams(

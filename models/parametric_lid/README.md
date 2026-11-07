@@ -71,7 +71,7 @@ Designed to support:
 
 ```python
 from build123d import *
-from lid_generator import LidParams, PYREX_PRESETS, build_lid, export_lid_files
+from parametric_lid import LidParams, PYREX_PRESETS, create_lid, export_lid_files
 
 # 1. Using a Pyrex preset (4-Cup Round in TPU)
 params = PYREX_PRESETS["pyrex_round_4_cup"]

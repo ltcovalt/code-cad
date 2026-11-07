@@ -45,77 +45,16 @@ except ImportError:
 
 
 # ==============================================================================
-# USER-EDITABLE CONFIGURATION (Quick-Change Variables)
+# Standardized Export Configuration
 # ==============================================================================
-# Modify these top-level settings and run this script to preview in ocp_viewer / ocp_vscode.
+EXPORT_STL: bool = False              # Save .stl files on execution (default: False)
+EXPORT_STEP: bool = False             # Save .step files on execution (default: False)
+OUTPUT_DIR: str = "exports"           # Output folder (relative to this script's directory)
 
-# Label Text:
-# - Set LABEL_TEXT for single label generation.
-# - OR populate BATCH_LABELS to batch-generate multiple labels at once using these shared defaults!
-LABEL_TEXT: str = "FASTENERS"
-
-# Batch label list: Just list your text strings here to generate all of them at once.
-# Supports simple strings e.g. ["M3 BOLTS", "M4 BOLTS", "WASHERS", "NUTS"]
-# or tuples with custom per-label overrides: [("SPECIAL", {"font_size": 16.0})]
-BATCH_LABELS: list[str | tuple[str, dict]] = [
-    "FASTENERS", 
-    "IN PROGRESS", 
-    "BITS/DRIVERS",
-    "BUILD MATS",
-    "3D PRINTING", 
-    "MAGNETS", 
-    "PLIERS", 
-    "T-SLOT", 
-    "MISC", 
-    "MEASURMENT",
-    "CUTTING",
-    "ADHESIVE",
-    "WIRE"
-]
-
-FONT_SIZE: float = 12.0               # Font height in mm
-FONT_NAME: str = "Arial"              # Font family (e.g. 'Arial', 'FreeSans', 'Helvetica')
-FONT_STYLE: str = "bold"              # 'regular', 'bold', 'italic', 'bold_italic'
-
-# Text Alignment: 'center', 'left', or 'right'
-TEXT_ALIGN: str = "center"
-TEXT_OFFSET_Y: float = 0.0            # Fine vertical offset adjustment in mm (0.0 = perfectly centered)
-
-# Text rendering style: 'embossed' (raised), 'debossed' (engraved), or 'flush' (multi-color inlay)
-TEXT_MODE: str = "embossed"
-TEXT_DEPTH: float = 1.2               # Height of raised letters or depth of engraving (mm)
-
-# Sizing: Set AUTO_SIZE = True for text-adaptive dimensions, or False for static dimensions
-AUTO_SIZE: bool = False
-STATIC_WIDTH: float = 100.0            # Used when AUTO_SIZE is False (mm)
-STATIC_HEIGHT: float = 16.0           # Used when AUTO_SIZE is False (mm)
-PADDING_X: float = 4.0               # Left & right margin around text in auto-size mode (mm)
-PADDING_Y: float = 4.0                # Top & bottom margin around text in auto-size mode (mm)
-
-# Plate & Edge Styling
-BASE_THICKNESS: float = 3.0           # Overall plate thickness (mm)
-CORNER_RADIUS: float = 3.0            # Corner fillet radius (mm; set 0 for square corners)
-TOP_EDGE_CHAMFER: float = 0.6         # 45-degree bevel on front perimeter (mm; 0 to disable)
-BORDER_RIM: bool = True              # Add an optional raised border frame around the face
-BORDER_WIDTH: float = 1.2             # Width of raised border frame (mm)
-
-# Magnet Specifications (Round press-fit magnets, e.g. 6x2mm or 6x3mm)
-MAGNET_DIAMETER: float = 10.0          # Nominal magnet diameter in mm
-MAGNET_THICKNESS: float = 2.0         # Nominal magnet thickness in mm
-MAGNET_CLEARANCE: float = 0.0         # Press-fit diameter tolerance for 3D printing (mm)
-POCKET_DEPTH_OFFSET: float = 0.2      # Pocket depth allowance to keep magnets sub-flush (mm)
-
-# Magnet Placement
-# Set MAGNET_COUNT = None for automatic spacing, or an integer (1, 2, 3...) to override
-MAGNET_COUNT: Optional[int] = None
-MAGNET_EDGE_MARGIN: float = 8.0       # Distance from plate ends to magnet centers (mm)
-
-# Export Settings
-EXPORT_STL: bool = False              # Save .stl files on execution
-EXPORT_STEP: bool = False             # Save .step files on execution
-# Output directory: Relative paths resolve relative to this script's directory.
-# Use "exports" for an exports/ subfolder, or "." to save directly alongside this script.
-OUTPUT_DIR: str = "exports"
+# Optional batch generation list:
+# Leave empty to generate/preview a single label defined by MagneticLabelParams defaults.
+# Or populate with strings e.g. ["FASTENERS", "3D PRINTING"] to batch-generate multiple labels.
+BATCH_LABELS: list[str | tuple[str, dict]] = []
 
 
 # ==============================================================================
@@ -158,39 +97,39 @@ class MagneticLabelParams:
     """Configuration parameters for the parametric magnetic label generator."""
 
     # Text Settings
-    text: str = "WORKSHOP"
-    font_size: float = 12.0
-    font: str = "Arial"
-    font_style: Union[str, FontStyle] = "bold"
+    text: str = "FASTENERS"
+    font_size: float = 12.0                # Font height in mm
+    font: str = "Arial"                    # Font family (e.g. 'Arial', 'FreeSans', 'Helvetica')
+    font_style: Union[str, FontStyle] = "bold"  # 'regular', 'bold', 'italic', 'bold_italic'
     text_align: str = "center"             # 'center', 'left', or 'right'
     text_offset_y: float = 0.0             # Fine vertical offset adjustment in mm
-    text_mode: Union[str, TextMode] = "embossed"
-    text_depth: float = 0.8
+    text_mode: Union[str, TextMode] = "embossed"  # 'embossed', 'debossed', or 'flush'
+    text_depth: float = 1.2                # Height of raised letters or depth of engraving (mm)
 
     # Sizing
-    auto_size: bool = True
-    width: float = 90.0
-    height: float = 24.0
-    padding_x: float = 10.0
-    padding_y: float = 6.0
-    min_width: float = 30.0
-    min_height: float = 16.0
+    auto_size: bool = False                # Adaptive text sizing (True) or static dimensions (False)
+    width: float = 100.0                   # Used when auto_size is False (mm)
+    height: float = 16.0                   # Used when auto_size is False (mm)
+    padding_x: float = 4.0                 # Margin around text in auto-size mode (mm)
+    padding_y: float = 4.0                 # Margin around text in auto-size mode (mm)
+    min_width: float = 30.0                # Minimum plate width limit (mm)
+    min_height: float = 16.0               # Minimum plate height limit (mm)
 
     # Plate & Edge Styling
-    base_thickness: float = 3.6
-    corner_radius: float = 3.0
-    top_chamfer: float = 0.6
-    border_rim: bool = False
-    border_width: float = 1.2
-    min_floor_thickness: float = 0.8
+    base_thickness: float = 3.0            # Overall plate thickness (mm)
+    corner_radius: float = 3.0             # Corner fillet radius (mm; 0 for square)
+    top_chamfer: float = 0.6               # 45-degree bevel on front perimeter (mm; 0 to disable)
+    border_rim: bool = True                # Optional raised border frame around face
+    border_width: float = 1.2              # Width of raised border frame (mm)
+    min_floor_thickness: float = 0.8       # Minimum solid plastic floor thickness behind magnets (mm)
 
     # Magnet Pocket Settings
-    magnet_diameter: float = 6.0
-    magnet_thickness: float = 2.0
-    magnet_clearance: float = 0.15
-    pocket_depth_offset: float = 0.1
-    magnet_count: Optional[int] = None
-    magnet_edge_margin: float = 8.0
+    magnet_diameter: float = 10.0          # Nominal magnet diameter in mm
+    magnet_thickness: float = 2.0          # Nominal magnet thickness in mm
+    magnet_clearance: float = 0.0          # Press-fit diameter tolerance for 3D printing (mm)
+    pocket_depth_offset: float = 0.2       # Extra depth allowance to keep magnets sub-flush (mm)
+    magnet_count: Optional[int] = None     # Specific magnet count, or None for automatic spacing
+    magnet_edge_margin: float = 8.0        # Distance from ends to magnet centers (mm)
     magnet_positions: Optional[List[Tuple[float, float]]] = None
 
 
@@ -443,6 +382,21 @@ def build_magnetic_label(params: MagneticLabelParams) -> GeneratedLabel:
     )
 
 
+def create_magnetic_label(params: MagneticLabelParams) -> Compound | Part | Solid:
+    """
+    Decoupled generator function returning CAD geometry without side effects.
+    Returns Part/Solid for single-body labels, or Compound if multi-body flush text is present.
+    """
+    label = build_magnetic_label(params)
+    if label.text_part is not None:
+        return Compound(children=[label.base_part, label.text_part])
+    return label.base_part
+
+
+# Generator alias
+create_label = create_magnetic_label
+
+
 # ==============================================================================
 # EXPORT HELPERS
 # ==============================================================================
@@ -451,12 +405,12 @@ def export_label_files(
     label: GeneratedLabel,
     output_dir: Union[str, Path] = "exports",
     prefix: str = "magnetic_label",
-    do_export_step: bool = False,
     do_export_stl: bool = False,
+    do_export_step: bool = False,
     stl_tolerance: float = 0.001,
 ) -> List[str]:
     """
-    Exports generated label parts to STEP and/or STL formats.
+    Exports generated label parts to STL and/or STEP formats.
     Relative paths in output_dir are automatically anchored relative
     to this script's directory, ensuring files never spill into the repo root.
     """
@@ -467,21 +421,27 @@ def export_label_files(
     saved_files: List[str] = []
 
     safe_text = "".join(c if c.isalnum() else "_" for c in label.params.text).strip("_").lower()
-    base_stem = f"{prefix}_{safe_text}_{label.params.text_mode}"
+    dim_str = f"{label.actual_width:.0f}x{label.actual_height:.0f}mm"
+    base_stem = f"{prefix}_{dim_str}_{safe_text}_{label.params.text_mode}"
 
     # Export base part
-    if do_export_step:
-        step_base = out_path / f"{base_stem}_base.step"
-        export_step(label.base_part, str(step_base))
-        saved_files.append(str(step_base))
-
     if do_export_stl:
         stl_base = out_path / f"{base_stem}_base.stl"
         export_stl(label.base_part, str(stl_base), angular_tolerance=0.1, tolerance=stl_tolerance)
         saved_files.append(str(stl_base))
 
+    if do_export_step:
+        step_base = out_path / f"{base_stem}_base.step"
+        export_step(label.base_part, str(step_base))
+        saved_files.append(str(step_base))
+
     # Export flush text inlay if present
     if label.text_part is not None:
+        if do_export_stl:
+            stl_text = out_path / f"{base_stem}_text_inlay.stl"
+            export_stl(label.text_part, str(stl_text), angular_tolerance=0.1, tolerance=stl_tolerance)
+            saved_files.append(str(stl_text))
+
         if do_export_step:
             step_text = out_path / f"{base_stem}_text_inlay.step"
             export_step(label.text_part, str(step_text))
@@ -491,11 +451,6 @@ def export_label_files(
             step_multi = out_path / f"{base_stem}_multibody_assembly.step"
             export_step(Compound([label.base_part, label.text_part]), str(step_multi))
             saved_files.append(str(step_multi))
-
-        if do_export_stl:
-            stl_text = out_path / f"{base_stem}_text_inlay.stl"
-            export_stl(label.text_part, str(stl_text), angular_tolerance=0.1, tolerance=stl_tolerance)
-            saved_files.append(str(stl_text))
 
     return saved_files
 
@@ -604,33 +559,8 @@ def batch_generate(
 # ==============================================================================
 
 def main():
-    """Generates the label based on top-level user configuration and previews it."""
-    params = MagneticLabelParams(
-        text=LABEL_TEXT,
-        font_size=FONT_SIZE,
-        font=FONT_NAME,
-        font_style=FONT_STYLE,
-        text_align=TEXT_ALIGN,
-        text_offset_y=TEXT_OFFSET_Y,
-        text_mode=TEXT_MODE,
-        text_depth=TEXT_DEPTH,
-        auto_size=AUTO_SIZE,
-        width=STATIC_WIDTH,
-        height=STATIC_HEIGHT,
-        padding_x=PADDING_X,
-        padding_y=PADDING_Y,
-        base_thickness=BASE_THICKNESS,
-        corner_radius=CORNER_RADIUS,
-        top_chamfer=TOP_EDGE_CHAMFER,
-        border_rim=BORDER_RIM,
-        border_width=BORDER_WIDTH,
-        magnet_diameter=MAGNET_DIAMETER,
-        magnet_thickness=MAGNET_THICKNESS,
-        magnet_clearance=MAGNET_CLEARANCE,
-        pocket_depth_offset=POCKET_DEPTH_OFFSET,
-        magnet_count=MAGNET_COUNT,
-        magnet_edge_margin=MAGNET_EDGE_MARGIN,
-    )
+    """Generates the label based on MagneticLabelParams defaults and previews it."""
+    params = MagneticLabelParams()
 
     # If BATCH_LABELS has items, run in batch mode!
     if BATCH_LABELS:
@@ -672,8 +602,8 @@ def main():
         files = export_label_files(
             label,
             output_dir=OUTPUT_DIR,
-            do_export_step=EXPORT_STEP,
             do_export_stl=EXPORT_STL,
+            do_export_step=EXPORT_STEP,
         )
         print(f" Exported files:    {files}")
 

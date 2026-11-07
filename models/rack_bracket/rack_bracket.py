@@ -25,8 +25,8 @@ except ImportError:
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STEP: bool = False               # Save .step file on execution
-EXPORT_STL: bool = False                # Save .stl file on execution
+EXPORT_STL: bool = False                # Save .stl file on execution (default: False)
+EXPORT_STEP: bool = False               # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"            # Output folder (relative to this script's directory)
 
 
@@ -231,14 +231,16 @@ if __name__ == "__main__":
         exports_path = Path(__file__).resolve().parent / OUTPUT_DIR
         exports_path.mkdir(parents=True, exist_ok=True)
 
-        if EXPORT_STEP:
-            step_file = exports_path / f"rack_bracket_{params.u_count}u.step"
-            export_step(bracket, str(step_file))
-            print(f"Exported STEP: {step_file}")
+        stem = f"rack_bracket_{params.u_count}u_{params.cutout_style.lower()}"
 
         if EXPORT_STL:
-            stl_file = exports_path / f"rack_bracket_{params.u_count}u.stl"
+            stl_file = exports_path / f"{stem}.stl"
             export_stl(bracket, str(stl_file))
             print(f"Exported STL:  {stl_file}")
+
+        if EXPORT_STEP:
+            step_file = exports_path / f"{stem}.step"
+            export_step(bracket, str(step_file))
+            print(f"Exported STEP: {step_file}")
 
     show(bracket)

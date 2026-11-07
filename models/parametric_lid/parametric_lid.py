@@ -36,8 +36,8 @@ except ImportError:
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STEP: bool = False               # Save .step file on execution
-EXPORT_STL: bool = False                # Save .stl file on execution
+EXPORT_STL: bool = False                # Save .stl file on execution (default: False)
+EXPORT_STEP: bool = False               # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"            # Output folder (relative to this script's directory)
 
 
@@ -637,16 +637,6 @@ def create_lid(params: LidParams) -> Solid:
 build_lid = create_lid
 
 
-def export_lid_files(part: Solid, name: str, output_dir: str = "exports") -> tuple[str, str]:
-    """Export the lid solid as STEP and STL files."""
-    os.makedirs(output_dir, exist_ok=True)
-    step_path = os.path.join(output_dir, f"{name}.step")
-    stl_path = os.path.join(output_dir, f"{name}.stl")
-    export_step(part, step_path)
-    export_stl(part, stl_path)
-    return step_path, stl_path
-
-
 if __name__ == "__main__":
     # Instantiate with no overrides so dataclass defaults take effect directly
     params = LidParams()
@@ -656,16 +646,22 @@ if __name__ == "__main__":
     if EXPORT_STEP or EXPORT_STL:
         exports_dir = Path(__file__).resolve().parent / OUTPUT_DIR
         exports_dir.mkdir(parents=True, exist_ok=True)
-        base_name = f"{params.shape}_{params.material}_lid"
-
-        if EXPORT_STEP:
-            step_file = exports_dir / f"{base_name}.step"
-            export_step(lid, str(step_file))
-            print(f"Exported STEP: {step_file}")
+        p_eff = params.get_effective_params()
+        if p_eff.shape.lower() == "round":
+            dim_str = f"{p_eff.diameter:.0f}mm"
+        else:
+            dim_str = f"{p_eff.length:.0f}x{p_eff.width:.0f}mm"
+        variant = f"{p_eff.shape.lower()}_{p_eff.material.lower()}"
+        stem = f"lid_{dim_str}_{variant}"
 
         if EXPORT_STL:
-            stl_file = exports_dir / f"{base_name}.stl"
+            stl_file = exports_dir / f"{stem}.stl"
             export_stl(lid, str(stl_file))
             print(f"Exported STL: {stl_file}")
+
+        if EXPORT_STEP:
+            step_file = exports_dir / f"{stem}.step"
+            export_step(lid, str(step_file))
+            print(f"Exported STEP: {step_file}")
 
     show(lid)
