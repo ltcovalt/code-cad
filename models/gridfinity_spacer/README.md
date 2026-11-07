@@ -60,7 +60,7 @@ Wx |   |     (0,0)  +------------------------+
 
 ## Usage
 
-Configure the parameters in `SpacerParams` at the top of [`gridfinity_spacer.py`](file:///models/gridfinity_spacer/gridfinity_spacer.py) and execute the script:
+Configure the parameters in `GridfinitySpacerParams` at the top of [`gridfinity_spacer.py`](file:///home/luke/repos/code-cad/models/gridfinity_spacer/gridfinity_spacer.py) and execute the script:
 
 ```bash
 python gridfinity_spacer.py
@@ -70,7 +70,7 @@ Generated `.step` and `.stl` files are automatically saved to `models/gridfinity
 
 ### Export Configuration
 
-At the top of [`gridfinity_spacer.py`](file:///models/gridfinity_spacer/gridfinity_spacer.py), exports can be toggled using standard configuration variables:
+At the top of [`gridfinity_spacer.py`](file:///home/luke/repos/code-cad/models/gridfinity_spacer/gridfinity_spacer.py), exports can be toggled using standard configuration variables:
 
 ```python
 EXPORT_STL: bool = False               # Save .stl file on execution (default: False)
@@ -83,10 +83,10 @@ OUTPUT_DIR: str = "exports"            # Output folder alongside this script
 ## Python / Scripting API
 
 ```python
-from models.gridfinity_spacer.gridfinity_spacer import SpacerParams, create_spacer
+from models.gridfinity_spacer.gridfinity_spacer import GridfinitySpacerParams, create_gridfinity_spacer
 
 # 1. Corner Piece (15.5mm Front gap, 15.0mm Side gap)
-corner_params = SpacerParams(
+corner_params = GridfinitySpacerParams(
     leg_x_length=100.0,   # Front wall leg length in mm
     leg_x_width=15.5,     # Front wall gap width in mm
     leg_y_length=80.0,    # Side wall leg length in mm
@@ -96,37 +96,37 @@ corner_params = SpacerParams(
     inner_corner_radius=4.0, # Standard Gridfinity bin corner match (R4)
     edge_radius=1.0,      # Top edge fillet
 )
-corner_spacer = create_spacer(corner_params)
+corner_spacer = create_gridfinity_spacer(corner_params)
 
 # 2. Straight Front Spacer (Setting leg_y_length = 0)
-front_params = SpacerParams(
+front_params = GridfinitySpacerParams(
     leg_x_length=150.0,
     leg_x_width=15.5,
     leg_y_length=0.0,     # Omit Leg Y -> generates straight front spacer
     height=12.0,
 )
-front_spacer = create_spacer(front_params)
+front_spacer = create_gridfinity_spacer(front_params)
 
 # 3. Straight Side Spacer (Setting leg_x_length = 0)
-side_params = SpacerParams(
+side_params = GridfinitySpacerParams(
     leg_x_length=0.0,     # Omit Leg X -> generates straight side spacer
     leg_y_length=120.0,
     leg_y_width=15.0,
     height=12.0,
 )
-side_spacer = create_spacer(side_params)
+side_spacer = create_gridfinity_spacer(side_params)
 ```
 
 ---
 
-## Parameter Reference
+## Parameter Reference (`GridfinitySpacerParams`)
 
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `height` | `float` | `12.0` | Shared spacer height above baseplate padding (mm) |
+| `height` | `float` | `3.0` | Shared spacer height above baseplate padding (mm) |
 | `leg_x_length` | `float` | `100.0` | Length of Leg X along drawer wall (mm). Set `0` to omit Leg X |
-| `leg_x_width` | `float` | `15.5` | Width / gap thickness of Leg X (mm) — e.g. front drawer gap |
-| `leg_y_length` | `float` | `80.0` | Length of Leg Y along drawer wall (mm). Set `0` to omit Leg Y |
+| `leg_x_width` | `float` | `15.0` | Width / gap thickness of Leg X (mm) — e.g. front drawer gap |
+| `leg_y_length` | `float` | `100.0` | Length of Leg Y along drawer wall (mm). Set `0` to omit Leg Y |
 | `leg_y_width` | `float` | `15.0` | Width / gap thickness of Leg Y (mm) — e.g. side drawer gap |
 | `corner_radius` | `float` | `2.0` | General vertical corner radius (mm) |
 | `outer_corner_radius` | `Optional[float]`| `None` | Radius of outer drawer corner (mm, None = `corner_radius`) |

@@ -13,7 +13,7 @@ models_dir = os.path.join(repo_root, "models", "gridfinity_spacer")
 if models_dir not in sys.path:
     sys.path.append(models_dir)
 
-from gridfinity_spacer import SpacerParams, create_spacer
+from gridfinity_spacer import GridfinitySpacerParams, create_gridfinity_spacer
 
 
 def validate():
@@ -25,7 +25,7 @@ def validate():
     # Side spacer:  15.0mm width, 80mm length
     # Shared height: 12.0mm
     # --------------------------------------------------------------------------
-    p1 = SpacerParams(
+    p1 = GridfinitySpacerParams(
         leg_x_length=100.0,
         leg_x_width=15.5,    # Front width: 15.5 mm
         leg_y_length=80.0,
@@ -35,7 +35,7 @@ def validate():
         inner_corner_radius=4.0,  # Standard Gridfinity R4
         edge_radius=1.0,
     )
-    s1 = create_spacer(p1)
+    s1 = create_gridfinity_spacer(p1)
     bbox1 = s1.bounding_box()
     assert s1.is_valid, "Corner spacer is invalid"
     assert abs(bbox1.size.X - 100.0) < 0.05, f"X size mismatch: {bbox1.size.X} vs 100.0"
@@ -46,7 +46,7 @@ def validate():
     # --------------------------------------------------------------------------
     # Test 2: Straight Front Spacer by setting leg_y_length = 0
     # --------------------------------------------------------------------------
-    p2 = SpacerParams(
+    p2 = GridfinitySpacerParams(
         leg_x_length=150.0,
         leg_x_width=15.5,
         leg_y_length=0.0,    # Implies straight spacer along Leg X
@@ -54,7 +54,7 @@ def validate():
         corner_radius=2.0,
         edge_radius=1.0,
     )
-    s2 = create_spacer(p2)
+    s2 = create_gridfinity_spacer(p2)
     bbox2 = s2.bounding_box()
     assert s2.is_valid, "Straight front spacer is invalid"
     assert abs(bbox2.size.X - 150.0) < 0.05, f"Length mismatch: {bbox2.size.X}"
@@ -65,7 +65,7 @@ def validate():
     # --------------------------------------------------------------------------
     # Test 3: Straight Side Spacer by setting leg_x_length = 0
     # --------------------------------------------------------------------------
-    p3 = SpacerParams(
+    p3 = GridfinitySpacerParams(
         leg_x_length=0.0,    # Implies straight spacer along Leg Y
         leg_y_length=120.0,
         leg_y_width=15.0,
@@ -73,7 +73,7 @@ def validate():
         corner_radius=2.0,
         edge_radius=1.0,
     )
-    s3 = create_spacer(p3)
+    s3 = create_gridfinity_spacer(p3)
     bbox3 = s3.bounding_box()
     assert s3.is_valid, "Straight side spacer is invalid"
     assert abs(bbox3.size.X - 15.0) < 0.05, f"Width mismatch: {bbox3.size.X}"
@@ -84,7 +84,7 @@ def validate():
     # --------------------------------------------------------------------------
     # Test 4: Hollow Underside Mode on Corner Piece
     # --------------------------------------------------------------------------
-    p4 = SpacerParams(
+    p4 = GridfinitySpacerParams(
         leg_x_length=90.0,
         leg_x_width=18.0,
         leg_y_length=90.0,
@@ -94,14 +94,14 @@ def validate():
         wall_thickness=2.0,
         top_thickness=2.0,
     )
-    s4 = create_spacer(p4)
+    s4 = create_gridfinity_spacer(p4)
     assert s4.is_valid, "Hollow corner spacer is invalid"
     print(f"[PASS] Test 4: Hollow corner spacer passed (volume={s4.volume:.1f} mm^3)")
 
     # --------------------------------------------------------------------------
     # Test 5: Chamfer Edge Treatment & Finger Notch on Straight Spacer
     # --------------------------------------------------------------------------
-    p5 = SpacerParams(
+    p5 = GridfinitySpacerParams(
         leg_x_length=100.0,
         leg_x_width=15.5,
         leg_y_length=0.0,
@@ -110,14 +110,14 @@ def validate():
         edge_radius=1.2,
         finger_notch=True,
     )
-    s5 = create_spacer(p5)
+    s5 = create_gridfinity_spacer(p5)
     assert s5.is_valid, "Chamfered straight spacer with finger notch is invalid"
     print(f"[PASS] Test 5: Chamfered straight spacer with finger notch passed")
 
     # --------------------------------------------------------------------------
     # Test 6: Sharp Corner Piece (Zero radii)
     # --------------------------------------------------------------------------
-    p6 = SpacerParams(
+    p6 = GridfinitySpacerParams(
         leg_x_length=70.0,
         leg_x_width=20.0,
         leg_y_length=60.0,
@@ -128,7 +128,7 @@ def validate():
         inner_corner_radius=0.0,
         edge_radius=0.0,
     )
-    s6 = create_spacer(p6)
+    s6 = create_gridfinity_spacer(p6)
     assert s6.is_valid
     expected_vol6 = (70.0 * 20.0 + 15.0 * 40.0) * 10.0
     assert abs(s6.volume - expected_vol6) < 0.1, f"Volume mismatch: {s6.volume} vs {expected_vol6}"
@@ -138,7 +138,7 @@ def validate():
     # Test 7: Error Handling when both leg lengths are 0
     # --------------------------------------------------------------------------
     try:
-        create_spacer(SpacerParams(leg_x_length=0.0, leg_y_length=0.0))
+        create_gridfinity_spacer(GridfinitySpacerParams(leg_x_length=0.0, leg_y_length=0.0))
         assert False, "Should raise ValueError when both leg lengths are 0"
     except ValueError:
         pass
@@ -147,7 +147,7 @@ def validate():
     # Test 8: Error Handling when leg length <= perpendicular width on corner
     # --------------------------------------------------------------------------
     try:
-        create_spacer(SpacerParams(leg_x_length=15.0, leg_y_width=20.0, leg_y_length=50.0))
+        create_gridfinity_spacer(GridfinitySpacerParams(leg_x_length=15.0, leg_y_width=20.0, leg_y_length=50.0))
         assert False, "Should raise ValueError when leg_x_length <= leg_y_width"
     except ValueError:
         pass

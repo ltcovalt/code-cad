@@ -44,7 +44,7 @@ OUTPUT_DIR: str = "exports"   # Relative subfolder alongside this script
 
 
 @dataclass
-class SpacerParams:
+class GridfinitySpacerParams:
     """Single source of truth parameters for Gridfinity drawer gap spacers."""
 
     # --------------------------------------------------------------------------
@@ -92,11 +92,7 @@ class SpacerParams:
     finger_notch_depth: float = 2.5     # Depth of scoop recess from top surface in mm
 
 
-# Type alias
-GridfinitySpacerParams = SpacerParams
-
-
-def create_gridfinity_spacer(params: SpacerParams) -> Solid:
+def create_gridfinity_spacer(params: GridfinitySpacerParams) -> Solid:
     """
     Decoupled generator function for Gridfinity drawer gap spacers.
 
@@ -232,13 +228,9 @@ def create_gridfinity_spacer(params: SpacerParams) -> Solid:
     return builder.part
 
 
-# Generator alias
-create_spacer = create_gridfinity_spacer
-
-
 if __name__ == "__main__":
     # Single source of truth: dataclass defaults take effect directly
-    params = SpacerParams()
+    params = GridfinitySpacerParams()
     spacer = create_gridfinity_spacer(params)
 
     # Standardized exports to the exports/ directory alongside this script
