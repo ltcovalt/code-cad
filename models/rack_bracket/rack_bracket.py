@@ -45,6 +45,7 @@ class RackBracketParams:
     outer_corner_radius: float = 1.5       # Fillet for sharp outer vertical corners
 
     # Side M4 thread-in pilot hole parameters
+    side_holes_enabled: bool = True        # Master toggle to enable/disable side M4 pilot holes
     side_hole_dia: float = 3.3             # M4 thread-in hole diameter in mm (3.3 mm for tapping into plastic)
     side_hole_spacing_x: float = 25.0      # Horizontal repeating interval between hole columns in mm
     side_hole_rear_offset: float = 15.0    # Offset from rear edge to first hole column (15 mm)
@@ -185,37 +186,39 @@ def create_rack_bracket(params: RackBracketParams) -> Part:
                 extrude(amount=params.thickness * 4, dir=(0, 1, 0), mode=Mode.SUBTRACT)
 
         # 4. Dynamic Side Plate Mounting Holes (Scales automatically with u_count)
-        x_columns = []
-        cur_x = rear_x
-        while cur_x >= min_x:
-            x_columns.append(cur_x)
-            cur_x -= params.side_hole_spacing_x
+        if params.side_holes_enabled and params.side_hole_dia > 0:
+            x_columns = []
+            cur_x = rear_x
+            while cur_x >= min_x:
+                x_columns.append(cur_x)
+                cur_x -= params.side_hole_spacing_x
 
-        # Calculate Z positions for hole rows
-        if params.side_hole_rows is not None:
-            z_positions = params.side_hole_rows
-        elif params.u_count == 1:
-            z_positions = [total_height / 2.0]
-        else:
-            # Place top and bottom hole rows in solid margins
-            bottom_z = params.side_hole_edge_offset
-            top_z = total_height - params.side_hole_edge_offset
-            z_positions = [bottom_z, top_z]
+            # Calculate Z positions for hole rows
+            if params.side_hole_rows is not None:
+                z_positions = params.side_hole_rows
+            elif params.u_count == 1:
+                z_positions = [total_height / 2.0]
+            else:
+                # Place top and bottom hole rows in solid margins
+                bottom_z = params.side_hole_edge_offset
+                top_z = total_height - params.side_hole_edge_offset
+                z_positions = [bottom_z, top_z]
 
-            # Optional intermediate hole rows (only if solid or explicitly requested)
-            if params.include_intermediate_side_holes or (
-                params.cutout_style.lower() == "none" and params.u_count >= 3
-            ):
-                for u in range(1, params.u_count - 1):
-                    u_center_z = (u + 0.5) * params.u_height_unit - (params.height_margin / 2.0)
-                    z_positions.append(u_center_z)
+                # Optional intermediate hole rows (only if solid or explicitly requested)
+                if params.include_intermediate_side_holes or (
+                    params.cutout_style.lower() == "none" and params.u_count >= 3
+                ):
+                    for u in range(1, params.u_count - 1):
+                        u_center_z = (u + 0.5) * params.u_height_unit - (params.height_margin / 2.0)
+                        z_positions.append(u_center_z)
 
-        with BuildSketch(Plane.XZ):
-            for h_x in x_columns:
-                for h_z in z_positions:
-                    with Locations((h_x, h_z)):
-                        Circle(radius=params.side_hole_dia / 2.0)
-        extrude(amount=params.thickness * 4, dir=(0, 1, 0), mode=Mode.SUBTRACT)
+            if x_columns and z_positions:
+                with BuildSketch(Plane.XZ):
+                    for h_x in x_columns:
+                        for h_z in z_positions:
+                            with Locations((h_x, h_z)):
+                                Circle(radius=params.side_hole_dia / 2.0)
+                extrude(amount=params.thickness * 4, dir=(0, 1, 0), mode=Mode.SUBTRACT)
 
     assert bracket.part is not None, "Bracket generation failed"
     return bracket.part
