@@ -45,8 +45,8 @@ class GridfinityBinParams:
     # --------------------------------------------------------------------------
     # Grid Units & Pitch
     # --------------------------------------------------------------------------
-    grid_x: int = 2                     # Number of grid units along X (width)
-    grid_y: int = 2                     # Number of grid units along Y (length/depth)
+    grid_x: int = 1                     # Number of grid units along X (width)
+    grid_y: int = 1                     # Number of grid units along Y (length/depth)
     grid_z: int = 4                     # Number of height units along Z
     unit_size: float = 42.0             # Base XY grid pitch in mm (standard Gridfinity = 42.0mm)
     unit_z: float = 7.0                 # Height Z unit pitch in mm (standard Gridfinity = 7.0mm)
@@ -88,7 +88,7 @@ class GridfinityBinParams:
     label_shelf_thickness: float = 2.4  # Vertical thickness of shelf deck in mm (0.6 roof + 1.0 slot + 0.8 floor)
     label_fin_count: Optional[int] = None  # Manual fin count override per compartment (None = auto-calculate)
     label_fin_max_span: float = 12.0    # Max unsupported bridge span in mm when label_fin_count is None
-    label_fin_thickness: float = 1.2    # Thickness (X) of each diagonal support fin in mm
+    label_fin_thickness: float = 0.8    # Thickness (X) of each support fin in mm (0.8mm = 2 walls, 1 clean U-turn loop)
     label_overhang_angle: float = 35.0  # Support fin angle underneath the label shelf in degrees
     label_width_margin: float = 5.6     # Margin subtracted from unit width (42 - 5.6 = 36.4mm pocket)
     label_tab_width: float = 6.5        # Width (Y) of side snap-in retention tab slots in mm (fits ~5.9mm tab)
@@ -98,13 +98,17 @@ class GridfinityBinParams:
     # Ergonomic Finger Scoops
     # --------------------------------------------------------------------------
     scoop_enabled: bool = True          # Master toggle to enable/disable all finger scoops
+    scoop_style: Literal["directional", "bowl"] = "directional"  # Per-wall scoops or 360° dish bottom
+    scoop_bowl_radius: float = 8.0      # 360° all-around floor fillet radius in mm when scoop_style="bowl"
     scoop_front_radius: float = 12.0    # Radius of front (-Y) finger scoop in mm (0.0 to disable)
     scoop_back_radius: float = 6.0      # Radius of back (+Y) finger scoop in mm (0.0 to disable)
+    scoop_left_radius: float = 0.0      # Radius of left (-X) finger scoop in mm (0.0 to disable)
+    scoop_right_radius: float = 0.0     # Radius of right (+X) finger scoop in mm (0.0 to disable)
 
     # --------------------------------------------------------------------------
     # Interior Dividers
     # --------------------------------------------------------------------------
-    dividers_enabled: bool = True      # Master toggle to enable/disable interior dividing walls
+    dividers_enabled: bool = False      # Master toggle to enable/disable interior dividing walls
     dividers_x: int = 1                 # Number of interior divider walls along X (0 = undivided)
     dividers_y: int = 0                 # Number of interior divider walls along Y (0 = undivided)
     divider_thickness: float = 1.2      # Wall thickness of internal dividing walls in mm
@@ -156,8 +160,12 @@ class _BinEnvelope:
     floor_inner_l: float
     floor_inner_cx: float
     floor_inner_cy: float
+    floor_x_left: float
+    floor_x_right: float
     floor_y_front: float
     floor_y_back: float
+    top_x_left: float
+    top_x_right: float
     top_y_front: float
     top_y_back: float
     # Compartment grid at top
@@ -227,6 +235,8 @@ def _compute_envelope(params: GridfinityBinParams) -> _BinEnvelope:
     comp_l = (inner_l - (cy_count - 1) * t_div) / cy_count
     r_inner = max(0.5, min(r_corner - t_wall, min(comp_w, comp_l) / 2.0 - 0.1))
 
+    top_x_left = top_cx - inner_w / 2.0
+    top_x_right = top_cx + inner_w / 2.0
     top_y_front = top_cy - inner_l / 2.0
     top_y_back = top_cy + inner_l / 2.0
 
@@ -247,20 +257,22 @@ def _compute_envelope(params: GridfinityBinParams) -> _BinEnvelope:
         inset_f = t_wall * math.sqrt(1.0 + (ov_f / dz) ** 2)
         inset_b = t_wall * math.sqrt(1.0 + (ov_b / dz) ** 2)
 
-        in_x_min_fl = out_x_min_fl + inset_l
-        in_x_max_fl = out_x_max_fl - inset_r
+        floor_x_left = out_x_min_fl + inset_l
+        floor_x_right = out_x_max_fl - inset_r
         floor_y_front = out_y_min_fl + inset_f
         floor_y_back = out_y_max_fl - inset_b
 
-        floor_inner_w = max(4.0, in_x_max_fl - in_x_min_fl)
+        floor_inner_w = max(4.0, floor_x_right - floor_x_left)
         floor_inner_l = max(4.0, floor_y_back - floor_y_front)
-        floor_inner_cx = (in_x_min_fl + in_x_max_fl) / 2.0
+        floor_inner_cx = (floor_x_left + floor_x_right) / 2.0
         floor_inner_cy = (floor_y_front + floor_y_back) / 2.0
     else:
         floor_inner_w = inner_w
         floor_inner_l = inner_l
         floor_inner_cx = top_cx
         floor_inner_cy = top_cy
+        floor_x_left = top_x_left
+        floor_x_right = top_x_right
         floor_y_front = top_y_front
         floor_y_back = top_y_back
 
@@ -293,8 +305,12 @@ def _compute_envelope(params: GridfinityBinParams) -> _BinEnvelope:
         floor_inner_l=floor_inner_l,
         floor_inner_cx=floor_inner_cx,
         floor_inner_cy=floor_inner_cy,
+        floor_x_left=floor_x_left,
+        floor_x_right=floor_x_right,
         floor_y_front=floor_y_front,
         floor_y_back=floor_y_back,
+        top_x_left=top_x_left,
+        top_x_right=top_x_right,
         top_y_front=top_y_front,
         top_y_back=top_y_back,
         comp_w=comp_w,
@@ -567,20 +583,18 @@ def create_stacking_lip(params: GridfinityBinParams) -> Optional[Part]:
 # ==============================================================================
 def create_compartment_scoops(params: GridfinityBinParams) -> Optional[Part]:
     """
-    Generates true circular finger-scoop ramps along the bottom front and/or back
-    interior edge(s) of every compartment using `scoop_front_radius` and
-    `scoop_back_radius` (set either to 0.0 to disable that side).
+    Generates ergonomic compartment finger scoops in one of two styles:
+      - `scoop_style == "bowl"`: 360° all-around floor fillet of radius `scoop_bowl_radius`,
+        producing cylindrical wall ramps and smooth spherical/toroidal corners around all
+        4 sides of every compartment with a flat center floor.
+      - `scoop_style == "directional"`: Independent circular tangent finger-scoop ramps on any
+        combination of `scoop_front_radius` (-Y), `scoop_back_radius` (+Y),
+        `scoop_left_radius` (-X), and `scoop_right_radius` (+X) (set any to 0.0 to disable).
 
-    Automatically adapts to both vertical walls (90° corner) and angled overhang walls
-    (using exact tangent circular arcs between the horizontal floor and the sloped
-    interior overhang wall), and clips strictly to the tapered interior cavity so
-    a scoop never protrudes outside an overhang.
+    Automatically adapts to both vertical walls (90° corner) and angled overhang walls,
+    clipping strictly to the tapered interior cavity so a scoop never protrudes outside.
     """
     if not params.scoop_enabled:
-        return None
-    r_front = max(0.0, params.scoop_front_radius)
-    r_back = max(0.0, params.scoop_back_radius)
-    if r_front <= 0.0 and r_back <= 0.0:
         return None
 
     env = _compute_envelope(params)
@@ -588,17 +602,106 @@ def create_compartment_scoops(params: GridfinityBinParams) -> Optional[Part]:
     if cavity_h <= 1.0:
         return None
 
-    active_scoops: list[tuple[Literal["front", "back"], float]] = []
-    if r_front > 0.0:
-        active_scoops.append(("front", r_front))
-    if r_back > 0.0:
-        active_scoops.append(("back", r_back))
-
-    max_len_fraction = 0.45 if len(active_scoops) == 2 else 0.65
-
     t_div = params.divider_thickness
     inner_env_part = _create_tapered_inner_envelope(env)
     scoop_solids = []
+
+    if params.scoop_style == "bowl":
+        req_bowl_r = max(0.0, params.scoop_bowl_radius)
+        if req_bowl_r <= 0.5:
+            return None
+
+        for icx in range(env.cx_count):
+            for icy in range(env.cy_count):
+                ccx = (
+                    env.top_cx
+                    - env.inner_w / 2.0
+                    + env.comp_w / 2.0
+                    + icx * (env.comp_w + t_div)
+                )
+                ccy = (
+                    env.top_cy
+                    - env.inner_l / 2.0
+                    + env.comp_l / 2.0
+                    + icy * (env.comp_l + t_div)
+                )
+
+                comp_x_left_top = ccx - env.comp_w / 2.0
+                comp_x_right_top = ccx + env.comp_w / 2.0
+                comp_y_front_top = ccy - env.comp_l / 2.0
+                comp_y_back_top = ccy + env.comp_l / 2.0
+
+                comp_x_left_fl = env.floor_x_left if icx == 0 else comp_x_left_top
+                comp_x_right_fl = (
+                    env.floor_x_right if icx == env.cx_count - 1 else comp_x_right_top
+                )
+                comp_y_front_fl = env.floor_y_front if icy == 0 else comp_y_front_top
+                comp_y_back_fl = (
+                    env.floor_y_back if icy == env.cy_count - 1 else comp_y_back_top
+                )
+
+                comp_fl_w = comp_x_right_fl - comp_x_left_fl
+                comp_fl_l = comp_y_back_fl - comp_y_front_fl
+                if min(comp_fl_w, comp_fl_l) <= 2.5:
+                    continue
+
+                r_bowl = min(
+                    req_bowl_r,
+                    min(comp_fl_w, comp_fl_l) * 0.42,
+                    cavity_h * 0.75,
+                )
+                if r_bowl <= 0.5:
+                    continue
+
+                # Build the unfilleted lower compartment prism (clipped to tapered inner envelope)
+                prism_h = min(cavity_h, r_bowl + 2.0)
+                with BuildPart() as unfilleted_cav:
+                    with BuildSketch(Plane.XY.offset(env.floor_z)) as sk_c:
+                        with Locations([(ccx, ccy)]):
+                            RectangleRounded(env.comp_w, env.comp_l, env.r_inner)
+                    extrude(amount=prism_h)
+                    add(inner_env_part, mode=Mode.INTERSECT)
+
+                # Build the 360° bottom-filleted cavity and subtract from unfilleted prism
+                with BuildPart() as filleted_cav:
+                    add(unfilleted_cav.part)
+                    bot_edges = filleted_cav.faces().sort_by(Axis.Z)[0].edges()
+                    fillet(bot_edges, radius=r_bowl)
+
+                with BuildPart() as bowl_scoop:
+                    add(unfilleted_cav.part)
+                    add(filleted_cav.part, mode=Mode.SUBTRACT)
+
+                scoop_solids.append(bowl_scoop.part)
+
+        if not scoop_solids:
+            return None
+        with BuildPart() as all_bowl_scoops:
+            add(scoop_solids)
+        return all_bowl_scoops.part
+
+    # Directional mode: independent front (-Y), back (+Y), left (-X), right (+X) scoops
+    r_front = max(0.0, params.scoop_front_radius)
+    r_back = max(0.0, params.scoop_back_radius)
+    r_left = max(0.0, params.scoop_left_radius)
+    r_right = max(0.0, params.scoop_right_radius)
+    if r_front <= 0.0 and r_back <= 0.0 and r_left <= 0.0 and r_right <= 0.0:
+        return None
+
+    active_y_scoops: list[tuple[Literal["front", "back"], float]] = []
+    if r_front > 0.0:
+        active_y_scoops.append(("front", r_front))
+    if r_back > 0.0:
+        active_y_scoops.append(("back", r_back))
+
+    active_x_scoops: list[tuple[Literal["left", "right"], float]] = []
+    if r_left > 0.0:
+        active_x_scoops.append(("left", r_left))
+    if r_right > 0.0:
+        active_x_scoops.append(("right", r_right))
+
+    max_y_frac = 0.45 if len(active_y_scoops) == 2 else 0.65
+    max_x_frac = 0.45 if len(active_x_scoops) == 2 else 0.65
 
     for icx in range(env.cx_count):
         for icy in range(env.cy_count):
@@ -615,53 +718,54 @@ def create_compartment_scoops(params: GridfinityBinParams) -> Optional[Part]:
                 + icy * (env.comp_l + t_div)
             )
 
-            # Determine the floor Y-boundaries of this compartment
+            comp_x_left_top = ccx - env.comp_w / 2.0
+            comp_x_right_top = ccx + env.comp_w / 2.0
             comp_y_front_top = ccy - env.comp_l / 2.0
             comp_y_back_top = ccy + env.comp_l / 2.0
 
-            comp_y_front_floor = (
-                env.floor_y_front if icy == 0 else comp_y_front_top
+            comp_x_left_floor = env.floor_x_left if icx == 0 else comp_x_left_top
+            comp_x_right_floor = (
+                env.floor_x_right if icx == env.cx_count - 1 else comp_x_right_top
             )
+            comp_y_front_floor = env.floor_y_front if icy == 0 else comp_y_front_top
             comp_y_back_floor = (
                 env.floor_y_back if icy == env.cy_count - 1 else comp_y_back_top
             )
+
+            comp_floor_w = comp_x_right_floor - comp_x_left_floor
             comp_floor_l = comp_y_back_floor - comp_y_front_floor
-            if comp_floor_l <= 2.0:
+            if comp_floor_w <= 2.0 or comp_floor_l <= 2.0:
                 continue
 
-            for wall_side, req_radius in active_scoops:
+            # Front (-Y) and Back (+Y) scoops extruded in YZ plane along X
+            for wall_side, req_radius in active_y_scoops:
                 if wall_side == "front":
                     s = 1.0  # Interior is in +Y direction from front wall
                     y_corner = comp_y_front_floor
-                    # Check if this wall is sloped due to front overhang
                     dy_slope = max(0.0, comp_y_front_floor - comp_y_front_top)
                 else:
                     s = -1.0  # Interior is in -Y direction from back wall
                     y_corner = comp_y_back_floor
-                    # Check if this wall is sloped due to back overhang
                     dy_slope = max(0.0, comp_y_back_top - comp_y_back_floor)
 
                 if dy_slope > 1e-4 and env.z_trans > env.floor_z:
                     dz_slope = env.z_trans - env.floor_z
-                    alpha = math.atan2(dz_slope, dy_slope)  # Wall angle in (0, pi/2)
+                    alpha = math.atan2(dz_slope, dy_slope)
                     wall_seg_len = math.hypot(dy_slope, dz_slope)
                 else:
-                    alpha = math.pi / 2.0  # Standard 90° vertical wall
+                    alpha = math.pi / 2.0
                     wall_seg_len = cavity_h - 1.0
 
                 tan_half = math.tan(alpha / 2.0)
                 if tan_half <= 1e-4:
                     continue
 
-                # Constrain scoop radius so tangent length fits both floor and wall segment
-                max_tan_len = min(comp_floor_l * max_len_fraction, wall_seg_len * 0.95)
+                max_tan_len = min(comp_floor_l * max_y_frac, wall_seg_len * 0.95)
                 sr = min(req_radius, max_tan_len / tan_half)
                 if sr <= 0.5:
                     continue
 
                 l_tan = sr * tan_half
-
-                # Exact tangent points and arc midpoint for any wall angle alpha in (0, pi/2]
                 p_corner = Vector(y_corner, env.floor_z)
                 p_floor = Vector(y_corner + s * l_tan, env.floor_z)
                 p_top = Vector(
@@ -682,16 +786,70 @@ def create_compartment_scoops(params: GridfinityBinParams) -> Optional[Part]:
                         make_face()
                     extrude(amount=env.comp_w / 2.0, both=True)
 
-                    # Clip to the compartment's rounded XY footprint
                     with BuildSketch(Plane.XY.offset(env.floor_z)) as sk_clip:
                         with Locations([(ccx, ccy)]):
                             RectangleRounded(env.comp_w, env.comp_l, env.r_inner)
                     extrude(amount=cavity_h, mode=Mode.INTERSECT)
-
-                    # Clip to the tapered interior cavity so it never protrudes past any overhang
                     add(inner_env_part, mode=Mode.INTERSECT)
 
                 scoop_solids.append(comp_scoop.part)
+
+            # Left (-X) and Right (+X) scoops extruded in XZ plane along Y
+            for wall_side, req_radius in active_x_scoops:
+                if wall_side == "left":
+                    s = 1.0  # Interior is in +X direction from left wall
+                    x_corner = comp_x_left_floor
+                    dx_slope = max(0.0, comp_x_left_floor - comp_x_left_top)
+                else:
+                    s = -1.0  # Interior is in -X direction from right wall
+                    x_corner = comp_x_right_floor
+                    dx_slope = max(0.0, comp_x_right_top - comp_x_right_floor)
+
+                if dx_slope > 1e-4 and env.z_trans > env.floor_z:
+                    dz_slope = env.z_trans - env.floor_z
+                    alpha = math.atan2(dz_slope, dx_slope)
+                    wall_seg_len = math.hypot(dx_slope, dz_slope)
+                else:
+                    alpha = math.pi / 2.0
+                    wall_seg_len = cavity_h - 1.0
+
+                tan_half = math.tan(alpha / 2.0)
+                if tan_half <= 1e-4:
+                    continue
+
+                max_tan_len = min(comp_floor_w * max_x_frac, wall_seg_len * 0.95)
+                sr = min(req_radius, max_tan_len / tan_half)
+                if sr <= 0.5:
+                    continue
+
+                l_tan = sr * tan_half
+                p_corner = Vector(x_corner, env.floor_z)
+                p_floor = Vector(x_corner + s * l_tan, env.floor_z)
+                p_top = Vector(
+                    x_corner - s * l_tan * math.cos(alpha),
+                    env.floor_z + l_tan * math.sin(alpha),
+                )
+                arc_mid = Vector(
+                    x_corner + s * (l_tan - sr * math.sin(alpha / 2.0)),
+                    env.floor_z + sr * (1.0 - math.cos(alpha / 2.0)),
+                )
+
+                with BuildPart() as comp_x_scoop:
+                    with BuildSketch(Plane.XZ.offset(ccy)) as sk_xz:
+                        with BuildLine() as bl:
+                            Line(p_top, p_corner)
+                            Line(p_corner, p_floor)
+                            ThreePointArc(p_floor, arc_mid, p_top)
+                        make_face()
+                    extrude(amount=env.comp_l / 2.0, both=True)
+
+                    with BuildSketch(Plane.XY.offset(env.floor_z)) as sk_clip:
+                        with Locations([(ccx, ccy)]):
+                            RectangleRounded(env.comp_w, env.comp_l, env.r_inner)
+                    extrude(amount=cavity_h, mode=Mode.INTERSECT)
+                    add(inner_env_part, mode=Mode.INTERSECT)
+
+                scoop_solids.append(comp_x_scoop.part)
 
     if not scoop_solids:
         return None
@@ -891,16 +1049,51 @@ def create_label_holders(params: GridfinityBinParams) -> Optional[Part]:
 
         shelf_solids.append(row_deck.part)
 
-        # 1B. Evenly spaced diagonal support fins underneath the deck in each X-compartment
-        if fins_per_comp > 0 and z_deck_bot > z_fin_bot + 0.5:
-            for icx in range(env.cx_count):
-                ccx = (
-                    env.top_cx
-                    - env.inner_w / 2.0
-                    + env.comp_w / 2.0
-                    + icx * (env.comp_w + t_div)
-                )
-                with BuildPart() as comp_fins:
+        # 1B. 45° wall-support ledge (0.8mm) + diagonal support fins in each X-compartment
+        ledge_h = min(0.8, max(0.0, z_deck_bot - env.floor_z))
+        fin_tip_h = min(0.8, max(0.0, (z_deck_bot - z_fin_bot) * 0.5))
+
+        for icx in range(env.cx_count):
+            ccx = (
+                env.top_cx
+                - env.inner_w / 2.0
+                + env.comp_w / 2.0
+                + icx * (env.comp_w + t_div)
+            )
+            with BuildPart() as comp_support:
+                # 45° perimeter support bevel along the compartment side & back walls directly
+                # beneath the shelf deck so the shelf edges sit on top of the bin wall/rim
+                if ledge_h > 0.2 and env.comp_w > 2.0 * ledge_h + 1.0:
+                    with BuildPart() as wall_ledge:
+                        with BuildSketch(Plane.YZ.offset(ccx)) as sk_ledge_blk:
+                            Polygon(
+                                (y_wall, z_deck_bot),
+                                (y_tip, z_deck_bot),
+                                (y_tip, z_deck_bot - ledge_h),
+                                (y_wall, z_deck_bot - ledge_h),
+                                align=None,
+                            )
+                        extrude(amount=env.comp_w / 2.0, both=True)
+
+                        # Subtract inner 45° taper (inset by ledge_h at z_deck_bot -> 0 at z_deck_bot - ledge_h)
+                        r_in_top = max(0.2, env.r_inner - ledge_h)
+                        with BuildSketch(Plane.XY.offset(z_deck_bot - ledge_h)) as sk_l0:
+                            with Locations([(ccx, ccy)]):
+                                RectangleRounded(env.comp_w, env.comp_l, env.r_inner)
+                        with BuildSketch(Plane.XY.offset(z_deck_bot)) as sk_l1:
+                            with Locations([(ccx, ccy)]):
+                                RectangleRounded(
+                                    env.comp_w - 2.0 * ledge_h,
+                                    env.comp_l - 2.0 * ledge_h,
+                                    r_in_top,
+                                )
+                        loft(ruled=True, mode=Mode.SUBTRACT)
+
+                    add(wall_ledge.part)
+
+                # Evenly spaced trapezoidal support fins underneath the deck (with 0.8mm vertical
+                # front tip face at y_tip so the top 4 layers of each fin reach the front edge)
+                if fins_per_comp > 0 and z_deck_bot > z_fin_bot + 0.5:
                     bay_span = env.comp_w / (fins_per_comp + 1)
                     for i_fin in range(1, fins_per_comp + 1):
                         fin_x = (ccx - env.comp_w / 2.0) + i_fin * bay_span
@@ -908,18 +1101,19 @@ def create_label_holders(params: GridfinityBinParams) -> Optional[Part]:
                             Polygon(
                                 (y_wall, z_deck_bot),
                                 (y_tip, z_deck_bot),
+                                (y_tip, z_deck_bot - fin_tip_h),
                                 (y_wall, z_fin_bot),
                                 align=None,
                             )
                         extrude(amount=fin_t / 2.0, both=True)
 
-                    with BuildSketch(Plane.XY.offset(z_fin_bot - 0.1)) as sk_fin_clip:
-                        with Locations([(ccx, ccy)]):
-                            RectangleRounded(env.comp_w, env.comp_l, env.r_inner)
-                    extrude(amount=(z_deck_bot - z_fin_bot) + 0.2, mode=Mode.INTERSECT)
-                    add(inner_env_part, mode=Mode.INTERSECT)
+                with BuildSketch(Plane.XY.offset(z_fin_bot - 0.1)) as sk_fin_clip:
+                    with Locations([(ccx, ccy)]):
+                        RectangleRounded(env.comp_w, env.comp_l, env.r_inner)
+                extrude(amount=(z_deck_bot - z_fin_bot) + 0.2, mode=Mode.INTERSECT)
+                add(inner_env_part, mode=Mode.INTERSECT)
 
-                shelf_solids.append(comp_fins.part)
+            shelf_solids.append(comp_support.part)
 
     # Combine all shelf decks + fins and cut the recessed Pred snap-in label sockets
     with BuildPart() as label_builder:
