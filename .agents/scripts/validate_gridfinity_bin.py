@@ -107,15 +107,55 @@ def validate():
     assert abs(bbox1.size.Y - expected_y1) < 0.05, f"Expected Y={expected_y1}, got {bbox1.size.Y}"
     assert abs(bbox1.size.Z - expected_top_z) < 0.05, f"Expected Z={expected_top_z}, got {bbox1.size.Z}"
 
-    # Verify the side tab slot at x = 18.6mm (underneath the x = 18.15mm stacking lip overhang)
-    # is completely open at mid-height of label tab slot
-    z_mid_slot = p1.grid_z * p1.unit_z - p1.label_thickness / 2.0
-    sec_slot = section(bin1, Plane.XY.offset(z_mid_slot))
-    assert sec_slot.faces(), "Expected valid XY cross-section at mid-height of label tab slot"
+    # Verify the undercut tab slot and 0.6mm retention roof on a 2x2 bin across all 4 label_style modes:
+    for style in ("auto", "center_1u", "full_width", "per_column"):
+        p_style = GridfinityBinParams(
+            grid_x=2,
+            grid_y=1,
+            grid_z=3,
+            dividers_enabled=(style == "auto"),
+            dividers_x=1,
+            dividers_y=0,
+            label_style=style,
+        )
+        lh_part = create_label_holders(p_style)
+        assert lh_part is not None and lh_part.is_valid, f"Label holder invalid for style={style}"
+
+        # Cross-section through the 0.6mm retention roof (z = body_h - 0.3mm) vs undercut slot (z = body_h - 1.1mm):
+        # The roof section must have MORE material (larger area) than the undercut slot section below it,
+        # proving the 0.6mm retention roof overhangs the side tab slots!
+        z_top = p_style.grid_z * p_style.unit_z
+        sec_roof = section(lh_part, Plane.XY.offset(z_top - 0.3))
+        sec_slot = section(lh_part, Plane.XY.offset(z_top - 1.1))
+        area_roof = sum(f.area for f in sec_roof.faces())
+        area_slot = sum(f.area for f in sec_slot.faces())
+        assert area_roof > area_slot + 5.0, (
+            f"Expected retention roof area ({area_roof:.1f}) > undercut slot area ({area_slot:.1f}) for style={style}"
+        )
+
+    # Also verify "auto" mode ties label count to X-dividers (1 full-width when undivided, 2x 1U when divided)
+    lh_auto_undiv = create_label_holders(
+        GridfinityBinParams(grid_x=2, grid_y=1, dividers_enabled=False, label_style="auto")
+    )
+    lh_full = create_label_holders(
+        GridfinityBinParams(grid_x=2, grid_y=1, dividers_enabled=False, label_style="full_width")
+    )
+    lh_auto_div = create_label_holders(
+        GridfinityBinParams(grid_x=2, grid_y=1, dividers_enabled=True, dividers_x=1, dividers_y=0, label_style="auto")
+    )
+    lh_per_col = create_label_holders(
+        GridfinityBinParams(grid_x=2, grid_y=1, dividers_enabled=True, dividers_x=1, dividers_y=0, label_style="per_column")
+    )
+    assert abs(lh_auto_undiv.volume - lh_full.volume) < 1e-3, (
+        "Expected 'auto' with no dividers on 2x1 bin to match 'full_width'"
+    )
+    assert abs(lh_auto_div.volume - lh_per_col.volume) < 1e-3, (
+        "Expected 'auto' with 1 X-divider on 2x1 bin to match 'per_column' (2x 1U labels)"
+    )
     print(
         f"✓ Test 1 Passed: Default {p1.grid_x}x{p1.grid_y}x{p1.grid_z}u bin "
-        f"({bbox1.size.X:.2f}x{bbox1.size.Y:.2f}x{bbox1.size.Z:.2f}mm, "
-        f"tab_width={p1.label_tab_width}mm, tab_height={p1.label_thickness}mm, solids={len(bin1.solids())})"
+        f"({bbox1.size.X:.2f}x{bbox1.size.Y:.2f}x{bbox1.size.Z:.2f}mm) + verified 0.6mm undercut retention roof "
+        f"& all 4 label_style modes ('auto', 'center_1u', 'full_width', 'per_column')"
     )
 
     # 4. Test large overhang on scooped wall (reproducing & verifying fix for user screenshot)
@@ -123,6 +163,7 @@ def validate():
         grid_x=1,
         grid_y=1,
         grid_z=3,
+        dividers_enabled=False,
         overhang_enabled=True,
         overhang_front=12.0,
         scoop_enabled=True,
