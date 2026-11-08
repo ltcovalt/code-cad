@@ -76,14 +76,39 @@ def validate():
         f"Expected symmetric front+back scoop volume ({scoops_both.volume:.1f}) == 2x single scoop ({scoops_single.volume:.1f})"
     )
 
-    p_asym = GridfinityBinParams(scoop_enabled=True, scoop_front_radius=6.0, scoop_back_radius=10.0)
+    p_asym = GridfinityBinParams(
+        scoop_enabled=True,
+        scoop_style="directional",
+        scoop_front_radius=6.0,
+        scoop_back_radius=10.0,
+        scoop_left_radius=8.0,
+        scoop_right_radius=5.0,
+    )
     scoops_asym = create_compartment_scoops(p_asym)
     assert scoops_asym is not None and scoops_asym.is_valid
     asym_radii = [round(f.radius, 4) for f in scoops_asym.faces().filter_by(GeomType.CYLINDER) if f.radius is not None]
-    assert any(abs(r - 6.0) < 1e-3 for r in asym_radii) and any(abs(r - 10.0) < 1e-3 for r in asym_radii), (
-        f"Expected both 6.0mm and 10.0mm cylindrical scoop faces, found {asym_radii}"
+    for expected_r in (5.0, 6.0, 8.0, 10.0):
+        assert any(abs(r - expected_r) < 1e-3 for r in asym_radii), (
+            f"Expected {expected_r}mm cylindrical scoop face, found {asym_radii}"
+        )
+
+    # Verify 360° "bowl" scoop style
+    p_bowl = GridfinityBinParams(
+        grid_x=2,
+        grid_y=1,
+        grid_z=3,
+        scoop_enabled=True,
+        scoop_style="bowl",
+        scoop_bowl_radius=8.0,
     )
-    print(f"✓ Confirmed scoop_enabled toggle & independent front/back scoop radii (radii={sorted(set(asym_radii))}mm)")
+    scoops_bowl = create_compartment_scoops(p_bowl)
+    assert scoops_bowl is not None and scoops_bowl.is_valid and scoops_bowl.volume > 100.0
+    bowl_bin = create_gridfinity_bin(p_bowl)
+    assert bowl_bin.is_valid and len(bowl_bin.solids()) == 1, "Bowl-mode bin must be a single valid solid"
+    print(
+        f"✓ Confirmed directional 4-wall scoop radii (radii={sorted(set(asym_radii))}mm) "
+        f"& 360° 'bowl' mode (r={p_bowl.scoop_bowl_radius}mm)"
+    )
 
     # Verify auto-calculated label fins vs manual override
     labels_auto_3 = create_label_holders(GridfinityBinParams(label_fin_count=None, label_fin_max_span=12.0))
