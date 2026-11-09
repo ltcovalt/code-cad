@@ -33,7 +33,7 @@ except ImportError:
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = False      # Save .stl file on execution (default: False)
+EXPORT_STL: bool = True      # Save .stl file on execution (default: False)
 EXPORT_STEP: bool = False     # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"   # Relative subfolder alongside this script
 
@@ -62,9 +62,9 @@ class GridfinityBinParams:
     # --------------------------------------------------------------------------
     # Base Foot & Hardware Mounting
     # --------------------------------------------------------------------------
-    magnet_holes: bool = False           # If True, cuts 4 corner pockets per foot cell for 6x2mm magnets
-    magnet_diameter: float = 6.5        # Magnet pocket diameter in mm
-    magnet_depth: float = 2.4           # Magnet pocket depth in mm
+    magnet_holes: bool = True           # If True, cuts 4 corner pockets per foot cell for 6x2mm magnets
+    magnet_diameter: float = 6.1        # Magnet pocket diameter in mm
+    magnet_depth: float = 2.2           # Magnet pocket depth in mm
     magnet_offset: float = 13.0         # Distance from unit cell center to magnet centers (26mm spacing)
     screw_holes: bool = False           # If True, cuts through-holes for M3 mounting screws
     screw_diameter: float = 3.2         # Through-hole diameter in mm
