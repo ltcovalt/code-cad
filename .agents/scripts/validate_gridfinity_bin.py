@@ -110,10 +110,10 @@ def validate():
         f"& 360° 'bowl' mode (r={p_bowl.scoop_bowl_radius}mm)"
     )
 
-    # Verify auto-calculated label fins vs manual override
-    labels_auto_3 = create_label_holders(GridfinityBinParams(label_fin_count=None, label_fin_max_span=12.0))
-    labels_manual_3 = create_label_holders(GridfinityBinParams(label_fin_count=3))
-    labels_manual_0 = create_label_holders(GridfinityBinParams(label_fin_count=0))
+    # Verify auto-calculated label fins vs manual override on a 1u bin
+    labels_auto_3 = create_label_holders(GridfinityBinParams(grid_x=1, grid_y=1, label_fin_count=None, label_fin_max_span=12.0))
+    labels_manual_3 = create_label_holders(GridfinityBinParams(grid_x=1, grid_y=1, label_fin_count=3))
+    labels_manual_0 = create_label_holders(GridfinityBinParams(grid_x=1, grid_y=1, label_fin_count=0))
     assert labels_auto_3 is not None and labels_manual_3 is not None and labels_manual_0 is not None
     assert abs(labels_auto_3.volume - labels_manual_3.volume) < 1e-3, (
         "Expected auto fin calculation with max_span=12.0 on 1u bin to equal manual label_fin_count=3"
@@ -132,55 +132,93 @@ def validate():
     assert abs(bbox1.size.Y - expected_y1) < 0.05, f"Expected Y={expected_y1}, got {bbox1.size.Y}"
     assert abs(bbox1.size.Z - expected_top_z) < 0.05, f"Expected Z={expected_top_z}, got {bbox1.size.Z}"
 
-    # Verify the undercut tab slot and 0.6mm retention roof on a 2x2 bin across all 4 label_style modes:
-    for style in ("auto", "center_1u", "full_width", "per_column"):
-        p_style = GridfinityBinParams(
+    # Verify the undercut tab slot and 0.6mm retention roof on a 2x1 bin across placement modes:
+    for placement in ("center", "left", "right", "per_column"):
+        p_placement = GridfinityBinParams(
             grid_x=2,
             grid_y=1,
             grid_z=3,
-            dividers_enabled=(style == "auto"),
-            dividers_x=1,
-            dividers_y=0,
-            label_style=style,
+            dividers_enabled=False,
+            label_placement=placement,
+            label_units=1,
         )
-        lh_part = create_label_holders(p_style)
-        assert lh_part is not None and lh_part.is_valid, f"Label holder invalid for style={style}"
+        lh_part = create_label_holders(p_placement)
+        assert lh_part is not None and lh_part.is_valid, f"Label holder invalid for placement={placement}"
 
         # Cross-section through the 0.6mm retention roof (z = body_h - 0.3mm) vs undercut slot (z = body_h - 1.1mm):
         # The roof section must have MORE material (larger area) than the undercut slot section below it,
         # proving the 0.6mm retention roof overhangs the side tab slots!
-        z_top = p_style.grid_z * p_style.unit_z
+        z_top = p_placement.grid_z * p_placement.unit_z
         sec_roof = section(lh_part, Plane.XY.offset(z_top - 0.3))
         sec_slot = section(lh_part, Plane.XY.offset(z_top - 1.1))
         area_roof = sum(f.area for f in sec_roof.faces())
         area_slot = sum(f.area for f in sec_slot.faces())
         assert area_roof > area_slot + 5.0, (
-            f"Expected retention roof area ({area_roof:.1f}) > undercut slot area ({area_slot:.1f}) for style={style}"
+            f"Expected retention roof area ({area_roof:.1f}) > undercut slot area ({area_slot:.1f}) for placement={placement}"
         )
 
-    # Also verify "auto" mode ties label count to X-dividers (1 full-width when undivided, 2x 1U when divided)
-    lh_auto_undiv = create_label_holders(
-        GridfinityBinParams(grid_x=2, grid_y=1, dividers_enabled=False, label_style="auto")
+    # Verify label_units (1u vs 2u) and specific label_column indexing on a 3x1 bin
+    lh_3u_col2 = create_label_holders(
+        GridfinityBinParams(grid_x=3, grid_y=1, label_units=1, label_column=2)
     )
-    lh_full = create_label_holders(
-        GridfinityBinParams(grid_x=2, grid_y=1, dividers_enabled=False, label_style="full_width")
+    assert lh_3u_col2 is not None and lh_3u_col2.is_valid
+
+    lh_3u_col1 = create_label_holders(
+        GridfinityBinParams(grid_x=3, grid_y=1, label_units=1, label_column=1)
     )
-    lh_auto_div = create_label_holders(
-        GridfinityBinParams(grid_x=2, grid_y=1, dividers_enabled=True, dividers_x=1, dividers_y=0, label_style="auto")
+    lh_3u_left = create_label_holders(
+        GridfinityBinParams(grid_x=3, grid_y=1, label_units=1, label_placement="left")
     )
-    lh_per_col = create_label_holders(
-        GridfinityBinParams(grid_x=2, grid_y=1, dividers_enabled=True, dividers_x=1, dividers_y=0, label_style="per_column")
+    assert abs(lh_3u_col1.volume - lh_3u_left.volume) < 1e-3, (
+        "Expected label_column=1 to match label_placement='left'"
     )
-    assert abs(lh_auto_undiv.volume - lh_full.volume) < 1e-3, (
-        "Expected 'auto' with no dividers on 2x1 bin to match 'full_width'"
+
+    lh_3u_col3 = create_label_holders(
+        GridfinityBinParams(grid_x=3, grid_y=1, label_units=1, label_column=3)
     )
-    assert abs(lh_auto_div.volume - lh_per_col.volume) < 1e-3, (
-        "Expected 'auto' with 1 X-divider on 2x1 bin to match 'per_column' (2x 1U labels)"
+    lh_3u_right = create_label_holders(
+        GridfinityBinParams(grid_x=3, grid_y=1, label_units=1, label_placement="right")
     )
+    assert abs(lh_3u_col3.volume - lh_3u_right.volume) < 1e-3, (
+        "Expected label_column=3 to match label_placement='right'"
+    )
+
+    # Verify label_shelf_full_width toggle (compact 1U shelf vs full-width shelf on 3x1 bin)
+    lh_compact_left = create_label_holders(
+        GridfinityBinParams(grid_x=3, grid_y=1, label_units=1, label_placement="left", label_shelf_full_width=False)
+    )
+    lh_full_left = create_label_holders(
+        GridfinityBinParams(grid_x=3, grid_y=1, label_units=1, label_placement="left", label_shelf_full_width=True)
+    )
+    assert lh_compact_left is not None and lh_full_left is not None
+    bbox_compact = lh_compact_left.bounding_box()
+    bbox_full = lh_full_left.bounding_box()
+    assert bbox_compact.size.X < 45.0, (
+        f"Expected compact 1U shelf deck width < 45mm, got {bbox_compact.size.X:.2f}mm"
+    )
+    assert bbox_full.size.X > 115.0, (
+        f"Expected full-width shelf deck width > 115mm on 3x1 bin, got {bbox_full.size.X:.2f}mm"
+    )
+
+    # Verify composed full bin with compact shelf is a single solid
+    bin_compact = create_gridfinity_bin(
+        GridfinityBinParams(grid_x=3, grid_y=1, grid_z=3, label_units=1, label_placement="center", label_shelf_full_width=False)
+    )
+    assert bin_compact.is_valid and len(bin_compact.solids()) == 1, (
+        f"Expected 1 valid solid for bin with compact center label, got {len(bin_compact.solids())}"
+    )
+
+    # Verify 2U center label on 2x1 bin
+    lh_2u_center = create_label_holders(
+        GridfinityBinParams(grid_x=2, grid_y=1, label_placement="center", label_units=2)
+    )
+    assert lh_2u_center is not None and lh_2u_center.is_valid
+    bbox_2u = lh_2u_center.bounding_box()
+    assert bbox_2u.size.X > 75.0, f"Expected 2U label width > 75mm, got {bbox_2u.size.X:.2f}mm"
     print(
         f"✓ Test 1 Passed: Default {p1.grid_x}x{p1.grid_y}x{p1.grid_z}u bin "
-        f"({bbox1.size.X:.2f}x{bbox1.size.Y:.2f}x{bbox1.size.Z:.2f}mm) + verified 0.6mm undercut retention roof "
-        f"& all 4 label_style modes ('auto', 'center_1u', 'full_width', 'per_column')"
+        f"({bbox1.size.X:.2f}x{bbox1.size.Y:.2f}x{bbox1.size.Z:.2f}mm) + verified 0.6mm undercut retention roof, "
+        f"label_placement modes, label_units sizing, and label_column indexing"
     )
 
     # 4. Test large overhang on scooped wall (reproducing & verifying fix for user screenshot)
