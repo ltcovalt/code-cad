@@ -50,7 +50,7 @@ class ShaftEndCapParams:
 
     # Shaft / Bore Dimensions
     shaft_diameter: float = 12.0           # Nominal shaft/rod diameter in mm (12.7 mm = 1/2 inch)
-    fit_clearance: float = 0.1             # Diametral press-fit clearance in mm (bore dia = shaft_diameter + fit_clearance)
+    fit_clearance: float = 0.2             # Diametral press-fit clearance in mm (bore dia = shaft_diameter + fit_clearance)
     collar_length: float = 18.0            # Length of collar sleeve pressing onto shaft (mm)
     collar_wall_thickness: float = 2.4     # Wall thickness of collar cylinder (mm)
     lead_in_chamfer: float = 1.0           # Internal chamfer at collar mouth for effortless sliding onto rod (mm)

@@ -26,7 +26,7 @@ Parametric build123d end cap designed for rod and shaft assemblies, such as 1/2"
 | Parameter | Type | Default | Description |
 |:---|:---:|:---:|:---|
 | `shaft_diameter` | `float` | `12.0` | Nominal shaft/rod diameter in mm (`12.7 mm` = 1/2 inch) |
-| `fit_clearance` | `float` | `0.1` | Diametral fit clearance in mm (bore = `shaft_diameter + fit_clearance`) |
+| `fit_clearance` | `float` | `0.2` | Diametral fit clearance in mm (bore = `shaft_diameter + fit_clearance`) |
 | `collar_length` | `float` | `18.0` | Insertion depth of the collar sleeve pressing onto the rod (mm) |
 | `collar_wall_thickness` | `float` | `2.4` | Wall thickness of the collar sleeve (mm) |
 | `lead_in_chamfer` | `float` | `1.0` | Internal entry chamfer at collar mouth for easy push-on fit (mm) |
