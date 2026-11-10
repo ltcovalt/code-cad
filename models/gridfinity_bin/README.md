@@ -25,11 +25,15 @@ Each geometric feature is implemented as an independent, standalone component fu
 5. **[`create_label_holders(params)`](file:///home/luke/repos/code-cad/models/gridfinity_bin/gridfinity_bin.py#L815-L932)**:
    - Generates a continuous horizontal Pred-style label shelf deck at $z = \text{body\_h}$ supported by evenly spaced diagonal support fins (`label_fin_count`, `label_fin_max_span`, `label_fin_thickness`, `label_overhang_angle`) that bridge cleanly while preserving interior bin space underneath.
    - Cuts a two-tier recessed snap-in label socket into the top of the shelf matching standard 3D-printable Pred labels ($11.5\,\text{mm}$ deep) with self-contained undercut side-tab slots ($1.0\,\text{mm}$ tall beneath a $0.6\,\text{mm}$ top retention roof flush with $z = \text{body\_h}$), locking down both outer and inner label tabs without interfering with upper bin stacking.
-   - Supports 4 `label_style` layouts:
-     - `"auto"` *(default)*: Ties labels to X-dividers when compartments are $\ge 1\text{U}$ wide (e.g., a $2\times2$ bin gets 1 full-width label when undivided, or 2 standard 1U labels when divided in two), falling back to `"per_column"` if compartments are narrower than 1U.
-     - `"center_1u"`: Always places a single centered 1U label ($36.4\,\text{mm}$ pocket width) regardless of bin width or X-dividers.
-     - `"full_width"`: Always places a single full-width label across the bin width regardless of X-dividers.
-     - `"per_column"`: Always places one standard 1U label per $42\,\text{mm}$ grid column along X regardless of X-dividers.
+   - Supports flexible label placement and sizing:
+     - `label_placement`:
+       - `"center"` *(default)*: Centers the `label_units` label across the bin width.
+       - `"left"`: Left-aligns the `label_units` label (starting at column 1).
+       - `"right"`: Right-aligns the `label_units` label (ending at column `grid_x`).
+       - `"per_column"`: Places one standard 1U label per $42\,\text{mm}$ grid column along X.
+     - `label_units`: Number of grid units wide ($1, 2, 3\dots$) for custom labels (width $= U \times 42.0 - 5.6\,\text{mm}$).
+     - `label_column`: Optional 1-indexed column start ($1\dots\text{grid\_x}$) to place a custom label at an exact unit column, overriding `"center"`/`"left"`/`"right"`.
+     - `label_shelf_full_width`: If `False` *(default)*, the shelf deck only spans the width of the label with dedicated outer boundary fins at open edges, maximizing open vertical clearance in the rest of the bin; if `True`, the shelf deck spans the full compartment row width.
 
 ---
 
@@ -48,15 +52,20 @@ All geometric parameters are defined in [`GridfinityBinParams`](file:///home/luk
 | `wall_thickness` | `float` | `1.2` | Exterior wall thickness in mm (3 perimeters w/ $0.4\,\text{mm}$ nozzle) |
 | `floor_thickness` | `float` | `2.0` | Solid floor thickness above base feet sockets in mm |
 | `corner_radius` | `float` | `3.75` | Outer vertical corner radius in mm ($4.0\,\text{mm} - 0.25\,\text{mm}$ inset) |
-| `magnet_holes` | `bool` | `False` | Master toggle: adds 4 corner pockets per foot cell for $6\times 2\,\text{mm}$ magnets |
+| `magnet_holes` | `bool` | `True` | Master toggle: adds 4 corner pockets per foot cell for $6\times 2\,\text{mm}$ magnets |
+| `magnet_diameter` | `float` | `6.1` | Magnet pocket diameter in mm |
+| `magnet_depth` | `float` | `2.2` | Magnet pocket depth in mm |
 | `screw_holes` | `bool` | `False` | Master toggle: adds through-holes for M3 mounting bolts |
 | `stackable` | `bool` | `True` | Master toggle: adds continuous upper stacking lip for bin nesting |
 | `lip_height` | `float` | `3.8` | Printable stacking lip height above `body_h` in mm |
 | `lip_top_flat` | `float` | `0.6` | Flat top rim width in mm (avoids fragile knife-edge) |
-| `label_enabled` | `bool` | `True` | Master toggle: adds Pred-compatible printable label shelf & recessed socket |
+| `label_enabled` | `bool` | `True` | Master toggle: adds printable label shelf & recessed socket |
+| `label_shelf_full_width`| `bool` | `False` | If False, shelf deck is sized to label; if True, spans full row width |
+| `label_placement` | `str` | `"center"` | `"center"`, `"left"`, `"right"`, or `"per_column"` |
+| `label_units` | `int` | `1` | Width of label in grid units ($1, 2, 3\dots$, clamped to `grid_x`) |
+| `label_column` | `int \| None` | `None` | Specific 1-indexed column start ($1\dots\text{grid\_x}$) |
 | `label_wall` | `str` | `"back"` | Compartment wall (`"back"` or `"front"`) where label shelf mounts |
-| `label_style` | `str` | `"auto"` | `"auto"`, `"center_1u"`, `"full_width"`, or `"per_column"` |
-| `label_height` | `float` | `11.5` | Label plate depth (Y) in mm (fits $\sim 11.3\,\text{mm}$ Pred label) |
+| `label_height` | `float` | `11.5` | Label plate depth (Y) in mm (fits $\sim 11.3\,\text{mm}$ label) |
 | `label_thickness` | `float` | `1.0` | Recessed pocket & tab slot height (Z) in mm (fits $\sim 0.87\,\text{mm}$ tab) |
 | `label_shelf_depth` | `float` | `13.5` | Total inward depth (Y) of the supporting shelf overhang in mm |
 | `label_shelf_thickness`| `float`| `2.4` | Vertical thickness of shelf deck in mm ($0.6$ roof + $1.0$ slot + $0.8$ floor) |

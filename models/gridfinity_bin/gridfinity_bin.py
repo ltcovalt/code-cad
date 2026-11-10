@@ -33,7 +33,7 @@ except ImportError:
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = True      # Save .stl file on execution (default: False)
+EXPORT_STL: bool = False      # Save .stl file on execution (default: False)
 EXPORT_STEP: bool = False     # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"   # Relative subfolder alongside this script
 
@@ -77,12 +77,15 @@ class GridfinityBinParams:
     lip_top_flat: float = 0.6           # Width of flat top rim edge in mm (prevents fragile knife-edge)
 
     # --------------------------------------------------------------------------
-    # Pred-Compatible Printable Label Holder
+    # Printable Label Holder
     # --------------------------------------------------------------------------
-    label_enabled: bool = True          # If True, adds Pred-style printable label shelf & recessed socket
+    label_enabled: bool = True          # Master toggle: adds printable label shelf & recessed socket
+    label_shelf_full_width: bool = False # If True, shelf spans full compartment width; if False, sized to label(s)
+    label_placement: Literal["center", "left", "right", "per_column"] = "center"  # Label placement along X
+    label_units: int = 1                # Width in grid units: 1, 2, 3... (clamped to grid_x)
+    label_column: Optional[int] = None  # Specific 1-indexed column start (1..grid_x); overrides left/center/right
     label_wall: Literal["back", "front"] = "back"  # Wall inside compartment where label shelf is mounted
-    label_style: Literal["auto", "center_1u", "full_width", "per_column"] = "auto"  # Label layout style
-    label_height: float = 11.5          # Label plate depth (Y) in mm (fits ~11.3mm Pred label)
+    label_height: float = 11.5          # Label plate depth (Y) in mm (fits ~11.3mm label)
     label_thickness: float = 1.0        # Recessed pocket & tab slot height (Z) in mm (fits ~0.87mm tab)
     label_shelf_depth: float = 13.5     # Total inward depth (Y) of the supporting shelf overhang in mm
     label_shelf_thickness: float = 2.4  # Vertical thickness of shelf deck in mm (0.6 roof + 1.0 slot + 0.8 floor)
@@ -861,13 +864,87 @@ def create_compartment_scoops(params: GridfinityBinParams) -> Optional[Part]:
 
 
 # ==============================================================================
-# Component 5: Pred-Compatible Printable Label Holder (Bridged Support Fins)
+# Component 5: Printable Label Holder (Bridged Support Fins & Sized Shelf Decks)
 # ==============================================================================
+def _compute_label_pocket_specs(
+    params: GridfinityBinParams, env: _BinEnvelope
+) -> list[tuple[float, float, int]]:
+    """
+    Computes (center_x, pocket_width, units) for each label pocket along X.
+    """
+    units = max(1, min(env.gx, params.label_units))
+    unit_pw = max(8.0, units * env.pitch_xy - params.label_width_margin)
+    t_div = params.divider_thickness
+
+    specs: list[tuple[float, float, int]] = []
+
+    if params.label_placement == "per_column":
+        pw = max(8.0, env.pitch_xy - params.label_width_margin)
+        for ix in range(env.gx):
+            scx = env.top_cx + (ix - (env.gx - 1) / 2.0) * env.pitch_xy
+            specs.append((scx, pw, 1))
+    else:  # "center" (default), "left", "right", or label_column specified
+        if params.label_column is not None:
+            start_col = max(1, min(env.gx - units + 1, params.label_column))
+            col_offset = (start_col - 1) + (units - 1) / 2.0
+            scx = env.top_cx + (col_offset - (env.gx - 1) / 2.0) * env.pitch_xy
+        elif params.label_placement == "left":
+            col_offset = (units - 1) / 2.0
+            scx = env.top_cx + (col_offset - (env.gx - 1) / 2.0) * env.pitch_xy
+        elif params.label_placement == "right":
+            col_offset = (env.gx - units) + (units - 1) / 2.0
+            scx = env.top_cx + (col_offset - (env.gx - 1) / 2.0) * env.pitch_xy
+        else:  # "center"
+            scx = env.top_cx
+        specs.append((scx, unit_pw, units))
+
+    return specs
+
+
+def _compute_label_shelf_intervals(
+    params: GridfinityBinParams,
+    env: _BinEnvelope,
+    specs: list[tuple[float, float, int]],
+) -> list[tuple[float, float]]:
+    """
+    Computes X-span intervals [x_min, x_max] for the horizontal shelf deck.
+    If label_shelf_full_width is True, spans the entire row width.
+    If False, sizes each shelf segment to the label pocket (U * pitch_xy - 2 * wall_thickness).
+    """
+    row_x_min = env.top_cx - env.inner_w / 2.0
+    row_x_max = env.top_cx + env.inner_w / 2.0
+
+    if params.label_shelf_full_width:
+        return [(row_x_min, row_x_max)]
+
+    raw_intervals: list[tuple[float, float]] = []
+    for scx, pw, u in specs:
+        deck_w = u * env.pitch_xy - 2.0 * params.wall_thickness
+        deck_w = max(pw + 2.0 * params.label_tab_extension + 1.0, deck_w)
+        x0 = max(row_x_min, scx - deck_w / 2.0)
+        x1 = min(row_x_max, scx + deck_w / 2.0)
+        raw_intervals.append((x0, x1))
+
+    raw_intervals.sort()
+    merged: list[tuple[float, float]] = []
+    for x0, x1 in raw_intervals:
+        if not merged:
+            merged.append((x0, x1))
+        else:
+            prev_x0, prev_x1 = merged[-1]
+            if x0 <= prev_x1 + 1.0:
+                merged[-1] = (prev_x0, max(prev_x1, x1))
+            else:
+                merged.append((x0, x1))
+
+    return merged
+
+
 def _create_label_slot_cutouts(
     params: GridfinityBinParams, env: _BinEnvelope
 ) -> Optional[Part]:
     """
-    Builds the two-tier negative cutout solid for all Pred label pockets and undercut
+    Builds the two-tier negative cutout solid for all label pockets and undercut
     side snap-tab slots:
       - Main label window (`sw x lh`): open through the top surface (z = body_h) down to
         the pocket floor (z = body_h - (roof_t + label_thickness)).
@@ -893,45 +970,8 @@ def _create_label_slot_cutouts(
     tab_w = min(params.label_tab_width, lh - 1.0)
     tab_ext = params.label_tab_extension
 
-    pocket_x_specs: list[tuple[float, float]] = []
-    if params.label_style == "center_1u":
-        pw = max(8.0, env.pitch_xy - params.label_width_margin)
-        pocket_x_specs.append((env.top_cx, pw))
-    elif params.label_style == "full_width":
-        pw = max(8.0, env.gx * env.pitch_xy - params.label_width_margin)
-        pocket_x_specs.append((env.top_cx, pw))
-    elif params.label_style == "per_column":
-        pw = max(8.0, env.pitch_xy - params.label_width_margin)
-        for ix in range(env.gx):
-            scx = env.top_cx + (ix - (env.gx - 1) / 2.0) * env.pitch_xy
-            pocket_x_specs.append((scx, pw))
-    else:
-        # "auto": tie labels to X-dividers when compartments are >= 1U wide (cx_count <= gx)
-        if env.cx_count == 1:
-            pw = max(8.0, env.gx * env.pitch_xy - params.label_width_margin)
-            pocket_x_specs.append((env.top_cx, pw))
-        elif env.cx_count == env.gx:
-            pw = max(8.0, env.pitch_xy - params.label_width_margin)
-            for ix in range(env.gx):
-                scx = env.top_cx + (ix - (env.gx - 1) / 2.0) * env.pitch_xy
-                pocket_x_specs.append((scx, pw))
-        elif 1 < env.cx_count < env.gx:
-            comp_pitch = (env.gx * env.pitch_xy) / env.cx_count
-            pw = max(8.0, comp_pitch - params.label_width_margin)
-            for icx in range(env.cx_count):
-                ccx = (
-                    env.top_cx
-                    - env.inner_w / 2.0
-                    + env.comp_w / 2.0
-                    + icx * (env.comp_w + t_div)
-                )
-                pocket_x_specs.append((ccx, pw))
-        else:
-            # Fallback when cx_count > gx (compartments narrower than 1U): 1U label per column
-            pw = max(8.0, env.pitch_xy - params.label_width_margin)
-            for ix in range(env.gx):
-                scx = env.top_cx + (ix - (env.gx - 1) / 2.0) * env.pitch_xy
-                pocket_x_specs.append((scx, pw))
+    specs = _compute_label_pocket_specs(params, env)
+    pocket_x_specs = [(scx, pw) for scx, pw, _ in specs]
 
     y_pocket_centers: list[float] = []
     for icy in range(env.cy_count):
@@ -973,11 +1013,12 @@ def _create_label_slot_cutouts(
 
 def create_label_holders(params: GridfinityBinParams) -> Optional[Part]:
     """
-    Generates the Pred-compatible printable label holder shelf and recessed snap-in socket:
-    - Continuous horizontal shelf deck at z = body_h extending inward from the compartment wall.
-    - Evenly spaced diagonal support fins underneath the shelf deck (instead of a solid
-      block) that bridge effortlessly during printing while preserving interior bin volume.
-    - Recessed pocket on top of the shelf matching standard 3D-printable Pred labels
+    Generates the printable label holder shelf and recessed snap-in socket:
+    - Horizontal shelf deck at z = body_h (sized to the label pocket when
+      label_shelf_full_width is False, or full row width when True).
+    - Support fins underneath the shelf deck, including automatic outer boundary
+      fins at any open edge not touching a wall or divider.
+    - Recessed pocket on top of the shelf matching standard 3D-printable labels
       with self-contained undercut side-tab slots and a 0.6mm top retention roof.
     """
     if not params.label_enabled:
@@ -999,19 +1040,35 @@ def create_label_holders(params: GridfinityBinParams) -> Optional[Part]:
     z_top = env.body_h
     z_deck_bot = z_top - deck_t
     z_fin_bot = max(env.floor_z, z_deck_bot - fin_drop_h)
+    ledge_h = min(0.8, max(0.0, z_deck_bot - env.floor_z))
+    fin_tip_h = min(0.8, max(0.0, (z_deck_bot - z_fin_bot) * 0.5))
+    fin_t = max(0.8, params.label_fin_thickness)
+    max_span = max(2.0, params.label_fin_max_span)
 
     inner_env_part = _create_tapered_inner_envelope(env)
     shelf_solids = []
 
-    # Number of support fins per X compartment (manual override or auto-calculated from max bridge span)
-    if params.label_fin_count is not None:
-        fins_per_comp = max(0, params.label_fin_count)
-    else:
-        max_span = max(2.0, params.label_fin_max_span)
-        fins_per_comp = max(0, math.ceil(env.comp_w / max_span) - 1)
-    fin_t = max(0.8, params.label_fin_thickness)
+    specs = _compute_label_pocket_specs(params, env)
+    intervals = _compute_label_shelf_intervals(params, env, specs)
 
-    # Build a continuous horizontal shelf deck per Y-row + diagonal support fins in each X-compartment
+    row_x_min = env.top_cx - env.inner_w / 2.0
+    row_x_max = env.top_cx + env.inner_w / 2.0
+
+    # Interior divider boundary positions along X
+    divider_x_locs: list[float] = []
+    if env.cx_count > 1:
+        for icx in range(1, env.cx_count):
+            x_div = row_x_min + icx * env.comp_w + (icx - 0.5) * t_div
+            divider_x_locs.append(x_div)
+
+    def is_adjacent_to_wall_or_divider(x_val: float) -> bool:
+        if abs(x_val - row_x_min) < 1.0 or abs(x_val - row_x_max) < 1.0:
+            return True
+        for x_div in divider_x_locs:
+            if abs(x_val - x_div) < (t_div / 2.0 + 1.0):
+                return True
+        return False
+
     for icy in range(env.cy_count):
         ccy = (
             env.top_cy
@@ -1021,106 +1078,120 @@ def create_label_holders(params: GridfinityBinParams) -> Optional[Part]:
         )
 
         if params.label_wall == "back":
-            # Attached to back wall of compartment (y_wall = ccy + comp_l/2), overhanging toward -Y
             y_wall = ccy + env.comp_l / 2.0
             y_tip = y_wall - shelf_d
+            s_y = -1.0
         else:
-            # Attached to front wall of compartment (y_wall = ccy - comp_l/2), overhanging toward +Y
             y_wall = ccy - env.comp_l / 2.0
             y_tip = y_wall + shelf_d
+            s_y = 1.0
 
-        # 1A. Continuous horizontal shelf deck spanning full inner_w across X
-        with BuildPart() as row_deck:
-            with BuildSketch(Plane.YZ.offset(env.top_cx)) as sk_deck:
-                Polygon(
-                    (y_wall, z_top),
-                    (y_tip, z_top),
-                    (y_tip, z_deck_bot),
-                    (y_wall, z_deck_bot),
-                    align=None,
-                )
-            extrude(amount=env.inner_w / 2.0, both=True)
+        for x0, x1 in intervals:
+            deck_span = x1 - x0
+            deck_cx = (x0 + x1) / 2.0
 
-            with BuildSketch(Plane.XY.offset(z_deck_bot - 0.1)) as sk_row_clip:
-                with Locations([(env.top_cx, ccy)]):
-                    RectangleRounded(env.inner_w, env.comp_l, env.r_inner)
-            extrude(amount=deck_t + 0.2, mode=Mode.INTERSECT)
-            add(inner_env_part, mode=Mode.INTERSECT)
-
-        shelf_solids.append(row_deck.part)
-
-        # 1B. 45° wall-support ledge (0.8mm) + diagonal support fins in each X-compartment
-        ledge_h = min(0.8, max(0.0, z_deck_bot - env.floor_z))
-        fin_tip_h = min(0.8, max(0.0, (z_deck_bot - z_fin_bot) * 0.5))
-
-        for icx in range(env.cx_count):
-            ccx = (
-                env.top_cx
-                - env.inner_w / 2.0
-                + env.comp_w / 2.0
-                + icx * (env.comp_w + t_div)
-            )
-            with BuildPart() as comp_support:
-                # 45° perimeter support bevel along the compartment side & back walls directly
-                # beneath the shelf deck so the shelf edges sit on top of the bin wall/rim
-                if ledge_h > 0.2 and env.comp_w > 2.0 * ledge_h + 1.0:
-                    with BuildPart() as wall_ledge:
-                        with BuildSketch(Plane.YZ.offset(ccx)) as sk_ledge_blk:
-                            Polygon(
-                                (y_wall, z_deck_bot),
-                                (y_tip, z_deck_bot),
-                                (y_tip, z_deck_bot - ledge_h),
-                                (y_wall, z_deck_bot - ledge_h),
-                                align=None,
-                            )
-                        extrude(amount=env.comp_w / 2.0, both=True)
-
-                        # Subtract inner 45° taper (inset by ledge_h at z_deck_bot -> 0 at z_deck_bot - ledge_h)
-                        r_in_top = max(0.2, env.r_inner - ledge_h)
-                        with BuildSketch(Plane.XY.offset(z_deck_bot - ledge_h)) as sk_l0:
-                            with Locations([(ccx, ccy)]):
-                                RectangleRounded(env.comp_w, env.comp_l, env.r_inner)
-                        with BuildSketch(Plane.XY.offset(z_deck_bot)) as sk_l1:
-                            with Locations([(ccx, ccy)]):
-                                RectangleRounded(
-                                    env.comp_w - 2.0 * ledge_h,
-                                    env.comp_l - 2.0 * ledge_h,
-                                    r_in_top,
-                                )
-                        loft(ruled=True, mode=Mode.SUBTRACT)
-
-                    add(wall_ledge.part)
-
-                # Evenly spaced trapezoidal support fins underneath the deck (with 0.8mm vertical
-                # front tip face at y_tip so the top 4 layers of each fin reach the front edge)
-                if fins_per_comp > 0 and z_deck_bot > z_fin_bot + 0.5:
-                    bay_span = env.comp_w / (fins_per_comp + 1)
-                    for i_fin in range(1, fins_per_comp + 1):
-                        fin_x = (ccx - env.comp_w / 2.0) + i_fin * bay_span
-                        with BuildSketch(Plane.YZ.offset(fin_x)) as sk_fin:
-                            Polygon(
-                                (y_wall, z_deck_bot),
-                                (y_tip, z_deck_bot),
-                                (y_tip, z_deck_bot - fin_tip_h),
-                                (y_wall, z_fin_bot),
-                                align=None,
-                            )
-                        extrude(amount=fin_t / 2.0, both=True)
-
-                with BuildSketch(Plane.XY.offset(z_fin_bot - 0.1)) as sk_fin_clip:
-                    with Locations([(ccx, ccy)]):
-                        RectangleRounded(env.comp_w, env.comp_l, env.r_inner)
-                extrude(amount=(z_deck_bot - z_fin_bot) + 0.2, mode=Mode.INTERSECT)
+            # 1. Horizontal shelf deck
+            with BuildPart() as comp_deck:
+                with BuildSketch(Plane.YZ.offset(deck_cx)) as sk_deck:
+                    Polygon(
+                        (y_wall, z_top),
+                        (y_tip, z_top),
+                        (y_tip, z_deck_bot),
+                        (y_wall, z_deck_bot),
+                        align=None,
+                    )
+                extrude(amount=deck_span / 2.0, both=True)
                 add(inner_env_part, mode=Mode.INTERSECT)
+            shelf_solids.append(comp_deck.part)
 
-            shelf_solids.append(comp_support.part)
+            # 2. Wall-support ledges (under shelf deck at exterior walls)
+            if ledge_h > 0.2:
+                # Back wall ledge along the shelf interval
+                with BuildPart() as b_ledge:
+                    with BuildSketch(Plane.YZ.offset(deck_cx)) as sk_bl:
+                        Polygon(
+                            (y_wall, z_deck_bot),
+                            (y_wall + s_y * ledge_h, z_deck_bot),
+                            (y_wall, z_deck_bot - ledge_h),
+                            align=None,
+                        )
+                    extrude(amount=deck_span / 2.0, both=True)
+                    add(inner_env_part, mode=Mode.INTERSECT)
+                shelf_solids.append(b_ledge.part)
 
-    # Combine all shelf decks + fins and cut the recessed Pred snap-in label sockets
+                # Left side wall ledge if x0 touches left exterior wall
+                if abs(x0 - row_x_min) < 1.0:
+                    with BuildPart() as l_ledge:
+                        with BuildSketch(Plane.XZ.offset(ccy)) as sk_ll:
+                            Polygon(
+                                (row_x_min, z_deck_bot),
+                                (row_x_min + ledge_h, z_deck_bot),
+                                (row_x_min, z_deck_bot - ledge_h),
+                                align=None,
+                            )
+                        extrude(amount=env.comp_l / 2.0, both=True)
+                        add(inner_env_part, mode=Mode.INTERSECT)
+                    shelf_solids.append(l_ledge.part)
+
+                # Right side wall ledge if x1 touches right exterior wall
+                if abs(x1 - row_x_max) < 1.0:
+                    with BuildPart() as r_ledge:
+                        with BuildSketch(Plane.XZ.offset(ccy)) as sk_rl:
+                            Polygon(
+                                (row_x_max, z_deck_bot),
+                                (row_x_max - ledge_h, z_deck_bot),
+                                (row_x_max, z_deck_bot - ledge_h),
+                                align=None,
+                            )
+                        extrude(amount=env.comp_l / 2.0, both=True)
+                        add(inner_env_part, mode=Mode.INTERSECT)
+                    shelf_solids.append(r_ledge.part)
+
+            # 3. Support fins (including outer boundary fins at open edges)
+            left_open = not is_adjacent_to_wall_or_divider(x0)
+            right_open = not is_adjacent_to_wall_or_divider(x1)
+
+            fin_positions: list[float] = []
+            if left_open:
+                fin_positions.append(x0 + fin_t / 2.0)
+            if right_open:
+                fin_positions.append(x1 - fin_t / 2.0)
+
+            x_anchor_left = (x0 + fin_t / 2.0) if left_open else x0
+            x_anchor_right = (x1 - fin_t / 2.0) if right_open else x1
+            inner_span = x_anchor_right - x_anchor_left
+
+            if inner_span > 2.0:
+                if params.label_fin_count is not None:
+                    n_inter = max(0, params.label_fin_count)
+                else:
+                    n_inter = max(0, math.ceil(inner_span / max_span) - 1)
+
+                if n_inter > 0:
+                    step = inner_span / (n_inter + 1)
+                    for i in range(1, n_inter + 1):
+                        fin_positions.append(x_anchor_left + i * step)
+
+            # Build all fins for this interval
+            for fx in fin_positions:
+                with BuildPart() as fin_part:
+                    with BuildSketch(Plane.YZ.offset(fx)) as sk_fin:
+                        Polygon(
+                            (y_wall, z_deck_bot),
+                            (y_tip, z_deck_bot),
+                            (y_tip, z_deck_bot - fin_tip_h),
+                            (y_wall, z_fin_bot),
+                            align=None,
+                        )
+                    extrude(amount=fin_t / 2.0, both=True)
+                    add(inner_env_part, mode=Mode.INTERSECT)
+                shelf_solids.append(fin_part.part)
+
     with BuildPart() as label_builder:
         add(shelf_solids)
-        slot_cutout = _create_label_slot_cutouts(params, env)
-        if slot_cutout is not None:
-            add(slot_cutout, mode=Mode.SUBTRACT)
+        cutouts = _create_label_slot_cutouts(params, env)
+        if cutouts is not None:
+            add(cutouts, mode=Mode.SUBTRACT)
 
     return label_builder.part
 
@@ -1174,8 +1245,17 @@ if __name__ == "__main__":
         output_dir.mkdir(parents=True, exist_ok=True)
 
         dims = f"{params.grid_x}x{params.grid_y}x{params.grid_z}u"
-        style = f"pred_label_{params.label_style}" if params.label_enabled else "standard"
-        base_filename = f"gridfinity_bin_{dims}_{style}"
+        if params.label_enabled:
+            if params.label_column is not None:
+                placement_str = f"col{params.label_column}_{params.label_units}u"
+            elif params.label_placement in ("left", "center", "right"):
+                placement_str = f"{params.label_placement}_{params.label_units}u"
+            else:
+                placement_str = params.label_placement
+            label_tag = f"label_{placement_str}"
+        else:
+            label_tag = "standard"
+        base_filename = f"gridfinity_bin_{dims}_{label_tag}"
 
         if EXPORT_STL:
             stl_path = output_dir / f"{base_filename}.stl"
