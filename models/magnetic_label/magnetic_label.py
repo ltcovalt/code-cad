@@ -33,15 +33,18 @@ if os.path.isdir("build123d") and sys.path and sys.path[0] in ("", "."):
 
 from build123d import *
 
-try:
-    from ocp_viewer import Camera, set_defaults, show, show_object
-    HAS_OCP_VIEWER = True
-except ImportError:
+
+def _get_viewer():
+    """Lazily import ocp_viewer or ocp_vscode only when interactive preview is requested."""
     try:
-        from ocp_vscode import Camera, set_defaults, show, show_object
-        HAS_OCP_VIEWER = True
+        from ocp_viewer import Camera, set_defaults, show
+        return Camera, set_defaults, show
     except ImportError:
-        HAS_OCP_VIEWER = False
+        try:
+            from ocp_vscode import Camera, set_defaults, show
+            return Camera, set_defaults, show
+        except ImportError:
+            return None
 
 
 # ==============================================================================
@@ -519,7 +522,9 @@ def batch_generate(
                 print(f"       -> Saved: {f}")
 
     # Arrange and show all labels in ocp_viewer / ocp_vscode viewer
-    if preview_grid and HAS_OCP_VIEWER and results:
+    viewer = _get_viewer() if preview_grid and results else None
+    if viewer is not None:
+        Camera, set_defaults, show = viewer
         set_defaults(orbit_control=True)
         print(f"\nArranging {len(results)} labels in viewer...")
 
@@ -609,7 +614,9 @@ def main():
         print(f" Exported files:    {files}")
 
     # Preview in ocp_viewer / ocp_vscode
-    if HAS_OCP_VIEWER:
+    viewer = _get_viewer()
+    if viewer is not None:
+        Camera, set_defaults, show = viewer
         set_defaults(orbit_control=True)
         print("\nSending 3D model to viewer...")
 
