@@ -8,7 +8,7 @@ Parametric `build123d` snap-on C-clip spacer designed to add precise axial spaci
 
 - **Parametric Spacer Thickness**: Configure exact axial spacing (`thickness`, Z height) added along the rod.
 - **Parametric Shaft & Outer Diameters**: Independently specify `inside_diameter` (nominal rod/shaft size), `fit_clearance` (default `0.2 mm` diametral clearance for 3D printing), and `outside_diameter`.
-- **Snap-On C-Opening**: Configurable `opening_angle` (`< 180°` so the clip wraps around and retains itself on the shaft) with rounded `tip_fillet` jaw corners for smooth snap-on gliding and comfortable handling.
+- **Snap-On C-Opening**: Configurable `opening_angle` (`< 180°` so the clip wraps around and retains itself on the shaft), `jaw_flare_angle` (controls how straight/closed the outer jaw edges are relative to the inner rim), `jaw_curve_depth` (gently bows each jaw face inward into a smooth C-curve between the outer and inner points), and independent `inner_tip_fillet` / `outer_tip_fillet` jaw radii.
 - **Inside-Edge Removal Cutout**: Smooth elliptical cutout bordering the shaft (defaulting to the spine opposite the C-opening at `180°`) with filleted entry corners to reduce bending stress risers while creating a pocket for a fingernail, pick, or small tool to grab and remove the clip.
 - **Subtle Edge Chamfer**: Optional small bevel on the top and bottom perimeter edges to prevent print-bed elephant's foot and sharp edges.
 
@@ -18,15 +18,18 @@ Parametric `build123d` snap-on C-clip spacer designed to add precise axial spaci
 
 | Parameter | Type | Default | Description |
 |:---|:---:|:---:|:---|
-| `thickness` | `float` | `5.0` | Axial thickness / space added by the spacer in mm (Z height) |
+| `thickness` | `float` | `6.0` | Axial thickness / space added by the spacer in mm (Z height) |
 | `inside_diameter` | `float` | `44.0` | Nominal diameter of the rod/shaft to fit in mm |
-| `outside_diameter` | `float` | `72.0` | Outer diameter of the spacer ring in mm |
+| `outside_diameter` | `float` | `76.0` | Outer diameter of the spacer ring in mm |
 | `fit_clearance` | `float` | `0.2` | Diametral bore clearance in mm (bore = `inside_diameter + fit_clearance`) |
-| `opening_angle` | `float` | `90.0` | Angular width of the C-opening in degrees (`< 180` for shaft retention) |
-| `tip_fillet` | `float` | `4.0` | Rounding radius on the C-opening jaw tips in mm (`0.0` for crisp tips) |
+| `opening_angle` | `float` | `90.0` | Angular width of inner C-opening in degrees (`< 180` for shaft retention) |
+| `jaw_flare_angle` | `float` | `8.0` | Jaw cut angle from `+X` in degrees (`0` = straight parallel slot, smaller = more closed outer rim) |
+| `jaw_curve_depth` | `float` | `1.2` | Concave C-curve bow depth along each jaw face in mm (`0.0` for straight jaw) |
+| `inner_tip_fillet` | `float` | `3.0` | Rounding radius transitioning jaw edge into inner bore in mm (`0.0` for crisp corner) |
+| `outer_tip_fillet` | `float` | `2.4` | Rounding radius curving outer jaw point toward inner point in mm (`0.0` for crisp tip) |
 | `removal_notch_enabled` | `bool` | `True` | Master toggle: inside-edge grab/remove cutout bordering the shaft |
-| `removal_notch_width` | `float` | `24.0` | Tangential width of the inside-edge cutout in mm |
-| `removal_notch_depth` | `float` | `6.0` | Radial depth of cutout extending outward from inner bore in mm |
+| `removal_notch_width` | `float` | `32.0` | Tangential width of the inside-edge cutout in mm |
+| `removal_notch_depth` | `float` | `8.0` | Radial depth of cutout extending outward from inner bore in mm |
 | `removal_notch_angle` | `float` | `180.0` | Angular position of cutout in degrees (`180` = spine opposite C-opening) |
 | `removal_notch_fillet` | `float` | `0.6` | Transition fillet where cutout meets inner bore in mm (`0.0` for crisp edge) |
 | `edge_chamfer_enabled` | `bool` | `True` | Master toggle: subtle top and bottom perimeter edge bevel |

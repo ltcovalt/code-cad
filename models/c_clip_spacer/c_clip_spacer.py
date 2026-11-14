@@ -35,19 +35,22 @@ class CClipSpacerParams:
     """Parameters for the parametric snap-on C-clip spacer."""
 
     # Primary Spacer Dimensions
-    thickness: float = 5.0                 # Axial thickness / space added by spacer in mm (Z height)
+    thickness: float = 12.0                 # Axial thickness / space added by spacer in mm (Z height)
     inside_diameter: float = 44.0          # Nominal diameter of the rod/shaft to fit in mm
-    outside_diameter: float = 72.0         # Outer diameter of the spacer in mm
+    outside_diameter: float = 76.0         # Outer diameter of the spacer in mm
     fit_clearance: float = 0.2             # Diametral bore clearance in mm (bore = inside_diameter + fit_clearance)
 
     # Snap-On C-Opening Geometry
-    opening_angle: float = 90.0           # Angular width of the C-opening in degrees (< 180 for shaft retention)
-    tip_fillet: float = 4.0                # Rounding radius on the C-opening jaw tips in mm (0.0 for crisp tips)
+    opening_angle: float = 95.0            # Angular width of inner C-opening in degrees (< 180 for shaft retention)
+    jaw_flare_angle: float = 8.0           # Jaw cut angle from +X in deg (0 = straight parallel slot, smaller = more closed outer rim)
+    jaw_curve_depth: float = 1.2           # Concave C-curve bow depth along each jaw face in mm (0.0 for straight jaw)
+    inner_tip_fillet: float = 4.0          # Rounding radius transitioning jaw edge into inner bore in mm (0.0 for crisp corner)
+    outer_tip_fillet: float = 2.4          # Rounding radius curving outer jaw point toward inner point in mm (0.0 for crisp tip)
 
     # Inside-Edge Removal Cutout (bordering the shaft)
     removal_notch_enabled: bool = True     # Master toggle for the inside-edge grab/remove cutout
-    removal_notch_width: float = 24.0       # Tangential width of the inside-edge cutout in mm
-    removal_notch_depth: float = 6.0       # Radial depth of cutout extending outward from inner bore in mm
+    removal_notch_width: float = 32.0       # Tangential width of the inside-edge cutout in mm
+    removal_notch_depth: float = 8.0       # Radial depth of cutout extending outward from inner bore in mm
     removal_notch_angle: float = 180.0     # Angular position of cutout in degrees (180 = spine opposite C-opening)
     removal_notch_fillet: float = 0.6      # Transition fillet where cutout meets inner bore in mm (0.0 for crisp edge)
 
@@ -62,6 +65,163 @@ def _shortest_angle_diff_deg(a: float, b: float) -> float:
     if diff > 180.0:
         diff = 360.0 - diff
     return abs(diff)
+
+
+def _solve_nose_and_jaw_arc(
+    r_out: float,
+    x_in: float,
+    y_in: float,
+    dx: float,
+    dy: float,
+    flare_rad: float,
+    b_dot: float,
+    h_jaw: float,
+    wall_thickness: float,
+    requested_outer_fillet: float,
+    requested_jaw_curve: float,
+) -> dict[str, float | tuple[float, float]] | None:
+    """Solve G1-tangent outer nose circle and concave C-curve jaw arc geometry.
+
+    Returns ``None`` when ``requested_outer_fillet <= 0`` (or cannot fit), in
+    which case the caller falls back to a crisp outer jaw tip.
+    """
+    if requested_outer_fillet <= 0.0:
+        return None
+
+    hi_r = min(requested_outer_fillet, (r_out - h_jaw) * 0.45, wall_thickness * 0.65)
+    if hi_r <= 1e-3:
+        return None
+
+    def _tip_center(r: float) -> tuple[float, float] | None:
+        rad_sq = (r_out - r) ** 2 - (h_jaw + r) ** 2
+        if rad_sq <= 0.0:
+            return None
+        u_tip = math.sqrt(rad_sq)
+        if u_tip <= b_dot + max(0.5, r * 0.25):
+            return None
+        return (
+            u_tip * dx - (h_jaw + r) * dy,
+            u_tip * dy + (h_jaw + r) * dx,
+        )
+
+    center = _tip_center(hi_r)
+    if center is None:
+        lo_r, cur_hi = 0.0, hi_r
+        for _ in range(24):
+            mid_r = 0.5 * (lo_r + cur_hi)
+            if _tip_center(mid_r) is not None:
+                lo_r = mid_r
+            else:
+                cur_hi = mid_r
+        r_tip = lo_r
+        center = _tip_center(r_tip)
+        if center is None or r_tip <= 1e-3:
+            return None
+    else:
+        r_tip = hi_r
+
+    cx, cy = center
+    outer_tan_rad = math.atan2(cy, cx)
+    px_tan = r_out * math.cos(outer_tan_rad)
+    py_tan = r_out * math.sin(outer_tan_rad)
+    base_phi = flare_rad - math.pi / 2.0
+
+    def _eval_delta(delta: float) -> dict[str, float | tuple[float, float]] | None:
+        phi = base_phi - delta
+        nose_sweep = (outer_tan_rad - phi) % (2.0 * math.pi)
+        if nose_sweep <= 1e-3 or nose_sweep >= math.radians(225.0):
+            return None
+
+        ux, uy = math.cos(phi), math.sin(phi)
+        tx, ty = cx + r_tip * ux, cy + r_tip * uy
+        vx, vy = x_in - tx, y_in - ty
+        chord = math.hypot(vx, vy)
+        if chord <= 0.5:
+            return None
+
+        mid_nose_rad = outer_tan_rad - 0.5 * nose_sweep
+        nose_mid = (
+            cx + r_tip * math.cos(mid_nose_rad),
+            cy + r_tip * math.sin(mid_nose_rad),
+        )
+
+        if delta <= 1e-5:
+            return {
+                "r_tip": r_tip,
+                "outer_tan_rad": outer_tan_rad,
+                "p_tan": (px_tan, py_tan),
+                "nose_mid": nose_mid,
+                "p_tan_jaw": (tx, ty),
+                "jaw_mid": (0.5 * (tx + x_in), 0.5 * (ty + y_in)),
+                "sag": 0.0,
+                "chord": chord,
+                "in_dir": (-vx / chord, -vy / chord),
+            }
+
+        denom = 2.0 * (vx * ux + vy * uy)
+        if denom <= 1e-6:
+            return None
+        r_jaw = (vx * vx + vy * vy) / denom
+        if r_jaw <= 0.5 * chord + 1e-5:
+            return None
+
+        sag = r_jaw - math.sqrt(max(0.0, r_jaw * r_jaw - 0.25 * chord * chord))
+        cx_jaw = tx + r_jaw * ux
+        cy_jaw = ty + r_jaw * uy
+        a_start = math.atan2(ty - cy_jaw, tx - cx_jaw)
+        a_end = math.atan2(y_in - cy_jaw, x_in - cx_jaw)
+        jaw_sweep = (a_end - a_start) % (2.0 * math.pi)
+        if jaw_sweep <= 1e-5 or jaw_sweep >= math.radians(150.0):
+            return None
+
+        mid_jaw_rad = a_start + 0.5 * jaw_sweep
+        jaw_mid = (
+            cx_jaw + r_jaw * math.cos(mid_jaw_rad),
+            cy_jaw + r_jaw * math.sin(mid_jaw_rad),
+        )
+        if math.hypot(jaw_mid[0], jaw_mid[1]) >= r_out * 0.96:
+            return None
+
+        return {
+            "r_tip": r_tip,
+            "outer_tan_rad": outer_tan_rad,
+            "p_tan": (px_tan, py_tan),
+            "nose_mid": nose_mid,
+            "p_tan_jaw": (tx, ty),
+            "jaw_mid": jaw_mid,
+            "sag": sag,
+            "chord": chord,
+            "in_dir": (math.sin(a_end), -math.cos(a_end)),
+        }
+
+    straight = _eval_delta(0.0)
+    if straight is None:
+        return None
+    if requested_jaw_curve <= 1e-4:
+        return straight
+
+    target_sag = min(
+        requested_jaw_curve,
+        straight["chord"] * 0.22,
+        wall_thickness * 0.45,
+    )
+    if target_sag <= 1e-4:
+        return straight
+
+    lo_d, hi_d = 0.0, math.radians(70.0)
+    best = straight
+    for _ in range(30):
+        mid_d = 0.5 * (lo_d + hi_d)
+        cand = _eval_delta(mid_d)
+        if cand is None or cand["sag"] > min(
+            target_sag, cand["chord"] * 0.25, wall_thickness * 0.45
+        ):
+            hi_d = mid_d
+        else:
+            best = cand
+            lo_d = mid_d
+
+    return best
 
 
 def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
@@ -87,8 +247,17 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
             f"opening_angle must be strictly between 0 and 180 degrees for shaft retention, "
             f"got {params.opening_angle}"
         )
-    if params.tip_fillet < 0:
-        raise ValueError(f"tip_fillet must be non-negative, got {params.tip_fillet}")
+    if not (-45.0 < params.jaw_flare_angle < 90.0):
+        raise ValueError(
+            f"jaw_flare_angle must be strictly between -45 and 90 degrees, "
+            f"got {params.jaw_flare_angle}"
+        )
+    if params.jaw_curve_depth < 0:
+        raise ValueError(f"jaw_curve_depth must be non-negative, got {params.jaw_curve_depth}")
+    if params.inner_tip_fillet < 0:
+        raise ValueError(f"inner_tip_fillet must be non-negative, got {params.inner_tip_fillet}")
+    if params.outer_tip_fillet < 0:
+        raise ValueError(f"outer_tip_fillet must be non-negative, got {params.outer_tip_fillet}")
     if params.edge_chamfer < 0:
         raise ValueError(f"edge_chamfer must be non-negative, got {params.edge_chamfer}")
 
@@ -96,6 +265,24 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
     r_out = params.outside_diameter / 2.0
     wall_thickness = r_out - r_in
     half_open_rad = math.radians(params.opening_angle / 2.0)
+    flare_rad = math.radians(params.jaw_flare_angle)
+
+    # Inner jaw corner and ray-circle intersection with outer perimeter
+    x_in = r_in * math.cos(half_open_rad)
+    y_in = r_in * math.sin(half_open_rad)
+    dx = math.cos(flare_rad)
+    dy = math.sin(flare_rad)
+    b_dot = x_in * dx + y_in * dy
+    c_val = r_in * r_in - r_out * r_out
+    t_out = -b_dot + math.sqrt(b_dot * b_dot - c_val)
+    x_out = x_in + t_out * dx
+    y_out = y_in + t_out * dy
+    if y_out <= 1e-3:
+        raise ValueError(
+            f"jaw_flare_angle ({params.jaw_flare_angle} deg) causes opposing jaws to cross "
+            f"before reaching outside_diameter ({params.outside_diameter}mm)"
+        )
+    jaw_length = t_out
 
     # Validate removal notch geometry before constructing CAD shapes
     notch_half_w = params.removal_notch_width / 2.0
@@ -128,8 +315,65 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
             )
         notch_x_entry = math.sqrt(r_in * r_in - notch_half_w * notch_half_w)
 
-    # Resolve safe 2D corner fillet radii
-    eff_tip_fillet = min(params.tip_fillet, wall_thickness * 0.45) if params.tip_fillet > 0 else 0.0
+    # Solve outer nose circle + G1-tangent C-curve jaw geometry (or fall back to sharp outer tip)
+    h_jaw_base = -x_in * dy + y_in * dx
+    nose_sol = _solve_nose_and_jaw_arc(
+        r_out=r_out,
+        x_in=x_in,
+        y_in=y_in,
+        dx=dx,
+        dy=dy,
+        flare_rad=flare_rad,
+        b_dot=b_dot,
+        h_jaw=h_jaw_base,
+        wall_thickness=wall_thickness,
+        requested_outer_fillet=params.outer_tip_fillet,
+        requested_jaw_curve=params.jaw_curve_depth,
+    )
+
+    t_in_arc_x, t_in_arc_y = -math.sin(half_open_rad), math.cos(half_open_rad)
+    if nose_sol is not None:
+        eff_outer_fillet = float(nose_sol["r_tip"])
+        eff_jaw_curve = float(nose_sol["sag"])
+        jaw_chord_len = float(nose_sol["chord"])
+        dx_in_jaw, dy_in_jaw = nose_sol["in_dir"]  # type: ignore[misc]
+    else:
+        eff_outer_fillet = 0.0
+        x_mid = 0.5 * (x_in + x_out)
+        y_mid = 0.5 * (y_in + y_out)
+        eff_jaw_curve = (
+            min(params.jaw_curve_depth, jaw_length * 0.22, wall_thickness * 0.45)
+            if params.jaw_curve_depth > 0
+            else 0.0
+        )
+        while (
+            eff_jaw_curve > 1e-3
+            and math.hypot(x_mid - eff_jaw_curve * dy, y_mid + eff_jaw_curve * dx)
+            >= r_out * 0.96
+        ):
+            eff_jaw_curve *= 0.8
+        x_mid_arc = x_mid - eff_jaw_curve * dy
+        y_mid_arc = y_mid + eff_jaw_curve * dx
+        alpha_arc = (
+            2.0 * math.atan2(2.0 * eff_jaw_curve, jaw_length)
+            if eff_jaw_curve > 1e-4
+            else 0.0
+        )
+        jaw_chord_len = jaw_length
+        dx_in_jaw = math.cos(flare_rad + alpha_arc)
+        dy_in_jaw = math.sin(flare_rad + alpha_arc)
+
+    cos_gamma_in = max(
+        -0.999, min(0.999, t_in_arc_x * dx_in_jaw + t_in_arc_y * dy_in_jaw)
+    )
+    k_in = 1.0 / math.tan(math.acos(cos_gamma_in) / 2.0)
+    max_inner_by_jaw = (jaw_chord_len * 0.45) / max(k_in, 1e-6)
+    eff_inner_fillet = (
+        min(params.inner_tip_fillet, wall_thickness * 0.75, max_inner_by_jaw)
+        if params.inner_tip_fillet > 0 and cos_gamma_in > -0.995
+        else 0.0
+    )
+
     eff_notch_fillet = 0.0
     if params.removal_notch_enabled and params.removal_notch_fillet > 0:
         eff_notch_fillet = min(
@@ -153,23 +397,41 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
 
     with BuildPart() as spacer:
         with BuildSketch(Plane.XY) as profile:
-            # 1. Base ring
-            Circle(radius=r_out)
-            Circle(radius=r_in, mode=Mode.SUBTRACT)
+            # 1. Base C-clip perimeter with tangent rounded outer nose & curved/straight jaws
+            half_open_deg = params.opening_angle / 2.0
+            with BuildLine():
+                if nose_sol is not None:
+                    px_tan, py_tan = nose_sol["p_tan"]  # type: ignore[misc]
+                    mx_nose, my_nose = nose_sol["nose_mid"]  # type: ignore[misc]
+                    tx, ty = nose_sol["p_tan_jaw"]  # type: ignore[misc]
+                    mx_jaw, my_jaw = nose_sol["jaw_mid"]  # type: ignore[misc]
+                    theta_tan_deg = math.degrees(float(nose_sol["outer_tan_rad"]))
 
-            # 2. C-opening wedge centered on +X (multi-segment arc clearance up to 179 deg)
-            r_cut = r_out * 1.5
-            wedge_angles = [
-                -half_open_rad,
-                -half_open_rad * 0.5,
-                0.0,
-                half_open_rad * 0.5,
-                half_open_rad,
-            ]
-            wedge_pts = [(0.0, 0.0)] + [
-                (r_cut * math.cos(a), r_cut * math.sin(a)) for a in wedge_angles
-            ]
-            Polygon(*wedge_pts, mode=Mode.SUBTRACT)
+                    CenterArc((0.0, 0.0), r_out, theta_tan_deg, 360.0 - 2.0 * theta_tan_deg)
+                    ThreePointArc((px_tan, -py_tan), (mx_nose, -my_nose), (tx, -ty))
+                    if eff_jaw_curve > 1e-4:
+                        ThreePointArc((tx, -ty), (mx_jaw, -my_jaw), (x_in, -y_in))
+                    else:
+                        Line((tx, -ty), (x_in, -y_in))
+                    CenterArc((0.0, 0.0), r_in, half_open_deg, 360.0 - params.opening_angle)
+                    if eff_jaw_curve > 1e-4:
+                        ThreePointArc((x_in, y_in), (mx_jaw, my_jaw), (tx, ty))
+                    else:
+                        Line((x_in, y_in), (tx, ty))
+                    ThreePointArc((tx, ty), (mx_nose, my_nose), (px_tan, py_tan))
+                else:
+                    theta_out_deg = math.degrees(math.atan2(y_out, x_out))
+                    CenterArc((0.0, 0.0), r_out, theta_out_deg, 360.0 - 2.0 * theta_out_deg)
+                    if eff_jaw_curve > 1e-4:
+                        ThreePointArc((x_out, -y_out), (x_mid_arc, -y_mid_arc), (x_in, -y_in))
+                    else:
+                        Line((x_out, -y_out), (x_in, -y_in))
+                    CenterArc((0.0, 0.0), r_in, half_open_deg, 360.0 - params.opening_angle)
+                    if eff_jaw_curve > 1e-4:
+                        ThreePointArc((x_in, y_in), (x_mid_arc, y_mid_arc), (x_out, y_out))
+                    else:
+                        Line((x_in, y_in), (x_out, y_out))
+            make_face()
 
             # 3. Inside-edge grab/removal cutout bordering the shaft
             if notch_cutter is not None:
@@ -195,22 +457,16 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
                     if len(notch_verts) > 0:
                         fillet(notch_verts, radius=eff_notch_fillet)
 
-            # 4. Round the four C-opening jaw tips (inner glide corners & outer handling corners)
-            if eff_tip_fillet > 1e-3:
-                expected_tip_pts = []
-                for r_pt in (r_in, r_out):
-                    for sign in (-1.0, 1.0):
-                        a = sign * half_open_rad
-                        expected_tip_pts.append((r_pt * math.cos(a), r_pt * math.sin(a)))
-
-                tip_verts = profile.vertices().filter_by(
+            # 4. Round C-opening inner jaw transitions (outer tips already have exact tangent nose arcs)
+            if eff_inner_fillet > 1e-3:
+                inner_verts = profile.vertices().filter_by(
                     lambda v: any(
                         math.hypot(v.X - px, v.Y - py) < 0.05
-                        for px, py in expected_tip_pts
+                        for px, py in ((x_in, -y_in), (x_in, y_in))
                     )
                 )
-                if len(tip_verts) > 0:
-                    fillet(tip_verts, radius=eff_tip_fillet)
+                if len(inner_verts) > 0:
+                    fillet(inner_verts, radius=eff_inner_fillet)
 
         # 5. Extrude axially to spacer thickness (Z = 0 to thickness)
         extrude(amount=params.thickness)
@@ -227,10 +483,9 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
                 wall_thickness * 0.3,
                 remaining_spine * 0.35,
             )
-            if eff_tip_fillet > 0:
-                max_safe_chamfer = min(max_safe_chamfer, eff_tip_fillet * 0.8)
-            if eff_notch_fillet > 0:
-                max_safe_chamfer = min(max_safe_chamfer, eff_notch_fillet * 0.8)
+            for r_corner in (eff_inner_fillet, eff_outer_fillet, eff_notch_fillet):
+                if r_corner > 0:
+                    max_safe_chamfer = min(max_safe_chamfer, r_corner * 0.8)
 
             eff_chamfer = min(params.edge_chamfer, max_safe_chamfer)
             if eff_chamfer > 1e-3:
