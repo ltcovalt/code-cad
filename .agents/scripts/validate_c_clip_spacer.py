@@ -9,7 +9,7 @@ import os
 import sys
 import tempfile
 
-from build123d import Align, Cylinder, export_step, export_stl
+from build123d import Align, Axis, Cylinder, GeomType, export_step, export_stl
 
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path = [p for p in sys.path if p not in ("", ".")]
@@ -66,10 +66,42 @@ def validate():
     )
     assert (part_default & probe).volume < 1e-6, "Expected open space inside spine removal cutout"
     assert (part_plain & probe).volume > 0.5, "Expected solid material at spine when removal cutout is disabled"
+    # Verify jaw_flare_angle closes the outer rim further than a pure radial cut
+    p_radial = CClipSpacerParams(jaw_flare_angle=p_default.opening_angle / 2.0)
+    part_radial = create_c_clip_spacer(p_radial)
+    assert part_radial.is_valid, "Radial jaw C-clip spacer is invalid"
+    assert bbox.max.X > part_radial.bounding_box().max.X + 3.0, (
+        f"Expected closed outer rim max.X ({bbox.max.X:.2f}) > radial max.X ({part_radial.bounding_box().max.X:.2f})"
+    )
+
+    p_parallel = CClipSpacerParams(jaw_flare_angle=0.0)
+    part_parallel = create_c_clip_spacer(p_parallel)
+    assert part_parallel.is_valid, "Parallel jaw (0 deg flare) C-clip spacer is invalid"
+
+    p_inward = CClipSpacerParams(jaw_flare_angle=-5.0)
+    part_inward = create_c_clip_spacer(p_inward)
+    assert part_inward.is_valid, "Inward jaw (-5 deg flare) C-clip spacer is invalid"
+
+    p_straight_jaw = CClipSpacerParams(jaw_curve_depth=0.0)
+    part_straight_jaw = create_c_clip_spacer(p_straight_jaw)
+    assert part_straight_jaw.is_valid, "Straight jaw (jaw_curve_depth=0) C-clip spacer is invalid"
+    assert part_default.volume < part_straight_jaw.volume - 10.0, (
+        f"Curved jaw volume ({part_default.volume:.2f}) should be smaller than straight jaw ({part_straight_jaw.volume:.2f})"
+    )
+
+    p_deep_curve = CClipSpacerParams(jaw_curve_depth=10.0, outer_tip_fillet=8.0)
+    part_deep_curve = create_c_clip_spacer(p_deep_curve)
+    assert part_deep_curve.is_valid, "Large clamped jaw_curve_depth C-clip spacer is invalid"
+
+    p_large_outer = CClipSpacerParams(outer_tip_fillet=20.0)
+    part_large_outer = create_c_clip_spacer(p_large_outer)
+    assert part_large_outer.is_valid, "Large clamped outer_tip_fillet C-clip spacer is invalid"
+
     print(
         f"✓ Test 1 Passed: Default {p_default.inside_diameter:g}x{p_default.outside_diameter:g}x"
         f"{p_default.thickness:g}mm spacer (valid={part_default.is_valid}, "
-        f"notched_vol={part_default.volume:.2f} < plain_vol={part_plain.volume:.2f})"
+        f"notched_vol={part_default.volume:.2f} < plain_vol={part_plain.volume:.2f}, "
+        f"max_x={bbox.max.X:.2f} > radial_max_x={part_radial.bounding_box().max.X:.2f})"
     )
 
     # --------------------------------------------------------------------------
@@ -81,7 +113,8 @@ def validate():
         outside_diameter=14.0,
         removal_notch_width=3.0,
         removal_notch_depth=1.0,
-        tip_fillet=2.0,
+        inner_tip_fillet=2.0,
+        outer_tip_fillet=4.0,
         removal_notch_fillet=2.0,
         edge_chamfer=0.5,
     )
@@ -117,7 +150,8 @@ def validate():
         inside_diameter=12.7,
         outside_diameter=25.4,
         opening_angle=160.0,
-        tip_fillet=0.8,
+        inner_tip_fillet=0.8,
+        outer_tip_fillet=1.5,
         removal_notch_width=4.0,
         removal_notch_depth=1.5,
         removal_notch_angle=135.0,
@@ -135,6 +169,9 @@ def validate():
         dict(thickness=0.0),
         dict(inside_diameter=12.0, outside_diameter=12.0),
         dict(opening_angle=180.0),
+        dict(jaw_flare_angle=90.0),
+        dict(jaw_curve_depth=-1.0),
+        dict(jaw_flare_angle=-40.0, opening_angle=20.0),
         dict(inside_diameter=12.0, outside_diameter=22.0, removal_notch_width=4.0, removal_notch_depth=4.9),
         dict(removal_notch_angle=10.0),
     ]
@@ -158,6 +195,29 @@ def validate():
         assert os.path.getsize(stl_path) > 100, "STL export file is unexpectedly small"
         assert os.path.getsize(step_path) > 100, "STEP export file is unexpectedly small"
     print("✓ Test 6 Passed: STL and STEP export succeeded")
+
+    # --------------------------------------------------------------------------
+    # Test 7: Exact Outer Tip Nose Fillet & Sharp-Tip Mode
+    # --------------------------------------------------------------------------
+    part_no_chamf = create_c_clip_spacer(CClipSpacerParams(edge_chamfer_enabled=False))
+    top_edges = part_no_chamf.faces().sort_by(Axis.Z)[-1].edges()
+    nose_arcs = [
+        e
+        for e in top_edges
+        if e.geom_type == GeomType.CIRCLE and abs(e.radius - p_default.outer_tip_fillet) < 0.01
+    ]
+    assert len(nose_arcs) == 2, (
+        f"Expected 2 outer nose arcs of radius {p_default.outer_tip_fillet}mm, found {len(nose_arcs)}"
+    )
+    for curve_depth in (0.0, 2.5):
+        part_sharp = create_c_clip_spacer(
+            CClipSpacerParams(outer_tip_fillet=0.0, jaw_curve_depth=curve_depth)
+        )
+        assert part_sharp.is_valid and len(part_sharp.solids()) == 1
+    print(
+        f"✓ Test 7 Passed: Verified {len(nose_arcs)} exact r={p_default.outer_tip_fillet}mm "
+        f"tangent outer nose arcs and crisp outer_tip_fillet=0.0 modes"
+    )
 
     print("\nALL C-CLIP SPACER VALIDATION CHECKS PASSED!")
 
