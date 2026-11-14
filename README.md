@@ -48,6 +48,7 @@ cad/
 ├── README.md                   # Repository overview (this file)
 ├── docs/                       # Manuals and general reference PDFs
 ├── models/                     # Parametric generator projects
+│   ├── c_clip_spacer/          # Parametric snap-on C-clip shaft spacers
 │   ├── container_lid/          # Container lid generator (Pyrex, etc.)
 │   ├── gridfinity_bin/         # Parametric Gridfinity bin with Pred printable label holder
 │   ├── gridfinity_spacer/      # Custom Gridfinity drawer fitment spacers
@@ -63,6 +64,7 @@ cad/
 
 | Model | Description | Output Formats |
 | :--- | :--- | :--- |
+| **[C-Clip Spacer](models/c_clip_spacer/)** | Parametric snap-on C-clip shaft spacer with configurable thickness, inside/outside diameters, and an inside-edge removal cutout bordering the shaft. | STL, STEP |
 | **[Container Lid](models/container_lid/)** | Airtight container lid generator with sealing bead, stacking rim, and pull tab. Built-in presets for Pyrex rectangular and round glass dishes. | STL, STEP |
 | **[Gridfinity Bin](models/gridfinity_bin/)** | Parametric Gridfinity bin with Pred-compatible printable label holder, finger scoops, dividers, and drawer spacer gap overhangs. | STL, STEP |
 | **[Gridfinity Spacer](models/gridfinity_spacer/)** | Precision drawer spacer to eliminate play around Gridfinity baseplates. Supports front/back/side positions, finger scoops, and hollow underside. | STL, STEP |
