@@ -25,17 +25,6 @@ from typing import Optional
 
 from build123d import *
 
-try:
-    from ocp_viewer import set_defaults, show
-    set_defaults(orbit_control=True)
-except ImportError:
-    try:
-        from ocp_vscode import set_defaults, show
-        set_defaults(orbit_control=True)
-    except ImportError:
-        def show(*args, **kwargs):
-            pass
-
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
@@ -295,5 +284,16 @@ if __name__ == "__main__":
             step_file = exports_path / f"{stem}.step"
             export_step(cap_part, str(step_file))
             print(f"Exported STEP: {step_file}")
+
+    try:
+        from ocp_viewer import set_defaults, show
+        set_defaults(orbit_control=True)
+    except ImportError:
+        try:
+            from ocp_vscode import set_defaults, show
+            set_defaults(orbit_control=True)
+        except ImportError:
+            def show(*args, **kwargs):
+                pass
 
     show(cap_part)
