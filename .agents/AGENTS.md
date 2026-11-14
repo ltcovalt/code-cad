@@ -11,9 +11,10 @@ When building CAD models in this repository:
      - Provide clear type annotations, default values, and comments for all fields.
      - **Uniform Feature Toggle Pattern (`*_enabled` Booleans)**: Group optional or toggleable features into logical sections in the dataclass and lead each section with a master boolean toggle (e.g. `label_enabled: bool = True`, `scoop_enabled: bool = True`, `dividers_enabled: bool = False`, `overhang_enabled: bool = False`). This allows users to quickly toggle entire features on and off during testing without losing their tuned dimensional values, and maps 1:1 to section toggles in a future web generator UI.
      - Avoid redundant alias properties or duplicate getters.
-   - **Decoupled Generator Function**:
+   - **Decoupled Generator Function & Side-Effect-Free Imports**:
      - Implement CAD logic as a standalone generator function `create_<model>(params: <Model>Params) -> Part | Compound | Solid`.
-     - It must accept the dataclass instance and return the generated geometry without side effects (no exports or viewer calls inside the generator). This ensures it can be imported and plugged into a future web generator/preview service directly.
+     - It must accept the dataclass instance and return the generated geometry without side effects (no exports, file writes, or viewer calls inside the generator). This ensures it can be imported and plugged directly into an external GUI/web viewer worker.
+     - **Never import `ocp_viewer` / `ocp_vscode` or call `set_defaults()` at module top-level** (nor construct geometry at import time). Keep viewer imports strictly inside `if __name__ == "__main__":` (or a lazy helper invoked only from `__main__`) so external preview/generator workers can import `<Model>Params` and `create_<model>` cleanly without viewer side effects.
    - **Standardized Export Variables**:
      Every model script must standardize on these exact top-level variable names to control exports, and they **must always be set to `False` by default**:
      ```python
