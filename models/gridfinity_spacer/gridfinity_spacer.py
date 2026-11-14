@@ -21,20 +21,6 @@ from pathlib import Path
 from typing import Optional
 from build123d import *
 
-try:
-    from ocp_viewer import set_defaults, show
-    set_defaults(orbit_control=True)
-    HAS_OCP_VIEWER = True
-except ImportError:
-    try:
-        from ocp_vscode import set_defaults, show
-        set_defaults(orbit_control=True)
-        HAS_OCP_VIEWER = True
-    except Exception:
-        HAS_OCP_VIEWER = False
-        def show(*args, **kwargs):
-            pass
-
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
@@ -260,5 +246,16 @@ if __name__ == "__main__":
             export_step(spacer, str(step_file))
             print(f"Exported STEP: {step_file}")
 
-    # Display in ocp_vscode viewer if available
+    # Display in ocp_viewer / ocp_vscode viewer if available
+    try:
+        from ocp_viewer import set_defaults, show
+        set_defaults(orbit_control=True)
+    except ImportError:
+        try:
+            from ocp_vscode import set_defaults, show
+            set_defaults(orbit_control=True)
+        except Exception:
+            def show(*args, **kwargs):
+                pass
+
     show(spacer)
