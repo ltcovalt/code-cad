@@ -67,7 +67,7 @@ class SpacerParams:
     # Leg Y (e.g. Side wall)
     # Set leg_x_length = 0 to generate a straight Leg Y spacer!
     # --------------------------------------------------------------------------
-    leg_y_length: float = 280.0         # Length along Y wall in mm (set 0 to omit)
+    leg_y_length: float = 246.0         # Length along Y wall in mm (set 0 to omit)
     leg_y_width: float = 15.0           # Width / thickness of Y leg in mm
 
     # --------------------------------------------------------------------------
@@ -113,8 +113,8 @@ class SpacerParams:
         SpacerCutout(
             leg="x",
             align="end",
-            offset=15.0,
-            length=50.0,
+            offset=12.0,
+            length=42.0,
             height=16.0,
             shape="rectangle",
             radius=2.0,
