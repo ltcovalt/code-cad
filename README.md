@@ -51,10 +51,10 @@ cad/
 │   ├── c_clip_spacer/          # Parametric snap-on C-clip shaft spacers
 │   ├── container_lid/          # Container lid generator (Pyrex, etc.)
 │   ├── gridfinity_bin/         # Parametric Gridfinity bin with Pred printable label holder
-│   ├── gridfinity_spacer/      # Custom Gridfinity drawer fitment spacers
 │   ├── magnetic_label/         # Magnetic label generator
 │   ├── rack_bracket/           # 19" EIA-310 rackmount brackets (1U, 2U+)
-│   └── shaft_end_cap/          # Retention end caps for cylindrical shelving rods
+│   ├── shaft_end_cap/          # Retention end caps for cylindrical shelving rods
+│   └── spacer/                 # Parametric straight, L-corner, T-shape, and cross spacers
 └── .agents/                    # Agent skills, references, and validation scripts
 ```
 
@@ -67,10 +67,10 @@ cad/
 | **[C-Clip Spacer](models/c_clip_spacer/)** | Parametric snap-on C-clip shaft spacer with configurable thickness, inside/outside diameters, and an inside-edge removal cutout bordering the shaft. | STL, STEP |
 | **[Container Lid](models/container_lid/)** | Airtight container lid generator with sealing bead, stacking rim, and pull tab. Built-in presets for Pyrex rectangular and round glass dishes. | STL, STEP |
 | **[Gridfinity Bin](models/gridfinity_bin/)** | Parametric Gridfinity bin with Pred-compatible printable label holder, finger scoops, dividers, and drawer spacer gap overhangs. | STL, STEP |
-| **[Gridfinity Spacer](models/gridfinity_spacer/)** | Precision drawer spacer to eliminate play around Gridfinity baseplates. Supports front/back/side positions, finger scoops, and hollow underside. | STL, STEP |
 | **[Magnetic Label](models/magnetic_label/)** | Magnetic label generator with auto-sizing to text, embossed/debossed/flush inlay styles, and press-fit round magnet pockets. | STL, STEP (Single & Multi-body) |
 | **[Rackmount Brackets](models/rack_bracket/)** | 19-inch rackmount L-brackets (1U, 2U, custom lengths) with EIA-310 mounting slots, M4 thread-in holes, and honeycomb cutouts. | STL, STEP |
 | **[Shaft End Cap](models/shaft_end_cap/)** | Press-fit retention end caps for spool storage rods with dome/flat/chamfer styles, internal lead-in chamfer, and optional grip flutes. | STL, STEP |
+| **[Spacer](models/spacer/)** | Parametric straight, L-corner, mirrored L, T-shape, and cross spacers with configurable notches, pockets, pass-through cutouts, and rounded/chamfered edges. | STL, STEP |
 
 ---
 

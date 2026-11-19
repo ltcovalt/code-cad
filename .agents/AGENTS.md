@@ -27,11 +27,11 @@ When building CAD models in this repository:
    - **Standardized Export Filename Convention**:
      Export filenames must follow the pattern:
      `<model_name>_<primary_dimensions>_<variant_or_style>.<ext>`
-     in lowercase `snake_case` (e.g. `rack_bracket_2u_hex.stl`, `shaft_end_cap_12.7mm_round.stl`, `magnetic_label_100x16mm_fasteners_embossed_base.stl`, `container_lid_150mm_round_tpu.stl`, `gridfinity_spacer_100x100x3mm_corner.stl`).
+     in lowercase `snake_case` (e.g. `rack_bracket_2u_hex.stl`, `shaft_end_cap_12.7mm_round.stl`, `magnetic_label_100x16mm_fasteners_embossed_base.stl`, `container_lid_150mm_round_tpu.stl`, `spacer_100x100x3mm_corner.stl`).
      This ensures immediate identification across slicers, file managers, and future web generator download endpoints.
    - **Strict Standalone Architecture (No Compatibility Shims or Legacy Wrappers)**:
      - Every model script must be completely self-contained in its canonical file: `models/<model_name>/<model_name>.py`.
-     - **Never create backwards-compatibility shims, wrapper scripts, redirect files, or deprecated alias modules** (e.g. do not create `spacer.py` alongside `gridfinity_spacer.py`). When refactoring, renaming, or migrating, rename cleanly and delete obsolete files.
+     - **Never create backwards-compatibility shims, wrapper scripts, redirect files, or deprecated alias modules** (e.g. do not create `old_name.py` alongside `new_name.py`). When refactoring, renaming, or migrating, rename cleanly and delete obsolete files.
      - **Never retain legacy parameter aliases, duplicate getters, or forwarding shims in `@dataclass` definitions** (e.g. do not keep deprecated `x`, `y`, `z` fields or `__post_init__` alias mappings). Remove dead fields directly.
      - Scripts must remain concise and zero-dependency beyond `build123d` and `ocp_viewer`/`ocp_vscode`.
    - **Clean `__main__` Block Without Parameter Overrides**:
