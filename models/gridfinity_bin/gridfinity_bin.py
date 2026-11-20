@@ -518,9 +518,9 @@ def create_stacking_lip(params: GridfinityBinParams) -> Optional[Part]:
     """
     Generates the continuous Gridfinity stacking lip around the entire top perimeter.
 
-    Constructed via concentric outer-minus-inner ruled lofts of RectangleRounded profiles,
-    guaranteeing a 100% uniform, unbroken top rim along all 4 straight walls and all
-    4 rounded corners without corner pinching or triangular artifacts.
+    Sweeps the exact 2D stacking-lip cross-section along the outer RectangleRounded
+    perimeter wire, guaranteeing a 100% uniform, unbroken top rim along all 4 straight
+    walls and all 4 rounded corners without corner pinching or triangular artifacts.
     """
     if not params.stacking_lip.enabled:
         return None
@@ -539,58 +539,35 @@ def create_stacking_lip(params: GridfinityBinParams) -> Optional[Part]:
     z2 = env.body_h + 2.5
     z3 = env.body_h + lip_h
 
-    def _inset_rect(inset_d: float) -> tuple[float, float, float]:
-        w = env.top_w - 2.0 * inset_d
-        l = env.top_l - 2.0 * inset_d
-        r = max(0.3, env.r_corner - inset_d)
-        return w, l, r
+    with BuildSketch(Plane.XY.offset(z_bot)) as path_sk:
+        with Locations([(env.top_cx, env.top_cy)]):
+            RectangleRounded(env.top_w, env.top_l, env.r_corner)
+    wire = path_sk.sketch.wire()
+
+    start_pt = wire.position_at(0)
+    start_tan = wire.tangent_at(0)
+    inward = Vector(0, 0, 1).cross(start_tan).normalized()
+    if inward.dot(Vector(env.top_cx, env.top_cy, z_bot) - start_pt) < 0:
+        inward = -inward
+    prof_plane = Plane(origin=start_pt, x_dir=inward, z_dir=start_tan)
 
     with BuildPart() as lip_builder:
-        # 1. Outer sleeve from z_bot to z3 (flush with outer bin perimeter)
-        with BuildSketch(Plane.XY.offset(z_bot)) as sk_out:
-            with Locations([(env.top_cx, env.top_cy)]):
-                RectangleRounded(env.top_w, env.top_l, env.r_corner)
-        extrude(amount=z3 - z_bot)
+        with BuildSketch(prof_plane):
+            pts = [
+                (0.0, 0.0),
+                (t_wall, 0.0),
+                (lip_depth, z0 - z_bot),
+                (1.9, z1 - z_bot),
+                (1.9, z2 - z_bot),
+                (top_flat, z3 - z_bot),
+                (0.0, z3 - z_bot),
+                (0.0, 0.0),
+            ]
+            Polygon(*pts, align=None)
+        sweep(path=wire, transition=Transition.ROUND)
 
-        # 2. Subtract lower support taper (z_bot -> z0: inset from t_wall to 2.6mm)
-        w_b, l_b, r_b = _inset_rect(t_wall)
-        w_0, l_0, r_0 = _inset_rect(lip_depth)
-        with BuildSketch(Plane.XY.offset(z_bot)) as sk_in_b:
-            with Locations([(env.top_cx, env.top_cy)]):
-                RectangleRounded(w_b, l_b, r_b)
-        with BuildSketch(Plane.XY.offset(z0)) as sk_in_0:
-            with Locations([(env.top_cx, env.top_cy)]):
-                RectangleRounded(w_0, l_0, r_0)
-        loft(ruled=True, mode=Mode.SUBTRACT)
-
-        # 3. Subtract lower 45° lip chamfer (z0 -> z1: inset from 2.6mm to 1.9mm)
-        w_1, l_1, r_1 = _inset_rect(1.9)
-        with BuildSketch(Plane.XY.offset(z0)) as sk_in_0b:
-            with Locations([(env.top_cx, env.top_cy)]):
-                RectangleRounded(w_0, l_0, r_0)
-        with BuildSketch(Plane.XY.offset(z1)) as sk_in_1:
-            with Locations([(env.top_cx, env.top_cy)]):
-                RectangleRounded(w_1, l_1, r_1)
-        loft(ruled=True, mode=Mode.SUBTRACT)
-
-        # 4. Subtract middle vertical section (z1 -> z2: constant inset 1.9mm)
-        with BuildSketch(Plane.XY.offset(z1)) as sk_in_1b:
-            with Locations([(env.top_cx, env.top_cy)]):
-                RectangleRounded(w_1, l_1, r_1)
-        extrude(amount=z2 - z1, mode=Mode.SUBTRACT)
-
-        # 5. Subtract upper 45° lip bevel (z2 -> z3: inset from 1.9mm to top_flat)
-        w_3, l_3, r_3 = _inset_rect(top_flat)
-        with BuildSketch(Plane.XY.offset(z2)) as sk_in_2:
-            with Locations([(env.top_cx, env.top_cy)]):
-                RectangleRounded(w_1, l_1, r_1)
-        with BuildSketch(Plane.XY.offset(z3)) as sk_in_3:
-            with Locations([(env.top_cx, env.top_cy)]):
-                RectangleRounded(w_3, l_3, r_3)
-        loft(ruled=True, mode=Mode.SUBTRACT)
-
-        # 6. Clear out label pocket & side tab slots from the lower support bevel (z < z0)
-        #    so the stacking lip's 45° underside bevel never pinches the vertical tab slot height
+        # Clear out label pocket & side tab slots from the lower support bevel (z < z0)
+        # so the stacking lip's 45° underside bevel never pinches the vertical tab slot height
         if params.label.enabled:
             slot_cutout = _create_label_slot_cutouts(params, env)
             if slot_cutout is not None:
@@ -1234,17 +1211,14 @@ def create_gridfinity_bin(params: GridfinityBinParams) -> Part:
     labels = create_label_holders(params)
     lip = create_stacking_lip(params)
 
-    with BuildPart() as final_bin:
-        add(feet)
-        add(body)
-        if scoops is not None:
-            add(scoops)
-        if labels is not None:
-            add(labels)
-        if lip is not None:
-            add(lip)
-
-    return final_bin.part
+    parts = [p for p in (feet, body, scoops, labels, lip) if p is not None]
+    solids = []
+    for p in parts:
+        solids.extend(p.solids())
+    if len(solids) == 1:
+        return Part(children=[solids[0]])
+    fused = solids[0].fuse(*solids[1:])
+    return fused if isinstance(fused, Part) else Part(children=[fused])
 
 
 def export_filename(params: GridfinityBinParams) -> str:
