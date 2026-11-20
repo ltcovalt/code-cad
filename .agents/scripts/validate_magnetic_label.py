@@ -8,24 +8,26 @@ if models_dir not in sys.path:
     sys.path.append(models_dir)
 
 from magnetic_label import (
+    BorderRimParams,
+    MagnetParams,
     MagneticLabelParams,
+    PlateParams,
+    SizingParams,
+    TextParams,
     build_magnetic_label,
     batch_generate,
     export_label_files,
-    TextMode,
 )
+
 
 def test_all_variations():
     print("Running comprehensive validation tests...")
 
     # Test 1: Auto-size embossed with border rim
     p1 = MagneticLabelParams(
-        text="METRIC BOLTS",
-        font_size=10.0,
-        text_mode="embossed",
-        auto_size=True,
-        border_rim=True,
-        border_width=1.2,
+        text=TextParams(content="METRIC BOLTS", font_size=10.0, mode="embossed"),
+        sizing=SizingParams(auto_size=True),
+        border=BorderRimParams(enabled=True, width=1.2),
     )
     res1 = build_magnetic_label(p1)
     assert res1.base_part.is_valid
@@ -34,16 +36,10 @@ def test_all_variations():
 
     # Test 2: Static dimensions debossed with left alignment
     p2 = MagneticLabelParams(
-        text="DRAWER 1",
-        font_size=8.0,
-        text_align="left",
-        text_offset_y=0.5,
-        text_mode="debossed",
-        auto_size=False,
-        width=60.0,
-        height=20.0,
-        corner_radius=2.0,
-        magnet_count=2,
+        text=TextParams(content="DRAWER 1", font_size=8.0, align="left", offset_y=0.5, mode="debossed"),
+        sizing=SizingParams(auto_size=False, width=60.0, height=20.0),
+        plate=PlateParams(corner_radius=2.0),
+        magnets=MagnetParams(count=2),
     )
     res2 = build_magnetic_label(p2)
     assert res2.base_part.is_valid
@@ -53,13 +49,8 @@ def test_all_variations():
 
     # Test 2b: Static dimensions with right alignment
     p2b = MagneticLabelParams(
-        text="VOLTAGE",
-        font_size=8.0,
-        text_align="right",
-        text_mode="embossed",
-        auto_size=False,
-        width=70.0,
-        height=20.0,
+        text=TextParams(content="VOLTAGE", font_size=8.0, align="right", mode="embossed"),
+        sizing=SizingParams(auto_size=False, width=70.0, height=20.0),
     )
     res2b = build_magnetic_label(p2b)
     assert res2b.base_part.is_valid
@@ -67,12 +58,8 @@ def test_all_variations():
 
     # Test 3: Flush / Inlay multi-color mode with 8mm magnets
     p3 = MagneticLabelParams(
-        text="RESISTORS",
-        font_size=11.0,
-        text_mode="flush",
-        magnet_diameter=8.0,
-        magnet_thickness=3.0,
-        magnet_clearance=0.2,
+        text=TextParams(content="RESISTORS", font_size=11.0, mode="flush"),
+        magnets=MagnetParams(diameter=8.0, thickness=3.0, clearance=0.2),
     )
     res3 = build_magnetic_label(p3)
     assert res3.base_part.is_valid
@@ -82,11 +69,9 @@ def test_all_variations():
 
     # Test 4: Single magnet small label
     p4 = MagneticLabelParams(
-        text="OFF",
-        font_size=8.0,
-        min_width=25.0,
-        min_height=15.0,
-        magnet_count=1,
+        text=TextParams(content="OFF", font_size=8.0),
+        sizing=SizingParams(min_width=25.0, min_height=15.0),
+        magnets=MagnetParams(count=1),
     )
     res4 = build_magnetic_label(p4)
     assert len(res4.magnet_positions) == 1
@@ -96,7 +81,7 @@ def test_all_variations():
     # Test 5: Exporting STEP & STL
     temp_dir = "/tmp/cad_label_test"
     files = export_label_files(res3, output_dir=temp_dir, do_export_step=True, do_export_stl=True)
-    assert len(files) == 5  # base.step, base.stl, text.step, multibody.step, text.stl
+    assert len(files) == 5
     for f in files:
         assert os.path.exists(f)
         os.remove(f)
@@ -113,11 +98,12 @@ def test_all_variations():
         preview_grid=False,
     )
     assert len(batch_results) == 3
-    assert batch_results[0].params.text == "M3 SCREWS"
-    assert batch_results[2].params.font_size == 14.0
+    assert batch_results[0].params.text.content == "M3 SCREWS"
+    assert batch_results[2].params.text.font_size == 14.0
     print(f"✓ Test 6 Passed: Batch Generation ({len(batch_results)} labels)")
 
     print("\nALL VALIDATION TESTS PASSED SUCCESSFULLY!")
+
 
 if __name__ == "__main__":
     test_all_variations()

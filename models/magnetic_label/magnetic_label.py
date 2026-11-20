@@ -22,10 +22,10 @@ from __future__ import annotations
 import math
 import os
 import sys
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import List, Literal, Optional, Tuple, Union
 
 # Handle local repo folder shadowing the installed build123d site-package
 if os.path.isdir("build123d") and sys.path and sys.path[0] in ("", "."):
@@ -96,20 +96,23 @@ def _resolve_font_style(style_input: Union[str, FontStyle]) -> FontStyle:
 
 
 @dataclass
-class MagneticLabelParams:
-    """Configuration parameters for the parametric magnetic label generator."""
+class TextParams:
+    """Text content, typography, and rendering mode."""
 
-    # Text Settings
-    text: str = "FASTENERS"
+    content: str = "FASTENERS"
     font_size: float = 12.0                # Font height in mm
     font: str = "Arial"                    # Font family (e.g. 'Arial', 'FreeSans', 'Helvetica')
-    font_style: Union[str, FontStyle] = "bold"  # 'regular', 'bold', 'italic', 'bold_italic'
-    text_align: str = "center"             # 'center', 'left', or 'right'
-    text_offset_y: float = 0.0             # Fine vertical offset adjustment in mm
-    text_mode: Union[str, TextMode] = "embossed"  # 'embossed', 'debossed', or 'flush'
-    text_depth: float = 1.2                # Height of raised letters or depth of engraving (mm)
+    font_style: Literal["regular", "bold", "italic", "bold_italic"] = "bold"  # Font weight/slant
+    align: Literal["center", "left", "right"] = "center"  # Horizontal text alignment
+    offset_y: float = 0.0                  # Fine vertical offset adjustment in mm
+    mode: Literal["embossed", "debossed", "flush"] = "embossed"  # Text rendering style
+    depth: float = 1.2                     # Height of raised letters or depth of engraving (mm)
 
-    # Sizing
+
+@dataclass
+class SizingParams:
+    """Plate dimensions and auto-sizing margins."""
+
     auto_size: bool = False                # Adaptive text sizing (True) or static dimensions (False)
     width: float = 100.0                   # Used when auto_size is False (mm)
     height: float = 16.0                   # Used when auto_size is False (mm)
@@ -118,23 +121,48 @@ class MagneticLabelParams:
     min_width: float = 30.0                # Minimum plate width limit (mm)
     min_height: float = 16.0               # Minimum plate height limit (mm)
 
-    # Plate & Edge Styling
+
+@dataclass
+class PlateParams:
+    """Base plate thickness and edge styling."""
+
     base_thickness: float = 3.0            # Overall plate thickness (mm)
     corner_radius: float = 3.0             # Corner fillet radius (mm; 0 for square)
     top_chamfer: float = 0.6               # 45-degree bevel on front perimeter (mm; 0 to disable)
-    border_rim: bool = True                # Optional raised border frame around face
-    border_width: float = 1.2              # Width of raised border frame (mm)
     min_floor_thickness: float = 0.8       # Minimum solid plastic floor thickness behind magnets (mm)
 
-    # Magnet Pocket Settings
-    magnets_enabled: bool = True           # Master toggle to enable/disable rear magnet pockets
-    magnet_diameter: float = 10.0          # Nominal magnet diameter in mm
-    magnet_thickness: float = 2.0          # Nominal magnet thickness in mm
-    magnet_clearance: float = 0.0          # Press-fit diameter tolerance for 3D printing (mm)
+
+@dataclass
+class BorderRimParams:
+    """Optional raised border frame around front face."""
+
+    enabled: bool = True                   # Enable raised border frame around face
+    width: float = 1.2                     # Width of raised border frame (mm)
+
+
+@dataclass
+class MagnetParams:
+    """Rear press-fit magnet pockets."""
+
+    enabled: bool = True                   # Enable/disable rear magnet pockets
+    diameter: float = 10.0                 # Nominal magnet diameter in mm
+    thickness: float = 2.0                 # Nominal magnet thickness in mm
+    clearance: float = 0.0                 # Press-fit diameter tolerance for 3D printing (mm)
     pocket_depth_offset: float = 0.2       # Extra depth allowance to keep magnets sub-flush (mm)
-    magnet_count: Optional[int] = None     # Specific magnet count, or None for automatic spacing
-    magnet_edge_margin: float = 8.0        # Distance from ends to magnet centers (mm)
-    magnet_positions: Optional[List[Tuple[float, float]]] = None
+    count: Optional[int] = None            # Specific magnet count, or None for automatic spacing
+    edge_margin: float = 8.0               # Distance from ends to magnet centers (mm)
+    positions: Optional[List[Tuple[float, float]]] = None
+
+
+@dataclass
+class MagneticLabelParams:
+    """Configuration parameters for the parametric magnetic label generator."""
+
+    text: TextParams = field(default_factory=TextParams)
+    sizing: SizingParams = field(default_factory=SizingParams)
+    plate: PlateParams = field(default_factory=PlateParams)
+    border: BorderRimParams = field(default_factory=BorderRimParams)
+    magnets: MagnetParams = field(default_factory=MagnetParams)
 
 
 @dataclass
@@ -160,14 +188,14 @@ def calculate_dimensions(params: MagneticLabelParams) -> Tuple[float, float, flo
     Automatically factors in text bounding box (if auto_size is enabled)
     and enforces minimum floor thickness behind press-fit magnet pockets.
     """
-    style = _resolve_font_style(params.font_style)
+    style = _resolve_font_style(params.text.font_style)
 
     # Calculate text bounding dimensions with exact geometric centering
     with BuildSketch() as probe:
         Text(
-            txt=params.text,
-            font_size=params.font_size,
-            font=params.font,
+            txt=params.text.content,
+            font_size=params.text.font_size,
+            font=params.text.font,
             font_style=style,
             align=(Align.CENTER, Align.CENTER),
         )
@@ -175,21 +203,25 @@ def calculate_dimensions(params: MagneticLabelParams) -> Tuple[float, float, flo
     text_w = text_bb.size.X
     text_h = text_bb.size.Y
 
-    if params.auto_size:
-        plate_w = max(params.min_width, text_w + 2 * params.padding_x)
-        plate_h = max(params.min_height, text_h + 2 * params.padding_y)
+    if params.sizing.auto_size:
+        plate_w = max(params.sizing.min_width, text_w + 2 * params.sizing.padding_x)
+        plate_h = max(params.sizing.min_height, text_h + 2 * params.sizing.padding_y)
     else:
-        plate_w = params.width
-        plate_h = params.height
+        plate_w = params.sizing.width
+        plate_h = params.sizing.height
 
     # Ensure base thickness is sufficient for magnet pocket + floor thickness
-    pocket_depth = (params.magnet_thickness + params.pocket_depth_offset) if params.magnets_enabled else 0.0
-    mode = TextMode.from_str(params.text_mode) if isinstance(params.text_mode, str) else params.text_mode
-    
+    pocket_depth = (
+        (params.magnets.thickness + params.magnets.pocket_depth_offset)
+        if params.magnets.enabled
+        else 0.0
+    )
+    mode = TextMode.from_str(params.text.mode) if isinstance(params.text.mode, str) else params.text.mode
+
     # In debossed mode, letters cut into top face, requiring extra safety margin
-    extra_recess = params.text_depth if mode == TextMode.DEBOSSED else 0.0
-    required_min_thick = pocket_depth + extra_recess + params.min_floor_thickness
-    plate_thick = max(params.base_thickness, required_min_thick)
+    extra_recess = params.text.depth if mode == TextMode.DEBOSSED else 0.0
+    required_min_thick = pocket_depth + extra_recess + params.plate.min_floor_thickness
+    plate_thick = max(params.plate.base_thickness, required_min_thick)
 
     return plate_w, plate_h, plate_thick
 
@@ -203,37 +235,31 @@ def calculate_magnet_positions(
     Calculates symmetrical press-fit magnet center coordinates (X, Y).
     Supports custom positions, explicit count, or automatic aspect-ratio spacing.
     """
-    if not params.magnets_enabled:
+    mag = params.magnets
+    if not mag.enabled:
         return []
 
-    # 1. User supplied custom coordinates
-    if params.magnet_positions is not None:
-        return list(params.magnet_positions)
+    if mag.positions is not None:
+        return list(mag.positions)
 
-    # 2. Determine count if not specified
-    if params.magnet_count is not None:
-        count = max(1, params.magnet_count)
+    if mag.count is not None:
+        count = max(1, mag.count)
     else:
-        # Automatic spacing rule based on width:
-        # < 36 mm: 1 centered magnet
-        # 36 mm - 75 mm: 2 magnets
-        # > 75 mm: 3 or more magnets spaced roughly every 35-45 mm
         if plate_width < 36.0:
             count = 1
         elif plate_width <= 75.0:
             count = 2
         else:
-            span = plate_width - 2 * params.magnet_edge_margin
+            span = plate_width - 2 * mag.edge_margin
             count = max(2, round(span / 40.0) + 1)
 
-    # 3. Calculate coordinate array along horizontal centerline (Y = 0)
     if count == 1:
         return [(0.0, 0.0)]
 
-    x_left = -plate_width / 2.0 + params.magnet_edge_margin
-    x_right = plate_width / 2.0 - params.magnet_edge_margin
+    x_left = -plate_width / 2.0 + mag.edge_margin
+    x_right = plate_width / 2.0 - mag.edge_margin
     step = (x_right - x_left) / (count - 1)
-    
+
     return [(round(x_left + i * step, 3), 0.0) for i in range(count)]
 
 
@@ -243,24 +269,25 @@ def build_magnetic_label(params: MagneticLabelParams) -> GeneratedLabel:
     Returns a GeneratedLabel containing the base solid, text solid (for flush mode),
     and visualization magnet bodies.
     """
-    mode = TextMode.from_str(params.text_mode) if isinstance(params.text_mode, str) else params.text_mode
-    font_style = _resolve_font_style(params.font_style)
+    txt = params.text
+    sizing = params.sizing
+    plate = params.plate
+    border = params.border
+    mag = params.magnets
 
-    # Calculate dimensions and magnet layout
+    mode = TextMode.from_str(txt.mode) if isinstance(txt.mode, str) else txt.mode
+    font_style = _resolve_font_style(txt.font_style)
+
     width, height, thickness = calculate_dimensions(params)
     magnet_coords = calculate_magnet_positions(width, height, params)
 
-    pocket_radius = (params.magnet_diameter + params.magnet_clearance) / 2.0
-    pocket_depth = params.magnet_thickness + params.pocket_depth_offset
+    pocket_radius = (mag.diameter + mag.clearance) / 2.0
+    pocket_depth = mag.thickness + mag.pocket_depth_offset
 
-    # Ensure corner radius does not exceed half the plate height
-    effective_corner_radius = min(params.corner_radius, (height / 2.0) - 0.5)
+    effective_corner_radius = min(plate.corner_radius, (height / 2.0) - 0.5)
 
-    # --------------------------------------------------------------------------
     # 1. Main Base Plate
-    # --------------------------------------------------------------------------
     with BuildPart() as base_builder:
-        # 1a. Base plate extrusion from Z=0 to Z=thickness
         with BuildSketch():
             if effective_corner_radius > 0:
                 RectangleRounded(width, height, radius=effective_corner_radius)
@@ -268,16 +295,12 @@ def build_magnetic_label(params: MagneticLabelParams) -> GeneratedLabel:
                 Rectangle(width, height)
         extrude(amount=thickness)
 
-        # 1b. Chamfer top perimeter of base plate (only if border rim is NOT used)
-        # When border rim is enabled, chamfer is placed on the rim's top crown instead
-        # to prevent creating an awkward stepped notch at the base of the rim wall.
-        if (not params.border_rim) and params.top_chamfer > 0.0:
+        if (not border.enabled) and plate.top_chamfer > 0.0:
             top_face = base_builder.faces().sort_by(Axis.Z)[-1]
-            max_chamfer = min(params.top_chamfer, effective_corner_radius * 0.8, 1.5)
+            max_chamfer = min(plate.top_chamfer, effective_corner_radius * 0.8, 1.5)
             if max_chamfer > 0.05:
                 chamfer(top_face.edges(), length=max_chamfer)
 
-        # 1c. Rear magnet press-fit pockets (cut from Z=0 upwards)
         if magnet_coords:
             with Locations(magnet_coords):
                 Cylinder(
@@ -287,38 +310,35 @@ def build_magnetic_label(params: MagneticLabelParams) -> GeneratedLabel:
                     mode=Mode.SUBTRACT,
                 )
 
-        # 1d. Optional raised border rim
-        if params.border_rim and params.border_width > 0:
+        if border.enabled and border.width > 0:
             with BuildSketch(Plane.XY.offset(thickness)):
                 if effective_corner_radius > 0:
                     RectangleRounded(width, height, radius=effective_corner_radius)
-                    inner_r = max(0.5, effective_corner_radius - params.border_width)
+                    inner_r = max(0.5, effective_corner_radius - border.width)
                     RectangleRounded(
-                        width - 2 * params.border_width,
-                        height - 2 * params.border_width,
+                        width - 2 * border.width,
+                        height - 2 * border.width,
                         radius=inner_r,
                         mode=Mode.SUBTRACT,
                     )
                 else:
                     Rectangle(width, height)
                     Rectangle(
-                        width - 2 * params.border_width,
-                        height - 2 * params.border_width,
+                        width - 2 * border.width,
+                        height - 2 * border.width,
                         mode=Mode.SUBTRACT,
                     )
-            extrude(amount=params.text_depth, mode=Mode.ADD)
+            extrude(amount=txt.depth, mode=Mode.ADD)
 
-            # Apply chamfer to the outer top edge of the rim
-            if params.top_chamfer > 0.0:
+            if plate.top_chamfer > 0.0:
                 rim_top_face = base_builder.faces().sort_by(Axis.Z)[-1]
                 outer_edges = rim_top_face.outer_wire().edges()
-                max_rim_chamfer = min(params.top_chamfer, params.border_width * 0.45, 1.2)
+                max_rim_chamfer = min(plate.top_chamfer, border.width * 0.45, 1.2)
                 if max_rim_chamfer > 0.05:
                     chamfer(outer_edges, length=max_rim_chamfer)
 
-        # 1e. Text application on front face (with true geometric centering and alignment)
-        align_norm = params.text_align.strip().lower()
-        margin_x = params.padding_x + (params.border_width if params.border_rim else 0.0)
+        align_norm = txt.align.strip().lower()
+        margin_x = sizing.padding_x + (border.width if border.enabled else 0.0)
 
         if align_norm in ("left", "start"):
             pos_x = -width / 2.0 + margin_x
@@ -326,57 +346,53 @@ def build_magnetic_label(params: MagneticLabelParams) -> GeneratedLabel:
         elif align_norm in ("right", "end"):
             pos_x = width / 2.0 - margin_x
             align_x = Align.MAX
-        else:  # "center"
+        else:
             pos_x = 0.0
             align_x = Align.CENTER
 
-        pos_y = params.text_offset_y
+        pos_y = txt.offset_y
         align_y = Align.CENTER
 
         with BuildSketch(Plane.XY.offset(thickness)):
             with Locations([(pos_x, pos_y)]):
                 Text(
-                    txt=params.text,
-                    font_size=params.font_size,
-                    font=params.font,
+                    txt=txt.content,
+                    font_size=txt.font_size,
+                    font=txt.font,
                     font_style=font_style,
                     align=(align_x, align_y),
                 )
 
         if mode == TextMode.EMBOSSED:
-            extrude(amount=params.text_depth, mode=Mode.ADD)
+            extrude(amount=txt.depth, mode=Mode.ADD)
         elif mode in (TextMode.DEBOSSED, TextMode.FLUSH):
-            extrude(amount=-params.text_depth, mode=Mode.SUBTRACT)
+            extrude(amount=-txt.depth, mode=Mode.SUBTRACT)
 
-    # --------------------------------------------------------------------------
     # 2. Text Inlay Body (for Flush / Multi-Color 3D Printing)
-    # --------------------------------------------------------------------------
     text_inlay_part: Optional[Compound | Solid] = None
     if mode == TextMode.FLUSH:
         with BuildPart() as inlay_builder:
-            with BuildSketch(Plane.XY.offset(thickness - params.text_depth)):
+            with BuildSketch(Plane.XY.offset(thickness - txt.depth)):
                 with Locations([(pos_x, pos_y)]):
                     Text(
-                        txt=params.text,
-                        font_size=params.font_size,
-                        font=params.font,
+                        txt=txt.content,
+                        font_size=txt.font_size,
+                        font=txt.font,
                         font_style=font_style,
                         align=(align_x, align_y),
                     )
-            extrude(amount=params.text_depth)
+            extrude(amount=txt.depth)
         text_inlay_part = inlay_builder.part
 
-    # --------------------------------------------------------------------------
     # 3. Magnet Solids (for visual preview and fit verification)
-    # --------------------------------------------------------------------------
     magnet_solids: List[Solid] = []
-    nominal_mag_radius = params.magnet_diameter / 2.0
+    nominal_mag_radius = mag.diameter / 2.0
     for mx, my in magnet_coords:
-        mag = Solid.make_cylinder(
+        mag_solid = Solid.make_cylinder(
             nominal_mag_radius,
-            params.magnet_thickness,
+            mag.thickness,
         ).locate(Location((mx, my, 0.0)))
-        magnet_solids.append(mag)
+        magnet_solids.append(mag_solid)
 
     return GeneratedLabel(
         base_part=base_builder.part,
@@ -424,9 +440,9 @@ def export_label_files(
     out_path.mkdir(parents=True, exist_ok=True)
     saved_files: List[str] = []
 
-    safe_text = "".join(c if c.isalnum() else "_" for c in label.params.text).strip("_").lower()
+    safe_text = "".join(c if c.isalnum() else "_" for c in label.params.text.content).strip("_").lower()
     dim_str = f"{label.actual_width:.0f}x{label.actual_height:.0f}mm"
-    base_stem = f"{prefix}_{dim_str}_{safe_text}_{label.params.text_mode}"
+    base_stem = f"{prefix}_{dim_str}_{safe_text}_{label.params.text.mode}"
 
     # Export base part
     if do_export_stl:
@@ -500,14 +516,20 @@ def batch_generate(
     for idx, item in enumerate(labels, start=1):
         if isinstance(item, tuple):
             text_val, overrides = item
-            item_params = replace(defaults, text=str(text_val), **overrides)
+            text_overrides = {k: v for k, v in overrides.items() if hasattr(defaults.text, k)}
+            top_overrides = {k: v for k, v in overrides.items() if not hasattr(defaults.text, k)}
+            item_params = replace(
+                defaults,
+                text=replace(defaults.text, content=str(text_val), **text_overrides),
+                **top_overrides,
+            )
         else:
-            item_params = replace(defaults, text=str(item))
+            item_params = replace(defaults, text=replace(defaults.text, content=str(item)))
 
         label = build_magnetic_label(item_params)
         results.append(label)
 
-        print(f" [{idx:02d}/{len(labels):02d}] '{label.params.text}': "
+        print(f" [{idx:02d}/{len(labels):02d}] '{label.params.text.content}': "
               f"{label.actual_width:.1f} x {label.actual_height:.1f} x {label.actual_thickness:.1f} mm "
               f"({len(label.magnet_positions)} magnets)")
 
@@ -536,12 +558,12 @@ def batch_generate(
             loc = Location((0.0, current_y, 0.0))
             offset_base = gen.base_part.locate(loc)
 
-            color_base = (240, 240, 245) if gen.params.text_mode == "flush" else (65, 70, 75)
-            display_items.append((offset_base, f"Label {i+1}: {gen.params.text}", color_base))
+            color_base = (240, 240, 245) if gen.params.text.mode == "flush" else (65, 70, 75)
+            display_items.append((offset_base, f"Label {i+1}: {gen.params.text.content}", color_base))
 
             if gen.text_part is not None:
                 offset_text = gen.text_part.locate(loc)
-                display_items.append((offset_text, f"Text {i+1}: {gen.params.text}", (230, 80, 20)))
+                display_items.append((offset_text, f"Text {i+1}: {gen.params.text.content}", (230, 80, 20)))
 
             for j, mag in enumerate(gen.magnet_solids):
                 display_items.append((mag.locate(loc), f"Mag_{i+1}_{j+1}", (190, 195, 200)))
@@ -583,16 +605,16 @@ def main():
     print("=" * 65)
     print(" PARAMETRIC BUILD123D MAGNETIC LABEL GENERATOR")
     print("=" * 65)
-    print(f" Text:              '{params.text}'")
-    print(f" Font:              {params.font} ({params.font_style}), Size: {params.font_size} mm")
-    print(f" Alignment:         {params.text_align.upper()} (Y offset: {params.text_offset_y:+.2f} mm)")
-    print(f" Rendering Mode:    {params.text_mode.upper()} (depth: {params.text_depth} mm)")
+    print(f" Text:              '{params.text.content}'")
+    print(f" Font:              {params.text.font} ({params.text.font_style}), Size: {params.text.font_size} mm")
+    print(f" Alignment:         {params.text.align.upper()} (Y offset: {params.text.offset_y:+.2f} mm)")
+    print(f" Rendering Mode:    {params.text.mode.upper()} (depth: {params.text.depth} mm)")
 
     # Build the label model
     label = build_magnetic_label(params)
 
-    pocket_dia = params.magnet_diameter + params.magnet_clearance
-    pocket_depth = params.magnet_thickness + params.pocket_depth_offset
+    pocket_dia = params.magnets.diameter + params.magnets.clearance
+    pocket_depth = params.magnets.thickness + params.magnets.pocket_depth_offset
     floor_thick = label.actual_thickness - pocket_depth
 
     print(f" Plate Dimensions:  {label.actual_width:.2f} x {label.actual_height:.2f} x {label.actual_thickness:.2f} mm")
@@ -623,11 +645,11 @@ def main():
         display_items = []
         
         # Color styling
-        if params.text_mode == "flush" and label.text_part is not None:
+        if params.text.mode == "flush" and label.text_part is not None:
             # Multi-color contrast for flush inlay
             display_items.append((label.base_part, "Label Base (Body)", (240, 240, 245)))
             display_items.append((label.text_part, "Text Inlay", (230, 80, 20)))
-        elif params.text_mode == "embossed":
+        elif params.text.mode == "embossed":
             display_items.append((label.base_part, "Magnetic Label (Embossed)", (60, 60, 65)))
         else:
             display_items.append((label.base_part, "Magnetic Label (Debossed)", (70, 75, 80)))
