@@ -17,7 +17,7 @@ Features:
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from build123d import *
@@ -31,32 +31,53 @@ OUTPUT_DIR: str = "exports"   # Relative subfolder alongside the script
 
 
 @dataclass
+class CoreParams:
+    """Primary C-clip spacer dimensions."""
+
+    thickness: float = 12.0                 # Axial thickness / space added by spacer in mm (Z height)
+    inside_diameter: float = 44.0           # Nominal diameter of the rod/shaft to fit in mm
+    outside_diameter: float = 76.0          # Outer diameter of the spacer in mm
+    fit_clearance: float = 0.2              # Diametral bore clearance in mm (bore = inside_diameter + fit_clearance)
+
+
+@dataclass
+class JawParams:
+    """Snap-on C-opening jaw geometry."""
+
+    opening_angle: float = 95.0             # Angular width of inner C-opening in degrees (< 180 for shaft retention)
+    jaw_flare_angle: float = 8.0            # Jaw cut angle from +X in deg (0 = straight parallel slot, smaller = more closed outer rim)
+    jaw_curve_depth: float = 1.2            # Concave C-curve bow depth along each jaw face in mm (0.0 for straight jaw)
+    inner_tip_fillet: float = 4.0           # Rounding radius transitioning jaw edge into inner bore in mm (0.0 for crisp corner)
+    outer_tip_fillet: float = 2.4           # Rounding radius curving outer jaw point toward inner point in mm (0.0 for crisp tip)
+
+
+@dataclass
+class RemovalNotchParams:
+    """Inside-edge removal cutout bordering the shaft."""
+
+    enabled: bool = True                    # Enable inside-edge grab/remove cutout
+    width: float = 32.0                     # Tangential width of the inside-edge cutout in mm
+    depth: float = 8.0                      # Radial depth of cutout extending outward from inner bore in mm
+    angle: float = 180.0                    # Angular position of cutout in degrees (180 = spine opposite C-opening)
+    fillet: float = 0.6                     # Transition fillet where cutout meets inner bore in mm (0.0 for crisp edge)
+
+
+@dataclass
+class EdgeChamferParams:
+    """Top and bottom perimeter edge bevel."""
+
+    enabled: bool = True                    # Enable subtle top/bottom perimeter bevel
+    size: float = 0.3                       # Chamfer size on top and bottom edges in mm
+
+
+@dataclass
 class CClipSpacerParams:
     """Parameters for the parametric snap-on C-clip spacer."""
 
-    # Primary Spacer Dimensions
-    thickness: float = 12.0                 # Axial thickness / space added by spacer in mm (Z height)
-    inside_diameter: float = 44.0          # Nominal diameter of the rod/shaft to fit in mm
-    outside_diameter: float = 76.0         # Outer diameter of the spacer in mm
-    fit_clearance: float = 0.2             # Diametral bore clearance in mm (bore = inside_diameter + fit_clearance)
-
-    # Snap-On C-Opening Geometry
-    opening_angle: float = 95.0            # Angular width of inner C-opening in degrees (< 180 for shaft retention)
-    jaw_flare_angle: float = 8.0           # Jaw cut angle from +X in deg (0 = straight parallel slot, smaller = more closed outer rim)
-    jaw_curve_depth: float = 1.2           # Concave C-curve bow depth along each jaw face in mm (0.0 for straight jaw)
-    inner_tip_fillet: float = 4.0          # Rounding radius transitioning jaw edge into inner bore in mm (0.0 for crisp corner)
-    outer_tip_fillet: float = 2.4          # Rounding radius curving outer jaw point toward inner point in mm (0.0 for crisp tip)
-
-    # Inside-Edge Removal Cutout (bordering the shaft)
-    removal_notch_enabled: bool = True     # Master toggle for the inside-edge grab/remove cutout
-    removal_notch_width: float = 32.0       # Tangential width of the inside-edge cutout in mm
-    removal_notch_depth: float = 8.0       # Radial depth of cutout extending outward from inner bore in mm
-    removal_notch_angle: float = 180.0     # Angular position of cutout in degrees (180 = spine opposite C-opening)
-    removal_notch_fillet: float = 0.6      # Transition fillet where cutout meets inner bore in mm (0.0 for crisp edge)
-
-    # Top & Bottom Edge Treatment
-    edge_chamfer_enabled: bool = True      # Master toggle for subtle top/bottom perimeter bevel
-    edge_chamfer: float = 0.3              # Chamfer size on top and bottom edges in mm
+    core: CoreParams = field(default_factory=CoreParams)
+    jaw: JawParams = field(default_factory=JawParams)
+    removal_notch: RemovalNotchParams = field(default_factory=RemovalNotchParams)
+    edge_chamfer: EdgeChamferParams = field(default_factory=EdgeChamferParams)
 
 
 def _shortest_angle_diff_deg(a: float, b: float) -> float:
@@ -226,46 +247,51 @@ def _solve_nose_and_jaw_arc(
 
 def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
     """Generate a parametric snap-on C-clip spacer solid body."""
-    if params.thickness <= 0:
-        raise ValueError(f"thickness must be positive, got {params.thickness}")
-    if params.inside_diameter <= 0:
-        raise ValueError(f"inside_diameter must be positive, got {params.inside_diameter}")
+    core = params.core
+    jaw = params.jaw
+    notch = params.removal_notch
+    chamf = params.edge_chamfer
 
-    bore_diameter = params.inside_diameter + params.fit_clearance
+    if core.thickness <= 0:
+        raise ValueError(f"thickness must be positive, got {core.thickness}")
+    if core.inside_diameter <= 0:
+        raise ValueError(f"inside_diameter must be positive, got {core.inside_diameter}")
+
+    bore_diameter = core.inside_diameter + core.fit_clearance
     if bore_diameter <= 0:
         raise ValueError(
             f"Effective bore diameter ({bore_diameter:.3f}mm) must be positive "
-            f"(inside_diameter={params.inside_diameter}, fit_clearance={params.fit_clearance})"
+            f"(inside_diameter={core.inside_diameter}, fit_clearance={core.fit_clearance})"
         )
-    if params.outside_diameter <= bore_diameter:
+    if core.outside_diameter <= bore_diameter:
         raise ValueError(
-            f"outside_diameter ({params.outside_diameter}mm) must be greater than "
+            f"outside_diameter ({core.outside_diameter}mm) must be greater than "
             f"effective bore diameter ({bore_diameter:.3f}mm)"
         )
-    if not (0.0 < params.opening_angle < 180.0):
+    if not (0.0 < jaw.opening_angle < 180.0):
         raise ValueError(
             f"opening_angle must be strictly between 0 and 180 degrees for shaft retention, "
-            f"got {params.opening_angle}"
+            f"got {jaw.opening_angle}"
         )
-    if not (-45.0 < params.jaw_flare_angle < 90.0):
+    if not (-45.0 < jaw.jaw_flare_angle < 90.0):
         raise ValueError(
             f"jaw_flare_angle must be strictly between -45 and 90 degrees, "
-            f"got {params.jaw_flare_angle}"
+            f"got {jaw.jaw_flare_angle}"
         )
-    if params.jaw_curve_depth < 0:
-        raise ValueError(f"jaw_curve_depth must be non-negative, got {params.jaw_curve_depth}")
-    if params.inner_tip_fillet < 0:
-        raise ValueError(f"inner_tip_fillet must be non-negative, got {params.inner_tip_fillet}")
-    if params.outer_tip_fillet < 0:
-        raise ValueError(f"outer_tip_fillet must be non-negative, got {params.outer_tip_fillet}")
-    if params.edge_chamfer < 0:
-        raise ValueError(f"edge_chamfer must be non-negative, got {params.edge_chamfer}")
+    if jaw.jaw_curve_depth < 0:
+        raise ValueError(f"jaw_curve_depth must be non-negative, got {jaw.jaw_curve_depth}")
+    if jaw.inner_tip_fillet < 0:
+        raise ValueError(f"inner_tip_fillet must be non-negative, got {jaw.inner_tip_fillet}")
+    if jaw.outer_tip_fillet < 0:
+        raise ValueError(f"outer_tip_fillet must be non-negative, got {jaw.outer_tip_fillet}")
+    if chamf.size < 0:
+        raise ValueError(f"edge_chamfer.size must be non-negative, got {chamf.size}")
 
     r_in = bore_diameter / 2.0
-    r_out = params.outside_diameter / 2.0
+    r_out = core.outside_diameter / 2.0
     wall_thickness = r_out - r_in
-    half_open_rad = math.radians(params.opening_angle / 2.0)
-    flare_rad = math.radians(params.jaw_flare_angle)
+    half_open_rad = math.radians(jaw.opening_angle / 2.0)
+    flare_rad = math.radians(jaw.jaw_flare_angle)
 
     # Inner jaw corner and ray-circle intersection with outer perimeter
     x_in = r_in * math.cos(half_open_rad)
@@ -279,39 +305,39 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
     y_out = y_in + t_out * dy
     if y_out <= 1e-3:
         raise ValueError(
-            f"jaw_flare_angle ({params.jaw_flare_angle} deg) causes opposing jaws to cross "
-            f"before reaching outside_diameter ({params.outside_diameter}mm)"
+            f"jaw_flare_angle ({jaw.jaw_flare_angle} deg) causes opposing jaws to cross "
+            f"before reaching outside_diameter ({core.outside_diameter}mm)"
         )
     jaw_length = t_out
 
     # Validate removal notch geometry before constructing CAD shapes
-    notch_half_w = params.removal_notch_width / 2.0
+    notch_half_w = notch.width / 2.0
     notch_x_entry = 0.0
-    if params.removal_notch_enabled:
-        if params.removal_notch_width <= 0:
-            raise ValueError(f"removal_notch_width must be positive, got {params.removal_notch_width}")
-        if params.removal_notch_depth <= 0:
-            raise ValueError(f"removal_notch_depth must be positive, got {params.removal_notch_depth}")
-        if params.removal_notch_fillet < 0:
-            raise ValueError(f"removal_notch_fillet must be non-negative, got {params.removal_notch_fillet}")
-        if params.removal_notch_width >= bore_diameter * 0.9:
+    if notch.enabled:
+        if notch.width <= 0:
+            raise ValueError(f"removal_notch.width must be positive, got {notch.width}")
+        if notch.depth <= 0:
+            raise ValueError(f"removal_notch.depth must be positive, got {notch.depth}")
+        if notch.fillet < 0:
+            raise ValueError(f"removal_notch.fillet must be non-negative, got {notch.fillet}")
+        if notch.width >= bore_diameter * 0.9:
             raise ValueError(
-                f"removal_notch_width ({params.removal_notch_width}mm) must be smaller than "
+                f"removal_notch.width ({notch.width}mm) must be smaller than "
                 f"90% of bore diameter ({bore_diameter * 0.9:.2f}mm)"
             )
-        if params.removal_notch_depth >= wall_thickness * 0.85:
+        if notch.depth >= wall_thickness * 0.85:
             raise ValueError(
-                f"removal_notch_depth ({params.removal_notch_depth}mm) must be less than "
+                f"removal_notch.depth ({notch.depth}mm) must be less than "
                 f"85% of radial wall thickness ({wall_thickness * 0.85:.2f}mm) to preserve spine strength"
             )
 
         notch_half_angle_deg = math.degrees(math.asin(notch_half_w / r_in))
-        angular_sep = _shortest_angle_diff_deg(params.removal_notch_angle, 0.0)
-        min_required_sep = params.opening_angle / 2.0 + notch_half_angle_deg + 5.0
+        angular_sep = _shortest_angle_diff_deg(notch.angle, 0.0)
+        min_required_sep = jaw.opening_angle / 2.0 + notch_half_angle_deg + 5.0
         if angular_sep < min_required_sep:
             raise ValueError(
-                f"removal_notch_angle ({params.removal_notch_angle} deg) overlaps or is too close to "
-                f"the C-opening ({params.opening_angle} deg centered at 0 deg)"
+                f"removal_notch.angle ({notch.angle} deg) overlaps or is too close to "
+                f"the C-opening ({jaw.opening_angle} deg centered at 0 deg)"
             )
         notch_x_entry = math.sqrt(r_in * r_in - notch_half_w * notch_half_w)
 
@@ -327,8 +353,8 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
         b_dot=b_dot,
         h_jaw=h_jaw_base,
         wall_thickness=wall_thickness,
-        requested_outer_fillet=params.outer_tip_fillet,
-        requested_jaw_curve=params.jaw_curve_depth,
+        requested_outer_fillet=jaw.outer_tip_fillet,
+        requested_jaw_curve=jaw.jaw_curve_depth,
     )
 
     t_in_arc_x, t_in_arc_y = -math.sin(half_open_rad), math.cos(half_open_rad)
@@ -342,8 +368,8 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
         x_mid = 0.5 * (x_in + x_out)
         y_mid = 0.5 * (y_in + y_out)
         eff_jaw_curve = (
-            min(params.jaw_curve_depth, jaw_length * 0.22, wall_thickness * 0.45)
-            if params.jaw_curve_depth > 0
+            min(jaw.jaw_curve_depth, jaw_length * 0.22, wall_thickness * 0.45)
+            if jaw.jaw_curve_depth > 0
             else 0.0
         )
         while (
@@ -369,36 +395,36 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
     k_in = 1.0 / math.tan(math.acos(cos_gamma_in) / 2.0)
     max_inner_by_jaw = (jaw_chord_len * 0.45) / max(k_in, 1e-6)
     eff_inner_fillet = (
-        min(params.inner_tip_fillet, wall_thickness * 0.75, max_inner_by_jaw)
-        if params.inner_tip_fillet > 0 and cos_gamma_in > -0.995
+        min(jaw.inner_tip_fillet, wall_thickness * 0.75, max_inner_by_jaw)
+        if jaw.inner_tip_fillet > 0 and cos_gamma_in > -0.995
         else 0.0
     )
 
     eff_notch_fillet = 0.0
-    if params.removal_notch_enabled and params.removal_notch_fillet > 0:
+    if notch.enabled and notch.fillet > 0:
         eff_notch_fillet = min(
-            params.removal_notch_fillet,
-            params.removal_notch_depth * 0.45,
-            (wall_thickness - params.removal_notch_depth) * 0.45,
-            params.removal_notch_width * 0.25,
+            notch.fillet,
+            notch.depth * 0.45,
+            (wall_thickness - notch.depth) * 0.45,
+            notch.width * 0.25,
         )
 
     # Build trimmed inside-edge notch cutter outside main sketch so it never crosses bore center
     notch_cutter = None
-    if params.removal_notch_enabled:
-        x_radius = (r_in + params.removal_notch_depth) - notch_x_entry
+    if notch.enabled:
+        x_radius = (r_in + notch.depth) - notch_x_entry
         with BuildSketch(Plane.XY) as notch_sk:
             with Locations((notch_x_entry, 0.0)):
                 Ellipse(x_radius=x_radius, y_radius=notch_half_w)
-            clip_w = r_in + params.removal_notch_depth + 1.0
+            clip_w = r_in + notch.depth + 1.0
             with Locations((clip_w / 2.0, 0.0)):
-                Rectangle(width=clip_w, height=params.removal_notch_width + 1.0, mode=Mode.INTERSECT)
-        notch_cutter = notch_sk.sketch.rotate(Axis.Z, params.removal_notch_angle)
+                Rectangle(width=clip_w, height=notch.width + 1.0, mode=Mode.INTERSECT)
+        notch_cutter = notch_sk.sketch.rotate(Axis.Z, notch.angle)
 
     with BuildPart() as spacer:
         with BuildSketch(Plane.XY) as profile:
             # 1. Base C-clip perimeter with tangent rounded outer nose & curved/straight jaws
-            half_open_deg = params.opening_angle / 2.0
+            half_open_deg = jaw.opening_angle / 2.0
             with BuildLine():
                 if nose_sol is not None:
                     px_tan, py_tan = nose_sol["p_tan"]  # type: ignore[misc]
@@ -413,7 +439,7 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
                         ThreePointArc((tx, -ty), (mx_jaw, -my_jaw), (x_in, -y_in))
                     else:
                         Line((tx, -ty), (x_in, -y_in))
-                    CenterArc((0.0, 0.0), r_in, half_open_deg, 360.0 - params.opening_angle)
+                    CenterArc((0.0, 0.0), r_in, half_open_deg, 360.0 - jaw.opening_angle)
                     if eff_jaw_curve > 1e-4:
                         ThreePointArc((x_in, y_in), (mx_jaw, my_jaw), (tx, ty))
                     else:
@@ -426,7 +452,7 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
                         ThreePointArc((x_out, -y_out), (x_mid_arc, -y_mid_arc), (x_in, -y_in))
                     else:
                         Line((x_out, -y_out), (x_in, -y_in))
-                    CenterArc((0.0, 0.0), r_in, half_open_deg, 360.0 - params.opening_angle)
+                    CenterArc((0.0, 0.0), r_in, half_open_deg, 360.0 - jaw.opening_angle)
                     if eff_jaw_curve > 1e-4:
                         ThreePointArc((x_in, y_in), (x_mid_arc, y_mid_arc), (x_out, y_out))
                     else:
@@ -439,7 +465,7 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
 
                 # Smoothly fillet the two entry corners where the notch meets the inner bore
                 if eff_notch_fillet > 1e-3:
-                    angle_rad = math.radians(params.removal_notch_angle)
+                    angle_rad = math.radians(notch.angle)
                     expected_entry_pts = []
                     for sign in (-1.0, 1.0):
                         lx = notch_x_entry
@@ -469,17 +495,17 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
                     fillet(inner_verts, radius=eff_inner_fillet)
 
         # 5. Extrude axially to spacer thickness (Z = 0 to thickness)
-        extrude(amount=params.thickness)
+        extrude(amount=core.thickness)
 
         # 6. Subtle top & bottom perimeter edge chamfer for clean bed release and burr-free handling
-        if params.edge_chamfer_enabled and params.edge_chamfer > 0:
+        if chamf.enabled and chamf.size > 0:
             remaining_spine = (
-                wall_thickness - params.removal_notch_depth
-                if params.removal_notch_enabled
+                wall_thickness - notch.depth
+                if notch.enabled
                 else wall_thickness
             )
             max_safe_chamfer = min(
-                params.thickness * 0.35,
+                core.thickness * 0.35,
                 wall_thickness * 0.3,
                 remaining_spine * 0.35,
             )
@@ -487,7 +513,7 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
                 if r_corner > 0:
                     max_safe_chamfer = min(max_safe_chamfer, r_corner * 0.8)
 
-            eff_chamfer = min(params.edge_chamfer, max_safe_chamfer)
+            eff_chamfer = min(chamf.size, max_safe_chamfer)
             if eff_chamfer > 1e-3:
                 top_face = spacer.faces().sort_by(Axis.Z)[-1]
                 bot_face = spacer.faces().sort_by(Axis.Z)[0]
@@ -507,10 +533,10 @@ if __name__ == "__main__":
         exports_path = Path(__file__).resolve().parent / OUTPUT_DIR
         exports_path.mkdir(parents=True, exist_ok=True)
 
-        variant = "notch" if params.removal_notch_enabled else "plain"
+        variant = "notch" if params.removal_notch.enabled else "plain"
         stem = (
-            f"c_clip_spacer_{params.inside_diameter:g}x"
-            f"{params.outside_diameter:g}x{params.thickness:g}mm_{variant}"
+            f"c_clip_spacer_{params.core.inside_diameter:g}x"
+            f"{params.core.outside_diameter:g}x{params.core.thickness:g}mm_{variant}"
         )
 
         if EXPORT_STL:
