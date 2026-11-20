@@ -34,21 +34,21 @@ OUTPUT_DIR: str = "exports"   # Relative subfolder alongside the script
 class CoreParams:
     """Primary C-clip spacer dimensions."""
 
-    thickness: float = 12.0                 # Axial thickness / space added by spacer in mm (Z height)
-    inside_diameter: float = 44.0           # Nominal diameter of the rod/shaft to fit in mm
-    outside_diameter: float = 76.0          # Outer diameter of the spacer in mm
-    fit_clearance: float = 0.2              # Diametral bore clearance in mm (bore = inside_diameter + fit_clearance)
+    thickness: float = field(default=12.0, metadata={"min": 2.0, "max": 60.0, "step": 0.5})  # Axial thickness / space added by spacer in mm (Z height)
+    inside_diameter: float = field(default=44.0, metadata={"min": 6.0, "max": 120.0, "step": 0.5})  # Nominal diameter of the rod/shaft to fit in mm
+    outside_diameter: float = field(default=76.0, metadata={"min": 12.0, "max": 180.0, "step": 0.5})  # Outer diameter of the spacer in mm
+    fit_clearance: float = field(default=0.2, metadata={"min": -0.5, "max": 1.0, "step": 0.05})  # Diametral bore clearance in mm (bore = inside_diameter + fit_clearance)
 
 
 @dataclass
 class JawParams:
     """Snap-on C-opening jaw geometry."""
 
-    opening_angle: float = 95.0             # Angular width of inner C-opening in degrees (< 180 for shaft retention)
-    jaw_flare_angle: float = 8.0            # Jaw cut angle from +X in deg (0 = straight parallel slot, smaller = more closed outer rim)
-    jaw_curve_depth: float = 1.2            # Concave C-curve bow depth along each jaw face in mm (0.0 for straight jaw)
-    inner_tip_fillet: float = 4.0           # Rounding radius transitioning jaw edge into inner bore in mm (0.0 for crisp corner)
-    outer_tip_fillet: float = 2.4           # Rounding radius curving outer jaw point toward inner point in mm (0.0 for crisp tip)
+    opening_angle: float = field(default=95.0, metadata={"min": 20.0, "max": 165.0, "step": 1.0})  # Angular width of inner C-opening in degrees (< 180 for shaft retention)
+    jaw_flare_angle: float = field(default=8.0, metadata={"min": -20.0, "max": 45.0, "step": 1.0})  # Jaw cut angle from +X in deg (0 = straight parallel slot, smaller = more closed outer rim)
+    jaw_curve_depth: float = field(default=1.2, metadata={"min": 0.0, "max": 6.0, "step": 0.1})  # Concave C-curve bow depth along each jaw face in mm (0.0 for straight jaw)
+    inner_tip_fillet: float = field(default=4.0, metadata={"min": 0.0, "max": 10.0, "step": 0.2})  # Rounding radius transitioning jaw edge into inner bore in mm (0.0 for crisp corner)
+    outer_tip_fillet: float = field(default=2.4, metadata={"min": 0.0, "max": 10.0, "step": 0.2})  # Rounding radius curving outer jaw point toward inner point in mm (0.0 for crisp tip)
 
 
 @dataclass
@@ -56,10 +56,10 @@ class RemovalNotchParams:
     """Inside-edge removal cutout bordering the shaft."""
 
     enabled: bool = True                    # Enable inside-edge grab/remove cutout
-    width: float = 32.0                     # Tangential width of the inside-edge cutout in mm
-    depth: float = 8.0                      # Radial depth of cutout extending outward from inner bore in mm
-    angle: float = 180.0                    # Angular position of cutout in degrees (180 = spine opposite C-opening)
-    fillet: float = 0.6                     # Transition fillet where cutout meets inner bore in mm (0.0 for crisp edge)
+    width: float = field(default=32.0, metadata={"min": 4.0, "max": 60.0, "step": 1.0})  # Tangential width of the inside-edge cutout in mm
+    depth: float = field(default=8.0, metadata={"min": 1.0, "max": 25.0, "step": 0.5})  # Radial depth of cutout extending outward from inner bore in mm
+    angle: float = field(default=180.0, metadata={"min": 0.0, "max": 360.0, "step": 5.0})  # Angular position of cutout in degrees (180 = spine opposite C-opening)
+    fillet: float = field(default=0.6, metadata={"min": 0.0, "max": 5.0, "step": 0.1})  # Transition fillet where cutout meets inner bore in mm (0.0 for crisp edge)
 
 
 @dataclass
@@ -67,7 +67,7 @@ class EdgeChamferParams:
     """Top and bottom perimeter edge bevel."""
 
     enabled: bool = True                    # Enable subtle top/bottom perimeter bevel
-    size: float = 0.3                       # Chamfer size on top and bottom edges in mm
+    size: float = field(default=0.3, metadata={"min": 0.0, "max": 3.0, "step": 0.1})  # Chamfer size on top and bottom edges in mm
 
 
 @dataclass
@@ -523,6 +523,15 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
     return spacer.part
 
 
+def export_filename(params: CClipSpacerParams) -> str:
+    """Return standardized lowercase filename stem (without extension) for exports."""
+    variant = "notch" if params.removal_notch.enabled else "plain"
+    return (
+        f"c_clip_spacer_{params.core.inside_diameter:g}x"
+        f"{params.core.outside_diameter:g}x{params.core.thickness:g}mm_{variant}"
+    )
+
+
 if __name__ == "__main__":
     # Single source of truth: dataclass defaults take effect directly
     params = CClipSpacerParams()
@@ -533,11 +542,7 @@ if __name__ == "__main__":
         exports_path = Path(__file__).resolve().parent / OUTPUT_DIR
         exports_path.mkdir(parents=True, exist_ok=True)
 
-        variant = "notch" if params.removal_notch.enabled else "plain"
-        stem = (
-            f"c_clip_spacer_{params.core.inside_diameter:g}x"
-            f"{params.core.outside_diameter:g}x{params.core.thickness:g}mm_{variant}"
-        )
+        stem = export_filename(params)
 
         if EXPORT_STL:
             stl_file = exports_path / f"{stem}.stl"
