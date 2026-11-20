@@ -22,7 +22,7 @@ from build123d import *
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = True      # Save .stl file on execution (default: False)
+EXPORT_STL: bool = False     # Save .stl file on execution (default: False)
 EXPORT_STEP: bool = False     # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"   # Relative subfolder alongside this script
 
@@ -31,15 +31,15 @@ OUTPUT_DIR: str = "exports"   # Relative subfolder alongside this script
 class CoreParams:
     """Grid units, pitch, walls, floor, and corner radius."""
 
-    grid_x: int = 2                     # Number of grid units along X (width)
-    grid_y: int = 2                     # Number of grid units along Y (length/depth)
-    grid_z: int = 6                     # Number of height units along Z
+    grid_x: int = field(default=2, metadata={"min": 1, "max": 8, "step": 1})  # Number of grid units along X (width)
+    grid_y: int = field(default=2, metadata={"min": 1, "max": 8, "step": 1})  # Number of grid units along Y (length/depth)
+    grid_z: int = field(default=6, metadata={"min": 2, "max": 12, "step": 1})  # Number of height units along Z
     unit_size: float = 42.0             # Base XY grid pitch in mm (standard Gridfinity = 42.0mm)
     unit_z: float = 7.0                 # Height Z unit pitch in mm (standard Gridfinity = 7.0mm)
     grid_clearance: float = 0.5         # Total XY clearance gap between bins in mm (0.25mm per side)
-    wall_thickness: float = 1.2         # Exterior wall thickness in mm (3 perimeters w/ 0.4mm nozzle)
-    floor_thickness: float = 2.0        # Solid floor thickness above the 4.75mm base feet in mm
-    corner_radius: float = 3.75         # Outer vertical corner radius in mm (4.0mm grid R - 0.25mm inset)
+    wall_thickness: float = field(default=1.2, metadata={"min": 0.8, "max": 4.0, "step": 0.2})  # Exterior wall thickness in mm (3 perimeters w/ 0.4mm nozzle)
+    floor_thickness: float = field(default=2.0, metadata={"min": 1.0, "max": 6.0, "step": 0.2})  # Solid floor thickness above the 4.75mm base feet in mm
+    corner_radius: float = field(default=3.75, metadata={"min": 1.0, "max": 8.0, "step": 0.25})  # Outer vertical corner radius in mm (4.0mm grid R - 0.25mm inset)
 
 
 @dataclass
@@ -76,15 +76,15 @@ class LabelHolderParams:
     enabled: bool = True                # Add printable label shelf & recessed socket
     shelf_full_width: bool = False      # If True, shelf spans full compartment width; if False, sized to label(s)
     placement: Literal["center", "left", "right", "per_column"] = "center"  # Label placement along X
-    units: int = 1                      # Width in grid units: 1, 2, 3... (clamped to grid_x)
-    column: Optional[int] = None        # Specific 1-indexed column start (1..grid_x); overrides left/center/right
+    units: int = field(default=1, metadata={"min": 1, "max": 6, "step": 1, "when": {"placement": ["center", "left", "right"]}})  # Width in grid units: 1, 2, 3... (clamped to grid_x)
+    column: Optional[int] = field(default=None, metadata={"min": 1, "max": 8, "step": 1, "when": {"placement": ["center", "left", "right"]}})  # Specific 1-indexed column start (1..grid_x); overrides left/center/right
     wall: Literal["back", "front"] = "back"  # Wall inside compartment where label shelf is mounted
     height: float = 11.5                # Label plate depth (Y) in mm (fits ~11.3mm label)
     thickness: float = 1.0              # Recessed pocket & tab slot height (Z) in mm (fits ~0.87mm tab)
     shelf_depth: float = 13.5           # Total inward depth (Y) of the supporting shelf overhang in mm
     shelf_thickness: float = 2.4        # Vertical thickness of shelf deck in mm (0.6 roof + 1.0 slot + 0.8 floor)
-    fin_count: Optional[int] = None     # Manual fin count override per compartment (None = auto-calculate)
-    fin_max_span: float = 12.0          # Max unsupported bridge span in mm when fin_count is None
+    fin_count: Optional[int] = field(default=None, metadata={"min": 0, "max": 12, "step": 1})  # Manual fin count override per compartment (None = auto-calculate)
+    fin_max_span: float = field(default=12.0, metadata={"min": 4.0, "max": 30.0, "step": 1.0, "when": {"fin_count": None}})  # Max unsupported bridge span in mm when fin_count is None
     fin_thickness: float = 0.8          # Thickness (X) of each support fin in mm
     overhang_angle: float = 35.0        # Support fin angle underneath the label shelf in degrees
     width_margin: float = 5.6           # Margin subtracted from unit width (42 - 5.6 = 36.4mm pocket)
@@ -98,11 +98,11 @@ class ScoopParams:
 
     enabled: bool = True                # Enable/disable all finger scoops
     style: Literal["directional", "bowl"] = "directional"  # Per-wall scoops or 360° dish bottom
-    bowl_radius: float = 8.0            # 360° all-around floor fillet radius in mm when style="bowl"
-    front_radius: float = 12.0          # Radius of front (-Y) finger scoop in mm (0.0 to disable)
-    back_radius: float = 6.0            # Radius of back (+Y) finger scoop in mm (0.0 to disable)
-    left_radius: float = 0.0            # Radius of left (-X) finger scoop in mm (0.0 to disable)
-    right_radius: float = 0.0           # Radius of right (+X) finger scoop in mm (0.0 to disable)
+    bowl_radius: float = field(default=8.0, metadata={"min": 0.0, "max": 25.0, "step": 0.5, "when": {"style": "bowl"}})  # 360° all-around floor fillet radius in mm when style="bowl"
+    front_radius: float = field(default=12.0, metadata={"min": 0.0, "max": 25.0, "step": 0.5, "when": {"style": "directional"}})  # Radius of front (-Y) finger scoop in mm (0.0 to disable)
+    back_radius: float = field(default=6.0, metadata={"min": 0.0, "max": 25.0, "step": 0.5, "when": {"style": "directional"}})  # Radius of back (+Y) finger scoop in mm (0.0 to disable)
+    left_radius: float = field(default=0.0, metadata={"min": 0.0, "max": 25.0, "step": 0.5, "when": {"style": "directional"}})  # Radius of left (-X) finger scoop in mm (0.0 to disable)
+    right_radius: float = field(default=0.0, metadata={"min": 0.0, "max": 25.0, "step": 0.5, "when": {"style": "directional"}})  # Radius of right (+X) finger scoop in mm (0.0 to disable)
 
 
 @dataclass
@@ -110,9 +110,9 @@ class DividersParams:
     """Interior compartment dividing walls."""
 
     enabled: bool = False               # Enable/disable interior dividing walls
-    x: int = 1                          # Number of interior divider walls along X (0 = undivided)
-    y: int = 0                          # Number of interior divider walls along Y (0 = undivided)
-    thickness: float = 1.2              # Wall thickness of internal dividing walls in mm
+    x: int = field(default=1, metadata={"min": 0, "max": 6, "step": 1})  # Number of interior divider walls along X (0 = undivided)
+    y: int = field(default=0, metadata={"min": 0, "max": 6, "step": 1})  # Number of interior divider walls along Y (0 = undivided)
+    thickness: float = field(default=1.2, metadata={"min": 0.8, "max": 3.0, "step": 0.2})  # Wall thickness of internal dividing walls in mm
 
 
 @dataclass
@@ -120,11 +120,11 @@ class OverhangParams:
     """Drawer spacer gap overhangs (fills dead space above baseplate padding)."""
 
     enabled: bool = False               # Enable/disable drawer spacer overhangs
-    front: float = 0.0                  # Body extension past front (-Y) grid boundary in mm
-    back: float = 0.0                   # Body extension past back (+Y) grid boundary in mm
-    left: float = 0.0                   # Body extension past left (-X) grid boundary in mm
-    right: float = 0.0                  # Body extension past right (+X) grid boundary in mm
-    chamfer_angle: float = 45.0         # Print-safe underside transition angle in degrees
+    front: float = field(default=0.0, metadata={"min": 0.0, "max": 40.0, "step": 0.5})  # Body extension past front (-Y) grid boundary in mm
+    back: float = field(default=0.0, metadata={"min": 0.0, "max": 40.0, "step": 0.5})  # Body extension past back (+Y) grid boundary in mm
+    left: float = field(default=0.0, metadata={"min": 0.0, "max": 40.0, "step": 0.5})  # Body extension past left (-X) grid boundary in mm
+    right: float = field(default=0.0, metadata={"min": 0.0, "max": 40.0, "step": 0.5})  # Body extension past right (+X) grid boundary in mm
+    chamfer_angle: float = field(default=45.0, metadata={"min": 30.0, "max": 65.0, "step": 1.0})  # Print-safe underside transition angle in degrees
 
 
 @dataclass
@@ -1247,6 +1247,22 @@ def create_gridfinity_bin(params: GridfinityBinParams) -> Part:
     return final_bin.part
 
 
+def export_filename(params: GridfinityBinParams) -> str:
+    """Return standardized lowercase filename stem (without extension) for exports."""
+    dims = f"{params.core.grid_x}x{params.core.grid_y}x{params.core.grid_z}u"
+    if params.label.enabled:
+        if params.label.column is not None:
+            placement_str = f"col{params.label.column}_{params.label.units}u"
+        elif params.label.placement in ("left", "center", "right"):
+            placement_str = f"{params.label.placement}_{params.label.units}u"
+        else:
+            placement_str = params.label.placement
+        label_tag = f"label_{placement_str}"
+    else:
+        label_tag = "standard"
+    return f"gridfinity_bin_{dims}_{label_tag}"
+
+
 # ==============================================================================
 # Model Execution & Export
 # ==============================================================================
@@ -1261,19 +1277,7 @@ if __name__ == "__main__":
     if EXPORT_STL or EXPORT_STEP:
         output_dir = Path(__file__).resolve().parent / OUTPUT_DIR
         output_dir.mkdir(parents=True, exist_ok=True)
-
-        dims = f"{params.core.grid_x}x{params.core.grid_y}x{params.core.grid_z}u"
-        if params.label.enabled:
-            if params.label.column is not None:
-                placement_str = f"col{params.label.column}_{params.label.units}u"
-            elif params.label.placement in ("left", "center", "right"):
-                placement_str = f"{params.label.placement}_{params.label.units}u"
-            else:
-                placement_str = params.label.placement
-            label_tag = f"label_{placement_str}"
-        else:
-            label_tag = "standard"
-        base_filename = f"gridfinity_bin_{dims}_{label_tag}"
+        base_filename = export_filename(params)
 
         if EXPORT_STL:
             stl_path = output_dir / f"{base_filename}.stl"
