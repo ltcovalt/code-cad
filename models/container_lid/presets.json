@@ -1,0 +1,168 @@
+{
+  "pyrex_round_1_cup": {
+    "label": "Pyrex Round 1-Cup",
+    "description": "98 mm round Pyrex glass bowl",
+    "params": {
+      "core": {
+        "diameter": 98.0,
+        "rim_lip_height": 4.5,
+        "glass_wall_thickness": 3.8
+      },
+      "structure": {
+        "skirt_height": 9.0
+      }
+    }
+  },
+  "pyrex_round_2_cup": {
+    "label": "Pyrex Round 2-Cup",
+    "description": "120 mm round Pyrex glass bowl",
+    "params": {
+      "core": {
+        "diameter": 120.0
+      }
+    }
+  },
+  "pyrex_round_4_cup": {
+    "label": "Pyrex Round 4-Cup",
+    "description": "150 mm round Pyrex glass bowl",
+    "params": {
+      "core": {
+        "diameter": 150.0,
+        "rim_lip_height": 5.2,
+        "glass_wall_thickness": 4.2
+      },
+      "structure": {
+        "skirt_height": 10.5
+      }
+    }
+  },
+  "pyrex_round_7_cup": {
+    "label": "Pyrex Round 7-Cup",
+    "description": "185 mm round Pyrex glass bowl",
+    "params": {
+      "core": {
+        "diameter": 185.0,
+        "rim_lip_height": 5.5,
+        "glass_wall_thickness": 4.5
+      },
+      "structure": {
+        "skirt_height": 11.5
+      }
+    }
+  },
+  "pyrex_rect_3_cup": {
+    "label": "Pyrex Rectangular 3-Cup",
+    "description": "182 x 132 mm rectangular Pyrex dish",
+    "params": {
+      "core": {
+        "shape": "rectangular",
+        "length": 182.0,
+        "width": 132.0,
+        "corner_radius": 20.0
+      }
+    }
+  },
+  "pyrex_rect_6_cup": {
+    "label": "Pyrex Rectangular 6-Cup",
+    "description": "225 x 175 mm rectangular Pyrex dish",
+    "params": {
+      "core": {
+        "shape": "rectangular",
+        "length": 225.0,
+        "width": 175.0,
+        "corner_radius": 25.0,
+        "rim_lip_height": 5.5,
+        "glass_wall_thickness": 4.5
+      },
+      "structure": {
+        "skirt_height": 11.0
+      }
+    }
+  },
+  "pyrex_rect_11_cup": {
+    "label": "Pyrex Rectangular 11-Cup",
+    "description": "280 x 200 mm rectangular Pyrex dish",
+    "params": {
+      "core": {
+        "shape": "rectangular",
+        "length": 280.0,
+        "width": 200.0,
+        "corner_radius": 30.0,
+        "rim_lip_height": 6.0,
+        "glass_wall_thickness": 5.0
+      },
+      "structure": {
+        "skirt_height": 12.0
+      }
+    }
+  },
+  "anchor_round_1_cup": {
+    "label": "Anchor Hocking Round 1-Cup",
+    "description": "96 mm round Anchor Hocking bowl",
+    "params": {
+      "core": {
+        "diameter": 96.0,
+        "rim_lip_height": 4.5,
+        "glass_wall_thickness": 3.8
+      },
+      "structure": {
+        "skirt_height": 9.0
+      }
+    }
+  },
+  "anchor_round_2_cup": {
+    "label": "Anchor Hocking Round 2-Cup",
+    "description": "122 mm round Anchor Hocking bowl",
+    "params": {
+      "core": {
+        "diameter": 122.0,
+        "rim_lip_height": 4.8
+      }
+    }
+  },
+  "anchor_round_4_cup": {
+    "label": "Anchor Hocking Round 4-Cup",
+    "description": "152 mm round Anchor Hocking bowl",
+    "params": {
+      "core": {
+        "diameter": 152.0,
+        "rim_lip_height": 5.2,
+        "glass_wall_thickness": 4.2
+      },
+      "structure": {
+        "skirt_height": 10.5
+      }
+    }
+  },
+  "anchor_round_7_cup": {
+    "label": "Anchor Hocking Round 7-Cup",
+    "description": "186 mm round Anchor Hocking bowl",
+    "params": {
+      "core": {
+        "diameter": 186.0,
+        "rim_lip_height": 5.5,
+        "glass_wall_thickness": 4.5
+      },
+      "structure": {
+        "skirt_height": 11.5
+      }
+    }
+  },
+  "anchor_rect_4_75_cup": {
+    "label": "Anchor Hocking Rectangular 4.75-Cup",
+    "description": "195 x 148 mm rectangular Anchor Hocking dish",
+    "params": {
+      "core": {
+        "shape": "rectangular",
+        "length": 195.0,
+        "width": 148.0,
+        "corner_radius": 22.0,
+        "rim_lip_height": 5.2,
+        "glass_wall_thickness": 4.2
+      },
+      "structure": {
+        "skirt_height": 10.5
+      }
+    }
+  }
+}

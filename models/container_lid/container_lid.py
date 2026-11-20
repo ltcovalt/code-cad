@@ -14,13 +14,13 @@ Features:
 - Stacking nesting rim on top surface
 - Ergonomic pull tab (corner tab on rectangular lids, edge tab on round lids)
   with non-slip grip ridges and hanging/drying peg hole
-- Built-in verified presets for popular Pyrex container sizes
+- Verified Pyrex and Anchor Hocking container size presets in `presets.json`
 """
 
 import copy
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Literal, Optional
+from typing import Literal, Optional
 from build123d import *
 
 # ==============================================================================
@@ -39,28 +39,28 @@ class CoreParams:
     shape: Literal["round", "rectangular"] = "round"           # Round or rectangular/square container
     rim_style: Literal["beaded", "smooth"] = "beaded"          # Beaded glass rim lip vs smooth straight wall
     friction_ribs: bool = False         # Adds wiper gasket ribs for grip on smooth glass
-    diameter: float = 150.0             # Round: outer diameter of rim lip in mm (Pyrex 4-cup = ~150 mm)
-    length: float = 182.0               # Rectangular: outer length of rim lip in mm (Pyrex 3-cup = ~182 mm)
-    width: float = 132.0                # Rectangular: outer width of rim lip in mm (Pyrex 3-cup = ~132 mm)
-    corner_radius: float = 20.0         # Rectangular: corner radius of glass dish in mm
-    diameter_in: Optional[float] = None # Round: diameter in inches (overrides diameter if set)
-    length_in: Optional[float] = None   # Rectangular: length in inches (overrides length if set)
-    width_in: Optional[float] = None    # Rectangular: width in inches (overrides width if set)
+    diameter: float = field(default=150.0, metadata={"min": 40.0, "max": 350.0, "step": 1.0, "when": {"shape": "round"}})  # Round: outer diameter of rim lip in mm (Pyrex 4-cup = ~150 mm)
+    length: float = field(default=182.0, metadata={"min": 60.0, "max": 400.0, "step": 1.0, "when": {"shape": "rectangular"}})  # Rectangular: outer length of rim lip in mm (Pyrex 3-cup = ~182 mm)
+    width: float = field(default=132.0, metadata={"min": 60.0, "max": 350.0, "step": 1.0, "when": {"shape": "rectangular"}})  # Rectangular: outer width of rim lip in mm (Pyrex 3-cup = ~132 mm)
+    corner_radius: float = field(default=20.0, metadata={"min": 2.0, "max": 60.0, "step": 1.0, "when": {"shape": "rectangular"}})  # Rectangular: corner radius of glass dish in mm
+    diameter_in: Optional[float] = field(default=None, metadata={"min": 2.0, "max": 14.0, "step": 0.25, "when": {"shape": "round"}})  # Round: diameter in inches (overrides diameter if set)
+    length_in: Optional[float] = field(default=None, metadata={"min": 2.0, "max": 16.0, "step": 0.25, "when": {"shape": "rectangular"}})  # Rectangular: length in inches (overrides length if set)
+    width_in: Optional[float] = field(default=None, metadata={"min": 2.0, "max": 14.0, "step": 0.25, "when": {"shape": "rectangular"}})  # Rectangular: width in inches (overrides width if set)
     test_ring: bool = False             # Hollows center for quick fit-check test ring
-    rim_lip_height: float = 5.0         # Vertical height/thickness of glass rim bead in mm
-    glass_wall_thickness: float = 4.0   # Thickness of glass at container rim in mm
-    fit_tolerance: Optional[float] = None  # mm added to container dim (None = auto: -0.2 TPU, +0.2 PCTG)
+    rim_lip_height: float = field(default=5.0, metadata={"min": 2.0, "max": 15.0, "step": 0.2, "when": {"rim_style": "beaded"}})  # Vertical height/thickness of glass rim bead in mm
+    glass_wall_thickness: float = field(default=4.0, metadata={"min": 1.5, "max": 10.0, "step": 0.2})  # Thickness of glass at container rim in mm
+    fit_tolerance: Optional[float] = field(default=None, metadata={"min": -2.0, "max": 2.0, "step": 0.05})  # mm added to container dim (None = auto: -0.2 TPU, +0.2 PCTG)
 
 
 @dataclass
 class LidStructureParams:
     """Lid top plate and downward skirt wall dimensions."""
 
-    top_thickness: float = 1.8          # Solid top plate thickness in mm
-    skirt_height: float = 10.0          # Total vertical depth of outer downward skirt in mm
-    skirt_wall_thickness: float = 1.8   # Outer side skirt wall thickness in mm
-    outer_fillet: float = 1.2           # Fillet radius on top exterior perimeter edge in mm
-    lead_in_chamfer: float = 0.8        # Chamfer on inside bottom rim of skirt for smooth mounting
+    top_thickness: float = field(default=1.8, metadata={"min": 0.8, "max": 5.0, "step": 0.2})  # Solid top plate thickness in mm
+    skirt_height: float = field(default=10.0, metadata={"min": 5.0, "max": 25.0, "step": 0.5})  # Total vertical depth of outer downward skirt in mm
+    skirt_wall_thickness: float = field(default=1.8, metadata={"min": 1.0, "max": 5.0, "step": 0.2})  # Outer side skirt wall thickness in mm
+    outer_fillet: float = field(default=1.2, metadata={"min": 0.0, "max": 4.0, "step": 0.2})  # Fillet radius on top exterior perimeter edge in mm
+    lead_in_chamfer: float = field(default=0.8, metadata={"min": 0.0, "max": 3.0, "step": 0.1})  # Chamfer on inside bottom rim of skirt for smooth mounting
 
 
 @dataclass
@@ -68,9 +68,9 @@ class SnapBeadParams:
     """Inward retention snap bead under container glass lip."""
 
     enabled: bool = True                # Enable inward protruding snap ridge
-    depth: Optional[float] = None       # Inward protrusion (None = auto: 0.8mm TPU, 0.35mm PCTG)
-    height: float = 1.5                 # Vertical height of retention bead profile in mm
-    offset: Optional[float] = None      # Distance from underside to top of bead (None = rim_lip_height + 0.2mm)
+    depth: Optional[float] = field(default=None, metadata={"min": 0.1, "max": 2.5, "step": 0.05})  # Inward protrusion (None = auto: 0.8mm TPU, 0.35mm PCTG)
+    height: float = field(default=1.5, metadata={"min": 0.5, "max": 5.0, "step": 0.1})  # Vertical height of retention bead profile in mm
+    offset: Optional[float] = field(default=None, metadata={"min": 1.0, "max": 15.0, "step": 0.2})  # Distance from underside to top of bead (None = rim_lip_height + 0.2mm)
 
 
 @dataclass
@@ -78,9 +78,9 @@ class InnerSealParams:
     """Inner seal plug ring sitting inside the container wall."""
 
     enabled: bool = True                # Enable downward inner seal tongue
-    height: float = 3.5                 # Downward depth of seal ring in mm
-    thickness: float = 1.2              # Thickness of seal ring wall in mm
-    clearance: float = 0.6              # Radial gap between glass inner wall and seal ring in mm
+    height: float = field(default=3.5, metadata={"min": 1.0, "max": 10.0, "step": 0.5})  # Downward depth of seal ring in mm
+    thickness: float = field(default=1.2, metadata={"min": 0.6, "max": 3.0, "step": 0.1})  # Thickness of seal ring wall in mm
+    clearance: float = field(default=0.6, metadata={"min": 0.0, "max": 3.0, "step": 0.1})  # Radial gap between glass inner wall and seal ring in mm
 
 
 @dataclass
@@ -88,9 +88,9 @@ class StackingRimParams:
     """Raised top nesting rim for stacked containers."""
 
     enabled: bool = True                # Enable raised stacking rim on top surface
-    height: float = 1.5                 # Height of stacking rim in mm
-    thickness: float = 1.5              # Wall thickness of stacking rim in mm
-    inset: float = 4.0                  # Inward distance from lid edge to stacking rim in mm
+    height: float = field(default=1.5, metadata={"min": 0.5, "max": 5.0, "step": 0.2})  # Height of stacking rim in mm
+    thickness: float = field(default=1.5, metadata={"min": 0.8, "max": 4.0, "step": 0.2})  # Wall thickness of stacking rim in mm
+    inset: float = field(default=4.0, metadata={"min": 1.0, "max": 15.0, "step": 0.5})  # Inward distance from lid edge to stacking rim in mm
 
 
 @dataclass
@@ -98,15 +98,15 @@ class PullTabParams:
     """Ergonomic outer pull tab for lid removal."""
 
     enabled: bool = True                # Enable outer peel tab
-    location: Literal["auto", "corner", "edge"] = "auto"  # Corner for rect, edge for round
-    length: float = 8.5                 # Protrusion length beyond skirt in mm
-    width: float = 22.0                 # Width of tab in mm
-    root_overlap: float = 6.0           # Root overlap into top plate/skirt in mm
-    gusset_depth: float = 2.5           # Under-tab structural gusset depth down skirt wall in mm
-    thickness: float = 2.0              # Thickness of tab plate in mm
+    location: Literal["auto", "corner", "edge"] = field(default="auto", metadata={"when": {"core.shape": "rectangular"}})  # Corner for rect, edge for round
+    length: float = field(default=8.5, metadata={"min": 4.0, "max": 25.0, "step": 0.5})  # Protrusion length beyond skirt in mm
+    width: float = field(default=22.0, metadata={"min": 10.0, "max": 50.0, "step": 1.0})  # Width of tab in mm
+    root_overlap: float = field(default=6.0, metadata={"min": 2.0, "max": 15.0, "step": 0.5})  # Root overlap into top plate/skirt in mm
+    gusset_depth: float = field(default=2.5, metadata={"min": 0.0, "max": 8.0, "step": 0.5})  # Under-tab structural gusset depth down skirt wall in mm
+    thickness: float = field(default=2.0, metadata={"min": 1.0, "max": 5.0, "step": 0.2})  # Thickness of tab plate in mm
     grip_ribs: bool = True              # Raised non-slip traction ribs on tab surface
     hanging_hole: bool = False          # Pegboard / dish-rack drying hole
-    hole_diameter: float = 4.0          # Diameter of hanging hole in mm
+    hole_diameter: float = field(default=4.0, metadata={"min": 2.0, "max": 10.0, "step": 0.5, "when": {"hanging_hole": True}})  # Diameter of hanging hole in mm
 
 
 @dataclass
@@ -114,10 +114,10 @@ class FlexSlotsParams:
     """Rigid flexure relief slots (for PCTG / PETG / rigid plastics)."""
 
     enabled: Optional[bool] = None      # None = auto (True for rigid beaded lids, False for TPU)
-    slot_width: float = 1.5             # Width of vertical cutouts through skirt in mm
-    round_slot_count: int = 6           # Number of relief slots around round circumference
-    rect_slots_long_side: int = 2       # Number of relief slots along each long side
-    rect_slots_short_side: int = 1      # Number of relief slots along each short side
+    slot_width: float = field(default=1.5, metadata={"min": 0.5, "max": 4.0, "step": 0.1})  # Width of vertical cutouts through skirt in mm
+    round_slot_count: int = field(default=6, metadata={"min": 0, "max": 16, "step": 1, "when": {"core.shape": "round"}})  # Number of relief slots around round circumference
+    rect_slots_long_side: int = field(default=2, metadata={"min": 0, "max": 8, "step": 1, "when": {"core.shape": "rectangular"}})  # Number of relief slots along each long side
+    rect_slots_short_side: int = field(default=1, metadata={"min": 0, "max": 6, "step": 1, "when": {"core.shape": "rectangular"}})  # Number of relief slots along each short side
 
 
 @dataclass
@@ -126,7 +126,7 @@ class ContainerLidParams:
 
     core: CoreParams = field(default_factory=CoreParams)
     structure: LidStructureParams = field(default_factory=LidStructureParams)
-    snap_bead: SnapBeadParams = field(default_factory=SnapBeadParams)
+    snap_bead: SnapBeadParams = field(default_factory=SnapBeadParams, metadata={"when": {"core.rim_style": "beaded"}})
     inner_seal: InnerSealParams = field(default_factory=InnerSealParams)
     stacking_rim: StackingRimParams = field(default_factory=StackingRimParams)
     pull_tab: PullTabParams = field(default_factory=PullTabParams)
@@ -165,63 +165,15 @@ class ContainerLidParams:
         return p
 
 
-# Verified Presets for Popular Pyrex Food Storage Containers
-PYREX_PRESETS: Dict[str, ContainerLidParams] = {
-    "pyrex_round_1_cup": ContainerLidParams(
-        core=CoreParams(shape="round", diameter=98.0, rim_lip_height=4.5, glass_wall_thickness=3.8),
-        structure=LidStructureParams(skirt_height=9.0),
-    ),
-    "pyrex_round_2_cup": ContainerLidParams(
-        core=CoreParams(shape="round", diameter=120.0, rim_lip_height=5.0, glass_wall_thickness=4.0),
-        structure=LidStructureParams(skirt_height=10.0),
-    ),
-    "pyrex_round_4_cup": ContainerLidParams(
-        core=CoreParams(shape="round", diameter=150.0, rim_lip_height=5.2, glass_wall_thickness=4.2),
-        structure=LidStructureParams(skirt_height=10.5),
-    ),
-    "pyrex_round_7_cup": ContainerLidParams(
-        core=CoreParams(shape="round", diameter=185.0, rim_lip_height=5.5, glass_wall_thickness=4.5),
-        structure=LidStructureParams(skirt_height=11.5),
-    ),
-    "pyrex_rect_3_cup": ContainerLidParams(
-        core=CoreParams(shape="rectangular", length=182.0, width=132.0, corner_radius=20.0, rim_lip_height=5.0, glass_wall_thickness=4.0),
-        structure=LidStructureParams(skirt_height=10.0),
-    ),
-    "pyrex_rect_6_cup": ContainerLidParams(
-        core=CoreParams(shape="rectangular", length=225.0, width=175.0, corner_radius=25.0, rim_lip_height=5.5, glass_wall_thickness=4.5),
-        structure=LidStructureParams(skirt_height=11.0),
-    ),
-    "pyrex_rect_11_cup": ContainerLidParams(
-        core=CoreParams(shape="rectangular", length=280.0, width=200.0, corner_radius=30.0, rim_lip_height=6.0, glass_wall_thickness=5.0),
-        structure=LidStructureParams(skirt_height=12.0),
-    ),
-}
-
-# Verified Presets for Anchor Hocking (TrueSeal / SnugFit) Food Storage Containers
-ANCHOR_PRESETS: Dict[str, ContainerLidParams] = {
-    "anchor_round_1_cup": ContainerLidParams(
-        core=CoreParams(shape="round", diameter=96.0, rim_lip_height=4.5, glass_wall_thickness=3.8),
-        structure=LidStructureParams(skirt_height=9.0),
-    ),
-    "anchor_round_2_cup": ContainerLidParams(
-        core=CoreParams(shape="round", diameter=122.0, rim_lip_height=4.8, glass_wall_thickness=4.0),
-        structure=LidStructureParams(skirt_height=10.0),
-    ),
-    "anchor_round_4_cup": ContainerLidParams(
-        core=CoreParams(shape="round", diameter=152.0, rim_lip_height=5.2, glass_wall_thickness=4.2),
-        structure=LidStructureParams(skirt_height=10.5),
-    ),
-    "anchor_round_7_cup": ContainerLidParams(
-        core=CoreParams(shape="round", diameter=186.0, rim_lip_height=5.5, glass_wall_thickness=4.5),
-        structure=LidStructureParams(skirt_height=11.5),
-    ),
-    "anchor_rect_4_75_cup": ContainerLidParams(
-        core=CoreParams(shape="rectangular", length=195.0, width=148.0, corner_radius=22.0, rim_lip_height=5.2, glass_wall_thickness=4.2),
-        structure=LidStructureParams(skirt_height=10.5),
-    ),
-}
-
-CONTAINER_PRESETS: Dict[str, ContainerLidParams] = {**PYREX_PRESETS, **ANCHOR_PRESETS}
+def export_filename(params: ContainerLidParams) -> str:
+    """Return standardized lowercase filename stem (without extension) for exports."""
+    p_eff = params.get_effective_params()
+    if p_eff.core.shape.lower() == "round":
+        dim_str = f"{p_eff.core.diameter:.0f}mm"
+    else:
+        dim_str = f"{p_eff.core.length:.0f}x{p_eff.core.width:.0f}mm"
+    variant = f"{p_eff.core.shape.lower()}_{p_eff.core.material.lower()}"
+    return f"container_lid_{dim_str}_{variant}"
 
 
 def build_round_lid(p: ContainerLidParams) -> Solid:
@@ -575,13 +527,7 @@ if __name__ == "__main__":
     if EXPORT_STEP or EXPORT_STL:
         exports_dir = Path(__file__).resolve().parent / OUTPUT_DIR
         exports_dir.mkdir(parents=True, exist_ok=True)
-        p_eff = params.get_effective_params()
-        if p_eff.core.shape.lower() == "round":
-            dim_str = f"{p_eff.core.diameter:.0f}mm"
-        else:
-            dim_str = f"{p_eff.core.length:.0f}x{p_eff.core.width:.0f}mm"
-        variant = f"{p_eff.core.shape.lower()}_{p_eff.core.material.lower()}"
-        stem = f"container_lid_{dim_str}_{variant}"
+        stem = export_filename(params)
 
         if EXPORT_STL:
             stl_file = exports_dir / f"{stem}.stl"
