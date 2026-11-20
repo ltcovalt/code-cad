@@ -14,7 +14,7 @@ composed cleanly in `create_gridfinity_bin(params)`:
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, Optional
 from build123d import *
@@ -22,98 +22,123 @@ from build123d import *
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = False      # Save .stl file on execution (default: False)
+EXPORT_STL: bool = True      # Save .stl file on execution (default: False)
 EXPORT_STEP: bool = False     # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"   # Relative subfolder alongside this script
+
+
+@dataclass
+class CoreParams:
+    """Grid units, pitch, walls, floor, and corner radius."""
+
+    grid_x: int = 2                     # Number of grid units along X (width)
+    grid_y: int = 2                     # Number of grid units along Y (length/depth)
+    grid_z: int = 6                     # Number of height units along Z
+    unit_size: float = 42.0             # Base XY grid pitch in mm (standard Gridfinity = 42.0mm)
+    unit_z: float = 7.0                 # Height Z unit pitch in mm (standard Gridfinity = 7.0mm)
+    grid_clearance: float = 0.5         # Total XY clearance gap between bins in mm (0.25mm per side)
+    wall_thickness: float = 1.2         # Exterior wall thickness in mm (3 perimeters w/ 0.4mm nozzle)
+    floor_thickness: float = 2.0        # Solid floor thickness above the 4.75mm base feet in mm
+    corner_radius: float = 3.75         # Outer vertical corner radius in mm (4.0mm grid R - 0.25mm inset)
+
+
+@dataclass
+class MagnetHolesParams:
+    """Base foot corner magnet pockets."""
+
+    enabled: bool = True                # Cut 4 corner pockets per foot cell for 6x2mm magnets
+    diameter: float = 6.1               # Magnet pocket diameter in mm
+    depth: float = 2.2                  # Magnet pocket depth in mm
+    offset: float = 13.0                # Distance from unit cell center to magnet centers (26mm spacing)
+
+
+@dataclass
+class ScrewHolesParams:
+    """Base foot M3 mounting screw through-holes."""
+
+    enabled: bool = False               # Cut through-holes for M3 mounting screws
+    diameter: float = 3.2               # Through-hole diameter in mm
+
+
+@dataclass
+class StackingLipParams:
+    """Continuous top stacking rim."""
+
+    enabled: bool = True                # Add standard continuous top stacking rim
+    height: float = 3.8                 # Printable stacking lip height above body_h in mm (standard 3.8mm)
+    top_flat: float = 0.6               # Width of flat top rim edge in mm (prevents fragile knife-edge)
+
+
+@dataclass
+class LabelHolderParams:
+    """Pred-compatible printable label holder shelf & recessed socket."""
+
+    enabled: bool = True                # Add printable label shelf & recessed socket
+    shelf_full_width: bool = False      # If True, shelf spans full compartment width; if False, sized to label(s)
+    placement: Literal["center", "left", "right", "per_column"] = "center"  # Label placement along X
+    units: int = 1                      # Width in grid units: 1, 2, 3... (clamped to grid_x)
+    column: Optional[int] = None        # Specific 1-indexed column start (1..grid_x); overrides left/center/right
+    wall: Literal["back", "front"] = "back"  # Wall inside compartment where label shelf is mounted
+    height: float = 11.5                # Label plate depth (Y) in mm (fits ~11.3mm label)
+    thickness: float = 1.0              # Recessed pocket & tab slot height (Z) in mm (fits ~0.87mm tab)
+    shelf_depth: float = 13.5           # Total inward depth (Y) of the supporting shelf overhang in mm
+    shelf_thickness: float = 2.4        # Vertical thickness of shelf deck in mm (0.6 roof + 1.0 slot + 0.8 floor)
+    fin_count: Optional[int] = None     # Manual fin count override per compartment (None = auto-calculate)
+    fin_max_span: float = 12.0          # Max unsupported bridge span in mm when fin_count is None
+    fin_thickness: float = 0.8          # Thickness (X) of each support fin in mm
+    overhang_angle: float = 35.0        # Support fin angle underneath the label shelf in degrees
+    width_margin: float = 5.6           # Margin subtracted from unit width (42 - 5.6 = 36.4mm pocket)
+    tab_width: float = 6.5              # Width (Y) of side snap-in retention tab slots in mm
+    tab_extension: float = 0.8          # Extension (X) of side retention tab notches per side in mm
+
+
+@dataclass
+class ScoopParams:
+    """Ergonomic compartment finger scoops."""
+
+    enabled: bool = True                # Enable/disable all finger scoops
+    style: Literal["directional", "bowl"] = "directional"  # Per-wall scoops or 360° dish bottom
+    bowl_radius: float = 8.0            # 360° all-around floor fillet radius in mm when style="bowl"
+    front_radius: float = 12.0          # Radius of front (-Y) finger scoop in mm (0.0 to disable)
+    back_radius: float = 6.0            # Radius of back (+Y) finger scoop in mm (0.0 to disable)
+    left_radius: float = 0.0            # Radius of left (-X) finger scoop in mm (0.0 to disable)
+    right_radius: float = 0.0           # Radius of right (+X) finger scoop in mm (0.0 to disable)
+
+
+@dataclass
+class DividersParams:
+    """Interior compartment dividing walls."""
+
+    enabled: bool = False               # Enable/disable interior dividing walls
+    x: int = 1                          # Number of interior divider walls along X (0 = undivided)
+    y: int = 0                          # Number of interior divider walls along Y (0 = undivided)
+    thickness: float = 1.2              # Wall thickness of internal dividing walls in mm
+
+
+@dataclass
+class OverhangParams:
+    """Drawer spacer gap overhangs (fills dead space above baseplate padding)."""
+
+    enabled: bool = False               # Enable/disable drawer spacer overhangs
+    front: float = 0.0                  # Body extension past front (-Y) grid boundary in mm
+    back: float = 0.0                   # Body extension past back (+Y) grid boundary in mm
+    left: float = 0.0                   # Body extension past left (-X) grid boundary in mm
+    right: float = 0.0                  # Body extension past right (+X) grid boundary in mm
+    chamfer_angle: float = 45.0         # Print-safe underside transition angle in degrees
 
 
 @dataclass
 class GridfinityBinParams:
     """Single source of truth parameters for the parametric Gridfinity bin."""
 
-    # --------------------------------------------------------------------------
-    # Grid Units & Pitch
-    # --------------------------------------------------------------------------
-    grid_x: int = 1                     # Number of grid units along X (width)
-    grid_y: int = 1                     # Number of grid units along Y (length/depth)
-    grid_z: int = 4                     # Number of height units along Z
-    unit_size: float = 42.0             # Base XY grid pitch in mm (standard Gridfinity = 42.0mm)
-    unit_z: float = 7.0                 # Height Z unit pitch in mm (standard Gridfinity = 7.0mm)
-    grid_clearance: float = 0.5         # Total XY clearance gap between bins in mm (0.25mm per side)
-
-    # --------------------------------------------------------------------------
-    # Bin Walls, Floor & Corners
-    # --------------------------------------------------------------------------
-    wall_thickness: float = 1.2         # Exterior wall thickness in mm (3 perimeters w/ 0.4mm nozzle)
-    floor_thickness: float = 2.0        # Solid floor thickness above the 4.75mm base feet in mm
-    corner_radius: float = 3.75         # Outer vertical corner radius in mm (4.0mm grid R - 0.25mm inset)
-
-    # --------------------------------------------------------------------------
-    # Base Foot & Hardware Mounting
-    # --------------------------------------------------------------------------
-    magnet_holes: bool = True           # If True, cuts 4 corner pockets per foot cell for 6x2mm magnets
-    magnet_diameter: float = 6.1        # Magnet pocket diameter in mm
-    magnet_depth: float = 2.2           # Magnet pocket depth in mm
-    magnet_offset: float = 13.0         # Distance from unit cell center to magnet centers (26mm spacing)
-    screw_holes: bool = False           # If True, cuts through-holes for M3 mounting screws
-    screw_diameter: float = 3.2         # Through-hole diameter in mm
-
-    # --------------------------------------------------------------------------
-    # Top Stacking Lip
-    # --------------------------------------------------------------------------
-    stackable: bool = True              # If True, adds standard continuous top stacking rim
-    lip_height: float = 3.8             # Printable stacking lip height above body_h in mm (standard 3.8mm)
-    lip_top_flat: float = 0.6           # Width of flat top rim edge in mm (prevents fragile knife-edge)
-
-    # --------------------------------------------------------------------------
-    # Printable Label Holder
-    # --------------------------------------------------------------------------
-    label_enabled: bool = True          # Master toggle: adds printable label shelf & recessed socket
-    label_shelf_full_width: bool = False # If True, shelf spans full compartment width; if False, sized to label(s)
-    label_placement: Literal["center", "left", "right", "per_column"] = "center"  # Label placement along X
-    label_units: int = 1                # Width in grid units: 1, 2, 3... (clamped to grid_x)
-    label_column: Optional[int] = None  # Specific 1-indexed column start (1..grid_x); overrides left/center/right
-    label_wall: Literal["back", "front"] = "back"  # Wall inside compartment where label shelf is mounted
-    label_height: float = 11.5          # Label plate depth (Y) in mm (fits ~11.3mm label)
-    label_thickness: float = 1.0        # Recessed pocket & tab slot height (Z) in mm (fits ~0.87mm tab)
-    label_shelf_depth: float = 13.5     # Total inward depth (Y) of the supporting shelf overhang in mm
-    label_shelf_thickness: float = 2.4  # Vertical thickness of shelf deck in mm (0.6 roof + 1.0 slot + 0.8 floor)
-    label_fin_count: Optional[int] = None  # Manual fin count override per compartment (None = auto-calculate)
-    label_fin_max_span: float = 12.0    # Max unsupported bridge span in mm when label_fin_count is None
-    label_fin_thickness: float = 0.8    # Thickness (X) of each support fin in mm (0.8mm = 2 walls, 1 clean U-turn loop)
-    label_overhang_angle: float = 35.0  # Support fin angle underneath the label shelf in degrees
-    label_width_margin: float = 5.6     # Margin subtracted from unit width (42 - 5.6 = 36.4mm pocket)
-    label_tab_width: float = 6.5        # Width (Y) of side snap-in retention tab slots in mm (fits ~5.9mm tab)
-    label_tab_extension: float = 0.8    # Extension (X) of side retention tab notches per side in mm
-
-    # --------------------------------------------------------------------------
-    # Ergonomic Finger Scoops
-    # --------------------------------------------------------------------------
-    scoop_enabled: bool = True          # Master toggle to enable/disable all finger scoops
-    scoop_style: Literal["directional", "bowl"] = "directional"  # Per-wall scoops or 360° dish bottom
-    scoop_bowl_radius: float = 8.0      # 360° all-around floor fillet radius in mm when scoop_style="bowl"
-    scoop_front_radius: float = 12.0    # Radius of front (-Y) finger scoop in mm (0.0 to disable)
-    scoop_back_radius: float = 6.0      # Radius of back (+Y) finger scoop in mm (0.0 to disable)
-    scoop_left_radius: float = 0.0      # Radius of left (-X) finger scoop in mm (0.0 to disable)
-    scoop_right_radius: float = 0.0     # Radius of right (+X) finger scoop in mm (0.0 to disable)
-
-    # --------------------------------------------------------------------------
-    # Interior Dividers
-    # --------------------------------------------------------------------------
-    dividers_enabled: bool = False      # Master toggle to enable/disable interior dividing walls
-    dividers_x: int = 1                 # Number of interior divider walls along X (0 = undivided)
-    dividers_y: int = 0                 # Number of interior divider walls along Y (0 = undivided)
-    divider_thickness: float = 1.2      # Wall thickness of internal dividing walls in mm
-
-    # --------------------------------------------------------------------------
-    # Drawer Spacer Gap Overhangs (Fills dead space above baseplate padding)
-    # --------------------------------------------------------------------------
-    overhang_enabled: bool = False      # Master toggle to enable/disable drawer spacer overhangs
-    overhang_front: float = 0.0         # Body extension past front (-Y) grid boundary in mm
-    overhang_back: float = 0.0          # Body extension past back (+Y) grid boundary in mm
-    overhang_left: float = 0.0          # Body extension past left (-X) grid boundary in mm
-    overhang_right: float = 0.0         # Body extension past right (+X) grid boundary in mm
-    overhang_chamfer_angle: float = 45.0 # Print-safe underside transition angle in degrees
+    core: CoreParams = field(default_factory=CoreParams)
+    magnets: MagnetHolesParams = field(default_factory=MagnetHolesParams)
+    screws: ScrewHolesParams = field(default_factory=ScrewHolesParams)
+    stacking_lip: StackingLipParams = field(default_factory=StackingLipParams)
+    label: LabelHolderParams = field(default_factory=LabelHolderParams)
+    scoop: ScoopParams = field(default_factory=ScoopParams)
+    dividers: DividersParams = field(default_factory=DividersParams)
+    overhang: OverhangParams = field(default_factory=OverhangParams)
 
 
 # ==============================================================================
@@ -169,32 +194,36 @@ class _BinEnvelope:
 
 def _compute_envelope(params: GridfinityBinParams) -> _BinEnvelope:
     """Computes derived dimensions for the bin, overhangs, and compartments."""
-    gx = max(1, params.grid_x)
-    gy = max(1, params.grid_y)
-    gz = max(1, params.grid_z)
-    pitch_xy = params.unit_size
-    pitch_z = params.unit_z
-    clr = params.grid_clearance
+    c = params.core
+    ov = params.overhang
+    div = params.dividers
+
+    gx = max(1, c.grid_x)
+    gy = max(1, c.grid_y)
+    gz = max(1, c.grid_z)
+    pitch_xy = c.unit_size
+    pitch_z = c.unit_z
+    clr = c.grid_clearance
 
     foot_h = 4.75
     body_h = gz * pitch_z
-    floor_z = foot_h + params.floor_thickness
+    floor_z = foot_h + c.floor_thickness
 
     base_w = gx * pitch_xy - clr
     base_l = gy * pitch_xy - clr
 
-    if params.overhang_enabled:
-        ov_f = max(0.0, params.overhang_front)
-        ov_b = max(0.0, params.overhang_back)
-        ov_l = max(0.0, params.overhang_left)
-        ov_r = max(0.0, params.overhang_right)
+    if ov.enabled:
+        ov_f = max(0.0, ov.front)
+        ov_b = max(0.0, ov.back)
+        ov_l = max(0.0, ov.left)
+        ov_r = max(0.0, ov.right)
     else:
         ov_f = ov_b = ov_l = ov_r = 0.0
     max_ov = max(ov_f, ov_b, ov_l, ov_r)
     has_overhang = max_ov > 0.0
 
     if has_overhang:
-        angle_rad = math.radians(max(15.0, min(75.0, params.overhang_chamfer_angle)))
+        angle_rad = math.radians(max(15.0, min(75.0, ov.chamfer_angle)))
         chamfer_rise = max_ov * math.tan(angle_rad)
         z_trans = min(body_h - 0.5, foot_h + chamfer_rise)
     else:
@@ -210,13 +239,13 @@ def _compute_envelope(params: GridfinityBinParams) -> _BinEnvelope:
     top_cx = (x_min + x_max) / 2.0
     top_cy = (y_min + y_max) / 2.0
 
-    r_corner = max(0.5, min(params.corner_radius, min(base_w, base_l) / 2.0 - 0.1))
+    r_corner = max(0.5, min(c.corner_radius, min(base_w, base_l) / 2.0 - 0.1))
 
-    t_wall = params.wall_thickness
-    t_div = params.divider_thickness
-    if params.dividers_enabled:
-        cx_count = max(0, params.dividers_x) + 1
-        cy_count = max(0, params.dividers_y) + 1
+    t_wall = c.wall_thickness
+    t_div = div.thickness
+    if div.enabled:
+        cx_count = max(0, div.x) + 1
+        cy_count = max(0, div.y) + 1
     else:
         cx_count = 1
         cy_count = 1
@@ -353,7 +382,7 @@ def create_base_feet(params: GridfinityBinParams) -> Part:
     including optional magnet pockets and M3 countersink/through holes.
     """
     env = _compute_envelope(params)
-    unit_w = env.pitch_xy - params.grid_clearance  # 41.5mm standard
+    unit_w = env.pitch_xy - params.core.grid_clearance  # 41.5mm standard
 
     # Build a single canonical foot centered at (0, 0)
     with BuildPart() as single_foot:
@@ -376,20 +405,20 @@ def create_base_feet(params: GridfinityBinParams) -> Part:
         loft(ruled=True)
 
         # Optional corner magnet pockets and screw holes
-        if params.magnet_holes or params.screw_holes:
-            mo = params.magnet_offset
+        if params.magnets.enabled or params.screws.enabled:
+            mo = params.magnets.offset
             hole_locs = [(-mo, -mo), (mo, -mo), (-mo, mo), (mo, mo)]
 
-            if params.magnet_holes and params.magnet_depth > 0:
+            if params.magnets.enabled and params.magnets.depth > 0:
                 with BuildSketch(Plane.XY) as mag_sk:
                     with Locations(hole_locs):
-                        Circle(params.magnet_diameter / 2.0)
-                extrude(amount=params.magnet_depth, mode=Mode.SUBTRACT)
+                        Circle(params.magnets.diameter / 2.0)
+                extrude(amount=params.magnets.depth, mode=Mode.SUBTRACT)
 
-            if params.screw_holes:
+            if params.screws.enabled:
                 with BuildSketch(Plane.XY) as screw_sk:
                     with Locations(hole_locs):
-                        Circle(params.screw_diameter / 2.0)
+                        Circle(params.screws.diameter / 2.0)
                 extrude(amount=env.foot_h, mode=Mode.SUBTRACT)
 
     foot_template = single_foot.part
@@ -438,7 +467,7 @@ def create_bin_body(params: GridfinityBinParams) -> Part:
                 extrude(amount=env.body_h - env.z_trans)
 
         # 2. Subtract subdivided interior compartments (clipped to the tapered inner envelope)
-        t_div = params.divider_thickness
+        t_div = params.dividers.thickness
         cavity_h = env.body_h - env.floor_z
         if cavity_h > 0:
             inner_env_part = _create_tapered_inner_envelope(env)
@@ -474,7 +503,7 @@ def create_bin_body(params: GridfinityBinParams) -> Part:
         # 3. If a label pocket spans across an interior X-divider (e.g. full_width or center_1u),
         #    recess the top of the X-divider for the label socket while keeping the divider
         #    wall underneath as structural support for the shelf deck.
-        if params.label_enabled:
+        if params.label.enabled:
             slot_cutout = _create_label_slot_cutouts(params, env)
             if slot_cutout is not None:
                 add(slot_cutout, mode=Mode.SUBTRACT)
@@ -493,16 +522,16 @@ def create_stacking_lip(params: GridfinityBinParams) -> Optional[Part]:
     guaranteeing a 100% uniform, unbroken top rim along all 4 straight walls and all
     4 rounded corners without corner pinching or triangular artifacts.
     """
-    if not params.stackable:
+    if not params.stacking_lip.enabled:
         return None
 
     env = _compute_envelope(params)
-    t_wall = params.wall_thickness
+    t_wall = params.core.wall_thickness
     lip_depth = 2.6
     support_h = max(0.2, lip_depth - t_wall)
 
-    lip_h = max(2.6, params.lip_height)
-    top_flat = max(0.4, min(1.2, params.lip_top_flat))
+    lip_h = max(2.6, params.stacking_lip.height)
+    top_flat = max(0.4, min(1.2, params.stacking_lip.top_flat))
 
     z_bot = max(env.floor_z, env.body_h - support_h)
     z0 = env.body_h
@@ -562,7 +591,7 @@ def create_stacking_lip(params: GridfinityBinParams) -> Optional[Part]:
 
         # 6. Clear out label pocket & side tab slots from the lower support bevel (z < z0)
         #    so the stacking lip's 45° underside bevel never pinches the vertical tab slot height
-        if params.label_enabled:
+        if params.label.enabled:
             slot_cutout = _create_label_slot_cutouts(params, env)
             if slot_cutout is not None:
                 add(slot_cutout, mode=Mode.SUBTRACT)
@@ -576,17 +605,14 @@ def create_stacking_lip(params: GridfinityBinParams) -> Optional[Part]:
 def create_compartment_scoops(params: GridfinityBinParams) -> Optional[Part]:
     """
     Generates ergonomic compartment finger scoops in one of two styles:
-      - `scoop_style == "bowl"`: 360° all-around floor fillet of radius `scoop_bowl_radius`,
-        producing cylindrical wall ramps and smooth spherical/toroidal corners around all
-        4 sides of every compartment with a flat center floor.
-      - `scoop_style == "directional"`: Independent circular tangent finger-scoop ramps on any
-        combination of `scoop_front_radius` (-Y), `scoop_back_radius` (+Y),
-        `scoop_left_radius` (-X), and `scoop_right_radius` (+X) (set any to 0.0 to disable).
+      - `scoop.style == "bowl"`: 360° all-around floor fillet of radius `scoop.bowl_radius`.
+      - `scoop.style == "directional"`: Independent circular tangent finger-scoop ramps on any
+        combination of front (-Y), back (+Y), left (-X), and right (+X) (0.0 to disable).
 
     Automatically adapts to both vertical walls (90° corner) and angled overhang walls,
     clipping strictly to the tapered interior cavity so a scoop never protrudes outside.
     """
-    if not params.scoop_enabled:
+    if not params.scoop.enabled:
         return None
 
     env = _compute_envelope(params)
@@ -594,12 +620,12 @@ def create_compartment_scoops(params: GridfinityBinParams) -> Optional[Part]:
     if cavity_h <= 1.0:
         return None
 
-    t_div = params.divider_thickness
+    t_div = params.dividers.thickness
     inner_env_part = _create_tapered_inner_envelope(env)
     scoop_solids = []
 
-    if params.scoop_style == "bowl":
-        req_bowl_r = max(0.0, params.scoop_bowl_radius)
+    if params.scoop.style == "bowl":
+        req_bowl_r = max(0.0, params.scoop.bowl_radius)
         if req_bowl_r <= 0.5:
             return None
 
@@ -673,10 +699,10 @@ def create_compartment_scoops(params: GridfinityBinParams) -> Optional[Part]:
         return all_bowl_scoops.part
 
     # Directional mode: independent front (-Y), back (+Y), left (-X), right (+X) scoops
-    r_front = max(0.0, params.scoop_front_radius)
-    r_back = max(0.0, params.scoop_back_radius)
-    r_left = max(0.0, params.scoop_left_radius)
-    r_right = max(0.0, params.scoop_right_radius)
+    r_front = max(0.0, params.scoop.front_radius)
+    r_back = max(0.0, params.scoop.back_radius)
+    r_left = max(0.0, params.scoop.left_radius)
+    r_right = max(0.0, params.scoop.right_radius)
     if r_front <= 0.0 and r_back <= 0.0 and r_left <= 0.0 and r_right <= 0.0:
         return None
 
@@ -861,26 +887,27 @@ def _compute_label_pocket_specs(
     """
     Computes (center_x, pocket_width, units) for each label pocket along X.
     """
-    units = max(1, min(env.gx, params.label_units))
-    unit_pw = max(8.0, units * env.pitch_xy - params.label_width_margin)
-    t_div = params.divider_thickness
+    lbl = params.label
+    units = max(1, min(env.gx, lbl.units))
+    unit_pw = max(8.0, units * env.pitch_xy - lbl.width_margin)
+    t_div = params.dividers.thickness
 
     specs: list[tuple[float, float, int]] = []
 
-    if params.label_placement == "per_column":
-        pw = max(8.0, env.pitch_xy - params.label_width_margin)
+    if lbl.placement == "per_column":
+        pw = max(8.0, env.pitch_xy - lbl.width_margin)
         for ix in range(env.gx):
             scx = env.top_cx + (ix - (env.gx - 1) / 2.0) * env.pitch_xy
             specs.append((scx, pw, 1))
-    else:  # "center" (default), "left", "right", or label_column specified
-        if params.label_column is not None:
-            start_col = max(1, min(env.gx - units + 1, params.label_column))
+    else:  # "center" (default), "left", "right", or column specified
+        if lbl.column is not None:
+            start_col = max(1, min(env.gx - units + 1, lbl.column))
             col_offset = (start_col - 1) + (units - 1) / 2.0
             scx = env.top_cx + (col_offset - (env.gx - 1) / 2.0) * env.pitch_xy
-        elif params.label_placement == "left":
+        elif lbl.placement == "left":
             col_offset = (units - 1) / 2.0
             scx = env.top_cx + (col_offset - (env.gx - 1) / 2.0) * env.pitch_xy
-        elif params.label_placement == "right":
+        elif lbl.placement == "right":
             col_offset = (env.gx - units) + (units - 1) / 2.0
             scx = env.top_cx + (col_offset - (env.gx - 1) / 2.0) * env.pitch_xy
         else:  # "center"
@@ -897,19 +924,19 @@ def _compute_label_shelf_intervals(
 ) -> list[tuple[float, float]]:
     """
     Computes X-span intervals [x_min, x_max] for the horizontal shelf deck.
-    If label_shelf_full_width is True, spans the entire row width.
+    If label.shelf_full_width is True, spans the entire row width.
     If False, sizes each shelf segment to the label pocket (U * pitch_xy - 2 * wall_thickness).
     """
     row_x_min = env.top_cx - env.inner_w / 2.0
     row_x_max = env.top_cx + env.inner_w / 2.0
 
-    if params.label_shelf_full_width:
+    if params.label.shelf_full_width:
         return [(row_x_min, row_x_max)]
 
     raw_intervals: list[tuple[float, float]] = []
     for scx, pw, u in specs:
-        deck_w = u * env.pitch_xy - 2.0 * params.wall_thickness
-        deck_w = max(pw + 2.0 * params.label_tab_extension + 1.0, deck_w)
+        deck_w = u * env.pitch_xy - 2.0 * params.core.wall_thickness
+        deck_w = max(pw + 2.0 * params.label.tab_extension + 1.0, deck_w)
         x0 = max(row_x_min, scx - deck_w / 2.0)
         x1 = min(row_x_max, scx + deck_w / 2.0)
         raw_intervals.append((x0, x1))
@@ -942,22 +969,23 @@ def _create_label_slot_cutouts(
         roof flush with z = body_h above every left and right tab (both outer and inner).
     Shared across `create_label_holders`, `create_bin_body`, and `create_stacking_lip`.
     """
-    if not params.label_enabled or params.label_thickness <= 0:
+    lbl = params.label
+    if not lbl.enabled or lbl.thickness <= 0:
         return None
 
-    shelf_d = min(params.label_shelf_depth, env.comp_l * 0.75)
+    shelf_d = min(lbl.shelf_depth, env.comp_l * 0.75)
     if shelf_d <= 4.0:
         return None
 
-    t_div = params.divider_thickness
+    t_div = params.dividers.thickness
     z_top = env.body_h
     roof_t = 0.6  # Overhanging retention roof thickness above side tab slots (flush with z_top)
-    slot_h = params.label_thickness
+    slot_h = lbl.thickness
     total_recess = roof_t + slot_h
 
-    lh = min(params.label_height, shelf_d - 1.5)
-    tab_w = min(params.label_tab_width, lh - 1.0)
-    tab_ext = params.label_tab_extension
+    lh = min(lbl.height, shelf_d - 1.5)
+    tab_w = min(lbl.tab_width, lh - 1.0)
+    tab_ext = lbl.tab_extension
 
     specs = _compute_label_pocket_specs(params, env)
     pocket_x_specs = [(scx, pw) for scx, pw, _ in specs]
@@ -970,7 +998,7 @@ def _create_label_slot_cutouts(
             + env.comp_l / 2.0
             + icy * (env.comp_l + t_div)
         )
-        if params.label_wall == "back":
+        if lbl.wall == "back":
             y_wall = ccy + env.comp_l / 2.0
             y_pocket_centers.append(y_wall - shelf_d / 2.0)
         else:
@@ -1010,19 +1038,20 @@ def create_label_holders(params: GridfinityBinParams) -> Optional[Part]:
     - Recessed pocket on top of the shelf matching standard 3D-printable labels
       with self-contained undercut side-tab slots and a 0.6mm top retention roof.
     """
-    if not params.label_enabled:
+    lbl = params.label
+    if not lbl.enabled:
         return None
 
     env = _compute_envelope(params)
-    t_div = params.divider_thickness
-    shelf_d = min(params.label_shelf_depth, env.comp_l * 0.75)
+    t_div = params.dividers.thickness
+    shelf_d = min(lbl.shelf_depth, env.comp_l * 0.75)
     if shelf_d <= 4.0:
         return None
 
     roof_t = 0.6
-    recess_total = params.label_thickness + roof_t
-    deck_t = max(recess_total + 0.8, params.label_shelf_thickness)
-    angle_rad = math.radians(max(25.0, min(65.0, params.label_overhang_angle)))
+    recess_total = lbl.thickness + roof_t
+    deck_t = max(recess_total + 0.8, lbl.shelf_thickness)
+    angle_rad = math.radians(max(25.0, min(65.0, lbl.overhang_angle)))
     fin_drop_h = shelf_d * math.tan(angle_rad)
 
     # Top of the label shelf aligns with z = body_h
@@ -1031,8 +1060,8 @@ def create_label_holders(params: GridfinityBinParams) -> Optional[Part]:
     z_fin_bot = max(env.floor_z, z_deck_bot - fin_drop_h)
     ledge_h = min(0.8, max(0.0, z_deck_bot - env.floor_z))
     fin_tip_h = min(0.8, max(0.0, (z_deck_bot - z_fin_bot) * 0.5))
-    fin_t = max(0.8, params.label_fin_thickness)
-    max_span = max(2.0, params.label_fin_max_span)
+    fin_t = max(0.8, lbl.fin_thickness)
+    max_span = max(2.0, lbl.fin_max_span)
 
     inner_env_part = _create_tapered_inner_envelope(env)
     shelf_solids = []
@@ -1066,7 +1095,7 @@ def create_label_holders(params: GridfinityBinParams) -> Optional[Part]:
             + icy * (env.comp_l + t_div)
         )
 
-        if params.label_wall == "back":
+        if lbl.wall == "back":
             y_wall = ccy + env.comp_l / 2.0
             y_tip = y_wall - shelf_d
             s_y = -1.0
@@ -1151,8 +1180,8 @@ def create_label_holders(params: GridfinityBinParams) -> Optional[Part]:
             inner_span = x_anchor_right - x_anchor_left
 
             if inner_span > 2.0:
-                if params.label_fin_count is not None:
-                    n_inter = max(0, params.label_fin_count)
+                if lbl.fin_count is not None:
+                    n_inter = max(0, lbl.fin_count)
                 else:
                     n_inter = max(0, math.ceil(inner_span / max_span) - 1)
 
@@ -1233,14 +1262,14 @@ if __name__ == "__main__":
         output_dir = Path(__file__).resolve().parent / OUTPUT_DIR
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        dims = f"{params.grid_x}x{params.grid_y}x{params.grid_z}u"
-        if params.label_enabled:
-            if params.label_column is not None:
-                placement_str = f"col{params.label_column}_{params.label_units}u"
-            elif params.label_placement in ("left", "center", "right"):
-                placement_str = f"{params.label_placement}_{params.label_units}u"
+        dims = f"{params.core.grid_x}x{params.core.grid_y}x{params.core.grid_z}u"
+        if params.label.enabled:
+            if params.label.column is not None:
+                placement_str = f"col{params.label.column}_{params.label.units}u"
+            elif params.label.placement in ("left", "center", "right"):
+                placement_str = f"{params.label.placement}_{params.label.units}u"
             else:
-                placement_str = params.label_placement
+                placement_str = params.label.placement
             label_tag = f"label_{placement_str}"
         else:
             label_tag = "standard"
