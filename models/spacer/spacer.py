@@ -23,7 +23,7 @@ from build123d import *
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = True      # Save .stl file on execution (default: False)
+EXPORT_STL: bool = False     # Save .stl file on execution (default: False)
 EXPORT_STEP: bool = False     # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"   # Relative subfolder alongside this script
 
@@ -51,11 +51,11 @@ class SpacerCutout:
 class CoreParams:
     """Shared height and X/Y leg dimensions."""
 
-    height: float = 56.0                # Spacer height in mm (Z dimension)
-    leg_x_length: float = 0.0           # Length along X wall in mm (set 0 to omit)
-    leg_x_width: float = 15.0           # Width / thickness of X leg in mm
-    leg_y_length: float = 238.0         # Length along Y wall in mm (set 0 to omit)
-    leg_y_width: float = 15.0           # Width / thickness of Y leg in mm
+    height: float = field(default=56.0, metadata={"min": 2.0, "max": 150.0, "step": 1.0})  # Spacer height in mm (Z dimension)
+    leg_x_length: float = field(default=0.0, metadata={"min": 0.0, "max": 350.0, "step": 1.0})  # Length along X wall in mm (set 0 to omit)
+    leg_x_width: float = field(default=15.0, metadata={"min": 3.0, "max": 80.0, "step": 0.5})  # Width / thickness of X leg in mm
+    leg_y_length: float = field(default=238.0, metadata={"min": 0.0, "max": 350.0, "step": 1.0})  # Length along Y wall in mm (set 0 to omit)
+    leg_y_width: float = field(default=15.0, metadata={"min": 3.0, "max": 80.0, "step": 0.5})  # Width / thickness of Y leg in mm
 
 
 @dataclass
@@ -74,11 +74,11 @@ class JunctionParams:
 class EdgeTreatmentParams:
     """Corner radii and top perimeter edge treatment."""
 
-    corner_radius: float = 2.0                   # General vertical corner radius in mm (XY profile corners)
-    outer_corner_radius: Optional[float] = None  # Outer junction corner radius in mm (None = corner_radius)
-    inner_corner_radius: Optional[float] = 4.0   # Inside junction corner radius in mm (None = corner_radius)
-    end_corner_radius: float = 0.0               # Radius on mating arm ends in mm (0.0 for flush butt-joints)
-    edge_radius: float = 1.0                     # Top perimeter edge radius/bevel in mm
+    corner_radius: float = field(default=2.0, metadata={"min": 0.0, "max": 20.0, "step": 0.5})  # General vertical corner radius in mm (XY profile corners)
+    outer_corner_radius: Optional[float] = field(default=None, metadata={"min": 0.0, "max": 20.0, "step": 0.5})  # Outer junction corner radius in mm (None = corner_radius)
+    inner_corner_radius: Optional[float] = field(default=4.0, metadata={"min": 0.0, "max": 20.0, "step": 0.5})  # Inside junction corner radius in mm (None = corner_radius)
+    end_corner_radius: float = field(default=0.0, metadata={"min": 0.0, "max": 10.0, "step": 0.5})  # Radius on mating arm ends in mm (0.0 for flush butt-joints)
+    edge_radius: float = field(default=1.0, metadata={"min": 0.0, "max": 8.0, "step": 0.2})  # Top perimeter edge radius/bevel in mm
     edge_treatment: Literal["fillet", "chamfer"] = "fillet"  # Top edge profile
 
 
@@ -87,8 +87,8 @@ class HollowParams:
     """Hollow / shell underside options (saves filament on thick spacers)."""
 
     enabled: bool = False               # Hollow out the bottom with an open underside
-    wall_thickness: float = 2.0         # Side wall thickness when enabled in mm
-    top_thickness: float = 2.0          # Top solid roof thickness when enabled in mm
+    wall_thickness: float = field(default=2.0, metadata={"min": 1.0, "max": 8.0, "step": 0.2})  # Side wall thickness when enabled in mm
+    top_thickness: float = field(default=2.0, metadata={"min": 1.0, "max": 8.0, "step": 0.2})  # Top solid roof thickness when enabled in mm
 
 
 @dataclass
@@ -96,8 +96,8 @@ class FingerNotchParams:
     """Ergonomic finger-lift scoop on top face."""
 
     enabled: bool = False               # Add recessed scoop on top face for easy prying/removal
-    radius: float = 12.0                # Radius of spherical scoop cutter in mm
-    depth: float = 2.5                  # Depth of scoop recess from top surface in mm
+    radius: float = field(default=12.0, metadata={"min": 4.0, "max": 30.0, "step": 0.5})  # Radius of spherical scoop cutter in mm
+    depth: float = field(default=2.5, metadata={"min": 0.5, "max": 10.0, "step": 0.2})  # Depth of scoop recess from top surface in mm
 
 
 @dataclass
@@ -629,6 +629,43 @@ def create_spacer(params: SpacerParams) -> Solid:
     return part
 
 
+def export_filename(params: SpacerParams) -> str:
+    """Return standardized lowercase filename stem (without extension) for exports."""
+    c, j = params.core, params.junction
+    is_junction = (c.leg_x_length > 0 and c.leg_y_length > 0)
+    if is_junction:
+        dim_str = f"{int(c.leg_x_length)}x{int(c.leg_y_length)}x{int(c.height)}mm"
+        x0 = _resolve_leg_position(
+            j.leg_y_align, j.leg_y_offset, c.leg_x_length, c.leg_y_width, "leg_y"
+        )
+        y0 = _resolve_leg_position(
+            j.leg_x_align, j.leg_x_offset, c.leg_y_length, c.leg_x_width, "leg_x"
+        )
+        mid_x = 1e-3 < x0 < (c.leg_x_length - c.leg_y_width - 1e-3)
+        mid_y = 1e-3 < y0 < (c.leg_y_length - c.leg_x_width - 1e-3)
+        if mid_x and mid_y:
+            variant = "cross"
+        elif mid_x or mid_y:
+            variant = "t_shape"
+        else:
+            variant = "corner"
+    elif c.leg_x_length > 0:
+        dim_str = f"{int(c.leg_x_length)}x{int(c.leg_x_width)}x{int(c.height)}mm"
+        variant = "straight_x"
+    else:
+        dim_str = f"{int(c.leg_y_length)}x{int(c.leg_y_width)}x{int(c.height)}mm"
+        variant = "straight_y"
+
+    if j.mirror_x and j.mirror_y:
+        variant += "_mirrored_xy"
+    elif j.mirror_x:
+        variant += "_mirrored_x"
+    elif j.mirror_y:
+        variant += "_mirrored_y"
+
+    return f"spacer_{dim_str}_{variant}"
+
+
 if __name__ == "__main__":
     # Single source of truth: dataclass defaults take effect directly
     params = SpacerParams()
@@ -638,39 +675,7 @@ if __name__ == "__main__":
     if EXPORT_STEP or EXPORT_STL:
         exports_path = Path(__file__).resolve().parent / OUTPUT_DIR
         exports_path.mkdir(parents=True, exist_ok=True)
-        c, j = params.core, params.junction
-        is_junction = (c.leg_x_length > 0 and c.leg_y_length > 0)
-        if is_junction:
-            dim_str = f"{int(c.leg_x_length)}x{int(c.leg_y_length)}x{int(c.height)}mm"
-            x0 = _resolve_leg_position(
-                j.leg_y_align, j.leg_y_offset, c.leg_x_length, c.leg_y_width, "leg_y"
-            )
-            y0 = _resolve_leg_position(
-                j.leg_x_align, j.leg_x_offset, c.leg_y_length, c.leg_x_width, "leg_x"
-            )
-            mid_x = 1e-3 < x0 < (c.leg_x_length - c.leg_y_width - 1e-3)
-            mid_y = 1e-3 < y0 < (c.leg_y_length - c.leg_x_width - 1e-3)
-            if mid_x and mid_y:
-                variant = "cross"
-            elif mid_x or mid_y:
-                variant = "t_shape"
-            else:
-                variant = "corner"
-        elif c.leg_x_length > 0:
-            dim_str = f"{int(c.leg_x_length)}x{int(c.leg_x_width)}x{int(c.height)}mm"
-            variant = "straight_x"
-        else:
-            dim_str = f"{int(c.leg_y_length)}x{int(c.leg_y_width)}x{int(c.height)}mm"
-            variant = "straight_y"
-
-        if j.mirror_x and j.mirror_y:
-            variant += "_mirrored_xy"
-        elif j.mirror_x:
-            variant += "_mirrored_x"
-        elif j.mirror_y:
-            variant += "_mirrored_y"
-
-        stem = f"spacer_{dim_str}_{variant}"
+        stem = export_filename(params)
 
         if EXPORT_STL:
             stl_file = exports_path / f"{stem}.stl"
