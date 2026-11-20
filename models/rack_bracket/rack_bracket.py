@@ -24,14 +24,14 @@ OUTPUT_DIR: str = "exports"             # Output folder (relative to this script
 class CoreParams:
     """Primary rack unit and L-bracket structural dimensions."""
 
-    u_count: int = 1                       # Number of Rack Units (1U, 2U, 3U, 4U, etc.)
+    u_count: int = field(default=1, metadata={"min": 1, "max": 6, "step": 1})  # Number of Rack Units (1U, 2U, 3U, 4U, etc.)
     u_height_unit: float = 44.45           # Nominal 1U height (1.75 in / 44.45 mm)
-    height_margin: float = 1.2             # Subtracted margin for clean rack stacking fit (1.2mm total clearance)
-    bracket_length: float = 150.0          # Side plate length in mm (default 150 mm)
-    front_flange_width: float = 20.0       # Front flange width in mm
-    thickness: float = 3.0                 # Wall thickness in mm (3.0mm for sturdy 3D prints)
-    inner_bend_radius: float = 1.5         # Inside corner fillet radius
-    outer_corner_radius: float = 1.5       # Fillet for sharp outer vertical corners
+    height_margin: float = field(default=1.2, metadata={"min": 0.0, "max": 4.0, "step": 0.1})  # Subtracted margin for clean rack stacking fit (1.2mm total clearance)
+    bracket_length: float = field(default=150.0, metadata={"min": 40.0, "max": 300.0, "step": 5.0})  # Side plate length in mm (default 150 mm)
+    front_flange_width: float = field(default=20.0, metadata={"min": 15.0, "max": 40.0, "step": 1.0})  # Front flange width in mm
+    thickness: float = field(default=3.0, metadata={"min": 1.5, "max": 8.0, "step": 0.5})  # Wall thickness in mm (3.0mm for sturdy 3D prints)
+    inner_bend_radius: float = field(default=1.5, metadata={"min": 0.0, "max": 5.0, "step": 0.5})  # Inside corner fillet radius
+    outer_corner_radius: float = field(default=1.5, metadata={"min": 0.0, "max": 5.0, "step": 0.5})  # Fillet for sharp outer vertical corners
 
 
 @dataclass
@@ -39,12 +39,12 @@ class SideHolesParams:
     """Side M4 thread-in pilot hole array."""
 
     enabled: bool = True                   # Enable/disable side M4 pilot holes
-    diameter: float = 3.3                  # M4 thread-in hole diameter in mm (3.3 mm for tapping into plastic)
-    spacing_x: float = 25.0                # Horizontal repeating interval between hole columns in mm
-    rear_offset: float = 15.0              # Offset from rear edge to first hole column (15 mm)
-    min_front_clearance: float = 10.0      # Minimum clearance before front bend
-    edge_offset: float = 9.7               # Offset from top/bottom edges to outer side hole rows (mm)
-    include_intermediate: bool = False     # If True and cutout style is 'none', adds hole rows at intermediate U centers
+    diameter: float = field(default=3.3, metadata={"min": 2.0, "max": 6.0, "step": 0.1})  # M4 thread-in hole diameter in mm (3.3 mm for tapping into plastic)
+    spacing_x: float = field(default=25.0, metadata={"min": 10.0, "max": 60.0, "step": 1.0})  # Horizontal repeating interval between hole columns in mm
+    rear_offset: float = field(default=15.0, metadata={"min": 5.0, "max": 40.0, "step": 1.0})  # Offset from rear edge to first hole column (15 mm)
+    min_front_clearance: float = field(default=10.0, metadata={"min": 5.0, "max": 30.0, "step": 1.0})  # Minimum clearance before front bend
+    edge_offset: float = field(default=9.7, metadata={"min": 5.0, "max": 20.0, "step": 0.5})  # Offset from top/bottom edges to outer side hole rows (mm)
+    include_intermediate: bool = field(default=False, metadata={"when": {"cutout.style": "none"}})  # If True and cutout style is 'none', adds hole rows at intermediate U centers
     rows: Optional[List[float]] = None     # Explicit Z heights for side hole rows (overrides auto)
 
 
@@ -53,22 +53,22 @@ class CutoutParams:
     """Center cutout window options (snapped to hex cell centers)."""
 
     style: Literal["hex", "window", "none"] = "hex"  # Ventilation cutout style
-    margin_z: float = 15.7                 # Top & bottom solid margin reserved along Z axis
-    corner_radius: float = 1.0             # Corner radius for rectangular cutout window
-    hex_pitch_count: int = 11              # Number of horizontal hex cell pitches to snap window width
-    hex_radius: float = 4.5                # Circumradius of hex cell cutouts (mm)
-    hex_wall_thickness: float = 1.5        # Uniform wall thickness between flat edges (mm)
+    margin_z: float = field(default=15.7, metadata={"min": 6.0, "max": 30.0, "step": 0.5, "when": {"style": ["hex", "window"]}})  # Top & bottom solid margin reserved along Z axis
+    corner_radius: float = field(default=1.0, metadata={"min": 0.0, "max": 10.0, "step": 0.5, "when": {"style": ["hex", "window"]}})  # Corner radius for rectangular cutout window
+    hex_pitch_count: int = field(default=11, metadata={"min": 1, "max": 25, "step": 1, "when": {"style": ["hex", "window"]}})  # Number of horizontal hex cell pitches to snap window width
+    hex_radius: float = field(default=4.5, metadata={"min": 2.0, "max": 12.0, "step": 0.5, "when": {"style": "hex"}})  # Circumradius of hex cell cutouts (mm)
+    hex_wall_thickness: float = field(default=1.5, metadata={"min": 0.8, "max": 5.0, "step": 0.1, "when": {"style": "hex"}})  # Uniform wall thickness between flat edges (mm)
 
 
 @dataclass
 class RackSlotsParams:
     """Front EIA-310 rack mounting slots."""
 
-    width: float = 9.5                     # Slot width in mm
-    height: float = 6.5                    # Slot height in mm
-    x_center: float = 10.0                 # Center of slot on 20mm front flange
-    offset_end: float = 5.75               # Standard EIA-310 offset from top/bottom outer edge to slot center
-    single_slot_1u: bool = True            # For 1U: if True, center 1 slot; if False, 2 slots at ends
+    width: float = field(default=9.5, metadata={"min": 5.0, "max": 15.0, "step": 0.5})  # Slot width in mm
+    height: float = field(default=6.5, metadata={"min": 4.0, "max": 10.0, "step": 0.5})  # Slot height in mm
+    x_center: float = field(default=10.0, metadata={"min": 5.0, "max": 25.0, "step": 0.5})  # Center of slot on 20mm front flange
+    offset_end: float = field(default=5.75, metadata={"min": 3.0, "max": 12.0, "step": 0.25})  # Standard EIA-310 offset from top/bottom outer edge to slot center
+    single_slot_1u: bool = field(default=True, metadata={"when": {"core.u_count": 1}})  # For 1U: if True, center 1 slot; if False, 2 slots at ends
     z_positions: Optional[List[float]] = None  # Explicit Z heights for rack slots (overrides auto)
 
 
@@ -125,8 +125,8 @@ def create_rack_bracket(params: RackBracketParams) -> Part:
         extrude(amount=total_height)
 
         # 2. Front Flange EIA-310 Mounting Slots (Scales with u_count)
-        if slots.z_positions is not None:
-            slot_z_positions = slots.z_positions
+        if slots.z_positions:
+            slot_z_positions = [float(z) for z in slots.z_positions]
         elif core.u_count == 1:
             if slots.single_slot_1u:
                 slot_z_positions = [total_height / 2.0]
@@ -137,11 +137,13 @@ def create_rack_bracket(params: RackBracketParams) -> Part:
             for u in range(1, core.u_count - 1):
                 slot_z_positions.append((u + 0.5) * core.u_height_unit - (core.height_margin / 2.0))
 
-        with BuildSketch(Plane.YZ):
-            for z_pos in slot_z_positions:
-                with Locations((slots.x_center, z_pos)):
-                    SlotOverall(slots.width, slots.height, rotation=0)
-        extrude(amount=core.thickness * 4, dir=(1, 0, 0), mode=Mode.SUBTRACT)
+        if slot_z_positions:
+            with BuildSketch(Plane.YZ) as slots_sk:
+                for z_pos in slot_z_positions:
+                    with Locations((slots.x_center, z_pos)):
+                        SlotOverall(slots.width, slots.height, rotation=0)
+            if len(slots_sk.faces()) > 0:
+                extrude(amount=core.thickness * 4, dir=(1, 0, 0), mode=Mode.SUBTRACT)
 
         # 3. Center Window Cutout (Honeycomb grill or open window)
         flat_to_flat = math.sqrt(3) * cutout.hex_radius
@@ -178,7 +180,7 @@ def create_rack_bracket(params: RackBracketParams) -> Part:
                     z_pos += pitch_z
                     z_row += 1
 
-                with BuildSketch(Plane.XZ):
+                with BuildSketch(Plane.XZ) as hex_sk:
                     with Locations((window_center_x, window_center_z)):
                         if cutout.corner_radius > 0:
                             RectangleRounded(window_width, window_height, radius=cutout.corner_radius)
@@ -188,7 +190,8 @@ def create_rack_bracket(params: RackBracketParams) -> Part:
                         for hx, hz in hex_locs:
                             with Locations((hx, hz)):
                                 RegularPolygon(radius=cutout.hex_radius, side_count=6, rotation=30)
-                extrude(amount=core.thickness * 4, dir=(0, 1, 0), mode=Mode.SUBTRACT)
+                if len(hex_sk.faces()) > 0:
+                    extrude(amount=core.thickness * 4, dir=(0, 1, 0), mode=Mode.SUBTRACT)
 
             elif cutout.style.lower() == "window":
                 with BuildSketch(Plane.XZ):
@@ -207,8 +210,8 @@ def create_rack_bracket(params: RackBracketParams) -> Part:
                 x_columns.append(cur_x)
                 cur_x -= side.spacing_x
 
-            if side.rows is not None:
-                z_positions = side.rows
+            if side.rows:
+                z_positions = [float(z) for z in side.rows]
             elif core.u_count == 1:
                 z_positions = [total_height / 2.0]
             else:
@@ -235,6 +238,11 @@ def create_rack_bracket(params: RackBracketParams) -> Part:
     return bracket.part
 
 
+def export_filename(params: RackBracketParams) -> str:
+    """Return standardized lowercase filename stem (without extension) for exports."""
+    return f"rack_bracket_{params.core.u_count}u_{params.cutout.style.lower()}"
+
+
 if __name__ == "__main__":
     params = RackBracketParams()
     bracket = create_rack_bracket(params)
@@ -243,7 +251,7 @@ if __name__ == "__main__":
         exports_path = Path(__file__).resolve().parent / OUTPUT_DIR
         exports_path.mkdir(parents=True, exist_ok=True)
 
-        stem = f"rack_bracket_{params.core.u_count}u_{params.cutout.style.lower()}"
+        stem = export_filename(params)
 
         if EXPORT_STL:
             stl_file = exports_path / f"{stem}.stl"
