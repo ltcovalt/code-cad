@@ -651,17 +651,13 @@ def export_filename(params: SpacerParams) -> str:
             variant = "corner"
     elif c.leg_x_length > 0:
         dim_str = f"{int(c.leg_x_length)}x{int(c.leg_x_width)}x{int(c.height)}mm"
-        variant = "straight_x"
+        variant = "straight"
     else:
         dim_str = f"{int(c.leg_y_length)}x{int(c.leg_y_width)}x{int(c.height)}mm"
-        variant = "straight_y"
+        variant = "straight"
 
-    if j.mirror_x and j.mirror_y:
-        variant += "_mirrored_xy"
-    elif j.mirror_x:
-        variant += "_mirrored_x"
-    elif j.mirror_y:
-        variant += "_mirrored_y"
+    if j.mirror_x or j.mirror_y:
+        variant += "_mirrored"
 
     return f"spacer_{dim_str}_{variant}"
 
