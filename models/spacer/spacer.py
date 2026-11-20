@@ -17,13 +17,13 @@ Clean, Unified Leg Architecture:
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Literal, Optional
 from build123d import *
 
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = False      # Save .stl file on execution (default: False)
+EXPORT_STL: bool = True      # Save .stl file on execution (default: False)
 EXPORT_STEP: bool = False     # Save .step file on execution (default: False)
 OUTPUT_DIR: str = "exports"   # Relative subfolder alongside this script
 
@@ -48,68 +48,64 @@ class SpacerCutout:
 
 
 @dataclass
-class SpacerParams:
-    """Single source of truth parameters for parametric spacers."""
+class CoreParams:
+    """Shared height and X/Y leg dimensions."""
 
-    # --------------------------------------------------------------------------
-    # Shared Height (Z)
-    # --------------------------------------------------------------------------
     height: float = 56.0                # Spacer height in mm (Z dimension)
-
-    # --------------------------------------------------------------------------
-    # Leg X (e.g. Front / Back wall)
-    # Set leg_y_length = 0 to generate a straight Leg X spacer!
-    # --------------------------------------------------------------------------
-    leg_x_length: float = 180.0         # Length along X wall in mm (set 0 to omit)
+    leg_x_length: float = 0.0           # Length along X wall in mm (set 0 to omit)
     leg_x_width: float = 15.0           # Width / thickness of X leg in mm
-
-    # --------------------------------------------------------------------------
-    # Leg Y (e.g. Side wall)
-    # Set leg_x_length = 0 to generate a straight Leg Y spacer!
-    # --------------------------------------------------------------------------
-    leg_y_length: float = 246.0         # Length along Y wall in mm (set 0 to omit)
+    leg_y_length: float = 238.0         # Length along Y wall in mm (set 0 to omit)
     leg_y_width: float = 15.0           # Width / thickness of Y leg in mm
 
-    # --------------------------------------------------------------------------
-    # Orientation & Junction Position (Inverse L, T-Shape, Cross)
-    # --------------------------------------------------------------------------
-    mirror_x: bool = False               # Mirror left <-> right (inverts L-shape for opposite corner)
+
+@dataclass
+class JunctionParams:
+    """Orientation and junction position (Inverse L, T-Shape, Cross)."""
+
+    mirror_x: bool = False              # Mirror left <-> right (inverts L-shape for opposite corner)
     mirror_y: bool = False              # Mirror front <-> back
-    leg_y_align: str = "start"          # Anchor for Leg Y along X: "start", "center" (T-shape), or "end"
+    leg_y_align: Literal["start", "center", "end"] = "start"  # Anchor for Leg Y along X
     leg_y_offset: float = 0.0           # Fine-tune shift of Leg Y from leg_y_align in mm (+ or -)
-    leg_x_align: str = "start"          # Anchor for Leg X along Y: "start", "center" (sideways T), or "end"
+    leg_x_align: Literal["start", "center", "end"] = "start"  # Anchor for Leg X along Y
     leg_x_offset: float = 0.0           # Fine-tune shift of Leg X from leg_x_align in mm (+ or -)
 
-    # --------------------------------------------------------------------------
-    # Corner Radii & Top Edge Treatment
-    # --------------------------------------------------------------------------
-    corner_radius: float = 2.0          # General vertical corner radius in mm (XY profile corners)
+
+@dataclass
+class EdgeTreatmentParams:
+    """Corner radii and top perimeter edge treatment."""
+
+    corner_radius: float = 2.0                   # General vertical corner radius in mm (XY profile corners)
     outer_corner_radius: Optional[float] = None  # Outer junction corner radius in mm (None = corner_radius)
     inner_corner_radius: Optional[float] = 4.0   # Inside junction corner radius in mm (None = corner_radius)
     end_corner_radius: float = 0.0               # Radius on mating arm ends in mm (0.0 for flush butt-joints)
+    edge_radius: float = 1.0                     # Top perimeter edge radius/bevel in mm
+    edge_treatment: Literal["fillet", "chamfer"] = "fillet"  # Top edge profile
 
-    edge_radius: float = 1.0            # Top perimeter edge radius/bevel in mm (smooth touch & prevents snagging)
-    edge_treatment: str = "fillet"      # "fillet" (smooth curve) or "chamfer" (beveled 45-deg edge)
 
-    # --------------------------------------------------------------------------
-    # Hollow / Shell Options (Saves filament and print time on thick spacers)
-    # --------------------------------------------------------------------------
-    hollow: bool = False                # If True, hollows out the bottom with an open underside
-    wall_thickness: float = 2.0         # Side wall thickness when hollow=True in mm
-    top_thickness: float = 2.0          # Top solid roof thickness when hollow=True in mm
+@dataclass
+class HollowParams:
+    """Hollow / shell underside options (saves filament on thick spacers)."""
 
-    # --------------------------------------------------------------------------
-    # Ergonomic Finger-Lift Scoop (Optional removal aid)
-    # --------------------------------------------------------------------------
-    finger_notch: bool = False          # If True, adds a recessed scoop on the top face for easy prying/removal
-    finger_notch_radius: float = 12.0   # Radius of spherical scoop cutter in mm
-    finger_notch_depth: float = 2.5     # Depth of scoop recess from top surface in mm
+    enabled: bool = False               # Hollow out the bottom with an open underside
+    wall_thickness: float = 2.0         # Side wall thickness when enabled in mm
+    top_thickness: float = 2.0          # Top solid roof thickness when enabled in mm
 
-    # --------------------------------------------------------------------------
-    # Notches & Cutouts (For drawer locks, latches, handle bolts, etc.)
-    # --------------------------------------------------------------------------
-    cutouts_enabled: bool = False       # Master toggle to enable/disable all cutouts below
-    cutouts: List[SpacerCutout] = field(default_factory=lambda: [
+
+@dataclass
+class FingerNotchParams:
+    """Ergonomic finger-lift scoop on top face."""
+
+    enabled: bool = False               # Add recessed scoop on top face for easy prying/removal
+    radius: float = 12.0                # Radius of spherical scoop cutter in mm
+    depth: float = 2.5                  # Depth of scoop recess from top surface in mm
+
+
+@dataclass
+class CutoutsParams:
+    """Notches & cutouts (for drawer locks, latches, handle bolts, etc.)."""
+
+    enabled: bool = False               # Enable/disable all cutouts
+    items: List[SpacerCutout] = field(default_factory=lambda: [
         SpacerCutout(
             leg="x",
             align="end",
@@ -121,6 +117,18 @@ class SpacerParams:
             entry_radius=2.0,
         ),
     ])
+
+
+@dataclass
+class SpacerParams:
+    """Single source of truth parameters for parametric spacers."""
+
+    core: CoreParams = field(default_factory=CoreParams)
+    junction: JunctionParams = field(default_factory=JunctionParams)
+    edges: EdgeTreatmentParams = field(default_factory=EdgeTreatmentParams)
+    hollow: HollowParams = field(default_factory=HollowParams)
+    finger_notch: FingerNotchParams = field(default_factory=FingerNotchParams)
+    cutouts: CutoutsParams = field(default_factory=CutoutsParams)
 
 
 def _apply_cutout(
@@ -428,16 +436,23 @@ def create_spacer(params: SpacerParams) -> Solid:
     Decoupled generator function for parametric spacers.
 
     - leg_x_length > 0 and leg_y_length > 0: generates an L-corner, T-shape, or Cross (+) spacer
-      depending on `leg_y_align` / `leg_y_offset` and `leg_x_align` / `leg_x_offset`.
+      depending on `junction.leg_y_align` / `leg_y_offset` and `leg_x_align` / `leg_x_offset`.
     - leg_x_length > 0 and leg_y_length <= 0: generates straight Leg X spacer.
     - leg_x_length <= 0 and leg_y_length > 0: generates straight Leg Y spacer.
-    - `mirror_x` / `mirror_y`: mirrors the finished spacer for opposite corners.
+    - `junction.mirror_x` / `mirror_y`: mirrors the finished spacer for opposite corners.
     """
-    lx = max(0.0, params.leg_x_length)
-    wx = params.leg_x_width
-    ly = max(0.0, params.leg_y_length)
-    wy = params.leg_y_width
-    h = params.height
+    core = params.core
+    junc = params.junction
+    edges = params.edges
+    hollow = params.hollow
+    notch = params.finger_notch
+    cutouts = params.cutouts
+
+    lx = max(0.0, core.leg_x_length)
+    wx = core.leg_x_width
+    ly = max(0.0, core.leg_y_length)
+    wy = core.leg_y_width
+    h = core.height
 
     if lx <= 0 and ly <= 0:
         raise ValueError(
@@ -458,38 +473,35 @@ def create_spacer(params: SpacerParams) -> Solid:
             raise ValueError(f"leg_x_length ({lx}mm) must be strictly greater than leg_y_width ({wy}mm)")
         if ly <= wx:
             raise ValueError(f"leg_y_length ({ly}mm) must be strictly greater than leg_x_width ({wx}mm)")
-        x0 = _resolve_leg_position(params.leg_y_align, params.leg_y_offset, lx, wy, "leg_y")
-        y0 = _resolve_leg_position(params.leg_x_align, params.leg_x_offset, ly, wx, "leg_x")
+        x0 = _resolve_leg_position(junc.leg_y_align, junc.leg_y_offset, lx, wy, "leg_y")
+        y0 = _resolve_leg_position(junc.leg_x_align, junc.leg_x_offset, ly, wx, "leg_x")
     elif lx > 0 and wx <= 0:
         raise ValueError(f"leg_x_width must be positive: got {wx}")
     elif ly > 0 and wy <= 0:
         raise ValueError(f"leg_y_width must be positive: got {wy}")
 
     # Radii
-    r_outer = params.outer_corner_radius if params.outer_corner_radius is not None else params.corner_radius
-    r_inner = params.inner_corner_radius if params.inner_corner_radius is not None else params.corner_radius
-    r_end = params.end_corner_radius
-    r_top = params.edge_radius
+    r_outer = edges.outer_corner_radius if edges.outer_corner_radius is not None else edges.corner_radius
+    r_inner = edges.inner_corner_radius if edges.inner_corner_radius is not None else edges.corner_radius
+    r_end = edges.end_corner_radius
+    r_top = edges.edge_radius
 
     with BuildPart() as builder:
         # Base 2D profile
         with BuildSketch(Plane.XY) as sk:
             if is_junction:
-                # Union of the two perpendicular arms (L, T, or Cross depending on offsets)
                 with Locations((0.0, y0)):
                     Rectangle(lx, wx, align=(Align.MIN, Align.MIN))
                 with Locations((x0, 0.0)):
                     Rectangle(wy, ly, align=(Align.MIN, Align.MIN))
             elif lx > 0:
-                # Straight Leg X
-                eff_cr = max(0.0, min(params.corner_radius, min(lx, wx) / 2.0 - 0.05)) if params.corner_radius > 0 else 0.0
+                eff_cr = max(0.0, min(edges.corner_radius, min(lx, wx) / 2.0 - 0.05)) if edges.corner_radius > 0 else 0.0
                 if eff_cr > 0.05:
                     RectangleRounded(lx, wx, radius=eff_cr, align=(Align.MIN, Align.MIN))
                 else:
                     Rectangle(lx, wx, align=(Align.MIN, Align.MIN))
             else:
-                # Straight Leg Y
-                eff_cr = max(0.0, min(params.corner_radius, min(ly, wy) / 2.0 - 0.05)) if params.corner_radius > 0 else 0.0
+                eff_cr = max(0.0, min(edges.corner_radius, min(ly, wy) / 2.0 - 0.05)) if edges.corner_radius > 0 else 0.0
                 if eff_cr > 0.05:
                     RectangleRounded(wy, ly, radius=eff_cr, align=(Align.MIN, Align.MIN))
                 else:
@@ -497,13 +509,13 @@ def create_spacer(params: SpacerParams) -> Solid:
         extrude(amount=h)
 
         # Hollow underside pocket (if enabled)
-        if params.hollow and h > params.top_thickness + 1.0:
+        if hollow.enabled and h > hollow.top_thickness + 1.0:
             min_dim = min(wx, wy) if is_junction else (wx if lx > 0 else wy)
-            eff_wall = min(params.wall_thickness, min_dim / 2.0 - 0.5)
+            eff_wall = min(hollow.wall_thickness, min_dim / 2.0 - 0.5)
             if eff_wall > 0.5:
                 with BuildSketch(Plane.XY) as sk_inner:
                     offset(sk.sketch, amount=-eff_wall)
-                extrude(sk_inner.sketch, amount=h - params.top_thickness, mode=Mode.SUBTRACT)
+                extrude(sk_inner.sketch, amount=h - hollow.top_thickness, mode=Mode.SUBTRACT)
 
         # Vertical corner fillets for L / T / Cross junction pieces
         if is_junction:
@@ -568,22 +580,22 @@ def create_spacer(params: SpacerParams) -> Solid:
         if r_top > 0.05 and h > r_top:
             min_edge = min(wx, wy) if is_junction else (wx if lx > 0 else wy)
             max_er = min(h * 0.8, min_edge * 0.45)
-            if params.hollow:
-                max_er = min(max_er, params.wall_thickness * 0.8)
+            if hollow.enabled:
+                max_er = min(max_er, hollow.wall_thickness * 0.8)
             er = min(r_top, max_er)
 
             if er > 0.05:
                 top_face = builder.faces().sort_by(Axis.Z)[-1]
                 top_outer_edges = top_face.outer_wire().edges()
-                if params.edge_treatment.lower() == "chamfer":
+                if edges.edge_treatment.lower() == "chamfer":
                     chamfer(top_outer_edges, length=er)
                 else:
                     fillet(top_outer_edges, radius=er)
 
         # Finger-lift scoop (if enabled)
-        if params.finger_notch and params.finger_notch_radius > 0:
-            fn_r = params.finger_notch_radius
-            fn_d = min(params.finger_notch_depth, h * 0.5)
+        if notch.enabled and notch.radius > 0:
+            fn_r = notch.radius
+            fn_d = min(notch.depth, h * 0.5)
             if is_junction:
                 cx = x0 + wy / 2.0
                 cy = y0 + wx / 2.0
@@ -598,19 +610,19 @@ def create_spacer(params: SpacerParams) -> Solid:
                 Sphere(radius=fn_r, mode=Mode.SUBTRACT)
 
         # Notches & cutouts (if enabled)
-        if params.cutouts_enabled and params.cutouts:
-            for cutout in params.cutouts:
+        if cutouts.enabled and cutouts.items:
+            for cutout in cutouts.items:
                 _apply_cutout(cutout, lx, wx, ly, wy, h, x0=x0, y0=y0)
 
     assert builder.part is not None, "Failed to generate spacer solid"
     part = builder.part
 
     # Optional mirroring (e.g. invert L-shape for opposite drawer corner)
-    if params.mirror_x:
+    if junc.mirror_x:
         part = part.mirror(Plane.YZ)
-    if params.mirror_y:
+    if junc.mirror_y:
         part = part.mirror(Plane.XZ)
-    if params.mirror_x or params.mirror_y:
+    if junc.mirror_x or junc.mirror_y:
         bb = part.bounding_box()
         part = part.translate((-bb.min.X, -bb.min.Y, -bb.min.Z))
 
@@ -626,35 +638,36 @@ if __name__ == "__main__":
     if EXPORT_STEP or EXPORT_STL:
         exports_path = Path(__file__).resolve().parent / OUTPUT_DIR
         exports_path.mkdir(parents=True, exist_ok=True)
-        is_junction = (params.leg_x_length > 0 and params.leg_y_length > 0)
+        c, j = params.core, params.junction
+        is_junction = (c.leg_x_length > 0 and c.leg_y_length > 0)
         if is_junction:
-            dim_str = f"{int(params.leg_x_length)}x{int(params.leg_y_length)}x{int(params.height)}mm"
+            dim_str = f"{int(c.leg_x_length)}x{int(c.leg_y_length)}x{int(c.height)}mm"
             x0 = _resolve_leg_position(
-                params.leg_y_align, params.leg_y_offset, params.leg_x_length, params.leg_y_width, "leg_y"
+                j.leg_y_align, j.leg_y_offset, c.leg_x_length, c.leg_y_width, "leg_y"
             )
             y0 = _resolve_leg_position(
-                params.leg_x_align, params.leg_x_offset, params.leg_y_length, params.leg_x_width, "leg_x"
+                j.leg_x_align, j.leg_x_offset, c.leg_y_length, c.leg_x_width, "leg_x"
             )
-            mid_x = 1e-3 < x0 < (params.leg_x_length - params.leg_y_width - 1e-3)
-            mid_y = 1e-3 < y0 < (params.leg_y_length - params.leg_x_width - 1e-3)
+            mid_x = 1e-3 < x0 < (c.leg_x_length - c.leg_y_width - 1e-3)
+            mid_y = 1e-3 < y0 < (c.leg_y_length - c.leg_x_width - 1e-3)
             if mid_x and mid_y:
                 variant = "cross"
             elif mid_x or mid_y:
                 variant = "t_shape"
             else:
                 variant = "corner"
-        elif params.leg_x_length > 0:
-            dim_str = f"{int(params.leg_x_length)}x{int(params.leg_x_width)}x{int(params.height)}mm"
+        elif c.leg_x_length > 0:
+            dim_str = f"{int(c.leg_x_length)}x{int(c.leg_x_width)}x{int(c.height)}mm"
             variant = "straight_x"
         else:
-            dim_str = f"{int(params.leg_y_length)}x{int(params.leg_y_width)}x{int(params.height)}mm"
+            dim_str = f"{int(c.leg_y_length)}x{int(c.leg_y_width)}x{int(c.height)}mm"
             variant = "straight_y"
 
-        if params.mirror_x and params.mirror_y:
+        if j.mirror_x and j.mirror_y:
             variant += "_mirrored_xy"
-        elif params.mirror_x:
+        elif j.mirror_x:
             variant += "_mirrored_x"
-        elif params.mirror_y:
+        elif j.mirror_y:
             variant += "_mirrored_y"
 
         stem = f"spacer_{dim_str}_{variant}"
