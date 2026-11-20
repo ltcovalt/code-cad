@@ -100,13 +100,13 @@ class TextParams:
     """Text content, typography, and rendering mode."""
 
     content: str = "FASTENERS"
-    font_size: float = 12.0                # Font height in mm
+    font_size: float = field(default=12.0, metadata={"min": 4.0, "max": 36.0, "step": 0.5})  # Font height in mm
     font: str = "Arial"                    # Font family (e.g. 'Arial', 'FreeSans', 'Helvetica')
     font_style: Literal["regular", "bold", "italic", "bold_italic"] = "bold"  # Font weight/slant
     align: Literal["center", "left", "right"] = "center"  # Horizontal text alignment
-    offset_y: float = 0.0                  # Fine vertical offset adjustment in mm
+    offset_y: float = field(default=0.0, metadata={"min": -10.0, "max": 10.0, "step": 0.2})  # Fine vertical offset adjustment in mm
     mode: Literal["embossed", "debossed", "flush"] = "embossed"  # Text rendering style
-    depth: float = 1.2                     # Height of raised letters or depth of engraving (mm)
+    depth: float = field(default=1.2, metadata={"min": 0.4, "max": 4.0, "step": 0.1})  # Height of raised letters or depth of engraving (mm)
 
 
 @dataclass
@@ -114,22 +114,22 @@ class SizingParams:
     """Plate dimensions and auto-sizing margins."""
 
     auto_size: bool = False                # Adaptive text sizing (True) or static dimensions (False)
-    width: float = 100.0                   # Used when auto_size is False (mm)
-    height: float = 16.0                   # Used when auto_size is False (mm)
-    padding_x: float = 4.0                 # Margin around text in auto-size mode (mm)
-    padding_y: float = 4.0                 # Margin around text in auto-size mode (mm)
-    min_width: float = 30.0                # Minimum plate width limit (mm)
-    min_height: float = 16.0               # Minimum plate height limit (mm)
+    width: float = field(default=100.0, metadata={"min": 20.0, "max": 250.0, "step": 1.0, "when": {"auto_size": False}})  # Used when auto_size is False (mm)
+    height: float = field(default=16.0, metadata={"min": 10.0, "max": 80.0, "step": 1.0, "when": {"auto_size": False}})  # Used when auto_size is False (mm)
+    padding_x: float = field(default=4.0, metadata={"min": 1.0, "max": 25.0, "step": 0.5, "when": {"auto_size": True}})  # Margin around text in auto-size mode (mm)
+    padding_y: float = field(default=4.0, metadata={"min": 1.0, "max": 25.0, "step": 0.5, "when": {"auto_size": True}})  # Margin around text in auto-size mode (mm)
+    min_width: float = field(default=30.0, metadata={"min": 15.0, "max": 150.0, "step": 1.0, "when": {"auto_size": True}})  # Minimum plate width limit (mm)
+    min_height: float = field(default=16.0, metadata={"min": 10.0, "max": 60.0, "step": 1.0, "when": {"auto_size": True}})  # Minimum plate height limit (mm)
 
 
 @dataclass
 class PlateParams:
     """Base plate thickness and edge styling."""
 
-    base_thickness: float = 3.0            # Overall plate thickness (mm)
-    corner_radius: float = 3.0             # Corner fillet radius (mm; 0 for square)
-    top_chamfer: float = 0.6               # 45-degree bevel on front perimeter (mm; 0 to disable)
-    min_floor_thickness: float = 0.8       # Minimum solid plastic floor thickness behind magnets (mm)
+    base_thickness: float = field(default=3.0, metadata={"min": 1.5, "max": 8.0, "step": 0.2})  # Overall plate thickness (mm)
+    corner_radius: float = field(default=3.0, metadata={"min": 0.0, "max": 15.0, "step": 0.5})  # Corner fillet radius (mm; 0 for square)
+    top_chamfer: float = field(default=0.6, metadata={"min": 0.0, "max": 2.0, "step": 0.1})  # 45-degree bevel on front perimeter (mm; 0 to disable)
+    min_floor_thickness: float = field(default=0.8, metadata={"min": 0.4, "max": 3.0, "step": 0.1})  # Minimum solid plastic floor thickness behind magnets (mm)
 
 
 @dataclass
@@ -137,7 +137,7 @@ class BorderRimParams:
     """Optional raised border frame around front face."""
 
     enabled: bool = True                   # Enable raised border frame around face
-    width: float = 1.2                     # Width of raised border frame (mm)
+    width: float = field(default=1.2, metadata={"min": 0.6, "max": 4.0, "step": 0.2})  # Width of raised border frame (mm)
 
 
 @dataclass
@@ -145,12 +145,12 @@ class MagnetParams:
     """Rear press-fit magnet pockets."""
 
     enabled: bool = True                   # Enable/disable rear magnet pockets
-    diameter: float = 10.0                 # Nominal magnet diameter in mm
-    thickness: float = 2.0                 # Nominal magnet thickness in mm
-    clearance: float = 0.0                 # Press-fit diameter tolerance for 3D printing (mm)
-    pocket_depth_offset: float = 0.2       # Extra depth allowance to keep magnets sub-flush (mm)
-    count: Optional[int] = None            # Specific magnet count, or None for automatic spacing
-    edge_margin: float = 8.0               # Distance from ends to magnet centers (mm)
+    diameter: float = field(default=10.0, metadata={"min": 3.0, "max": 20.0, "step": 0.5})  # Nominal magnet diameter in mm
+    thickness: float = field(default=2.0, metadata={"min": 1.0, "max": 5.0, "step": 0.2})  # Nominal magnet thickness in mm
+    clearance: float = field(default=0.0, metadata={"min": -0.2, "max": 0.5, "step": 0.05})  # Press-fit diameter tolerance for 3D printing (mm)
+    pocket_depth_offset: float = field(default=0.2, metadata={"min": 0.0, "max": 1.0, "step": 0.05})  # Extra depth allowance to keep magnets sub-flush (mm)
+    count: Optional[int] = field(default=None, metadata={"min": 1, "max": 10, "step": 1})  # Specific magnet count, or None for automatic spacing
+    edge_margin: float = field(default=8.0, metadata={"min": 4.0, "max": 30.0, "step": 0.5})  # Distance from ends to magnet centers (mm)
     positions: Optional[List[Tuple[float, float]]] = None
 
 
@@ -239,7 +239,7 @@ def calculate_magnet_positions(
     if not mag.enabled:
         return []
 
-    if mag.positions is not None:
+    if mag.positions:
         return list(mag.positions)
 
     if mag.count is not None:
@@ -415,6 +415,14 @@ def create_magnetic_label(params: MagneticLabelParams) -> Compound | Part | Soli
     if label.text_part is not None:
         return Compound(children=[label.base_part, label.text_part])
     return label.base_part
+
+
+def export_filename(params: MagneticLabelParams) -> str:
+    """Return standardized lowercase filename stem (without extension) for exports."""
+    width, height, _ = calculate_dimensions(params)
+    safe_text = "".join(c if c.isalnum() else "_" for c in params.text.content).strip("_").lower() or "label"
+    dim_str = f"{width:.0f}x{height:.0f}mm"
+    return f"magnetic_label_{dim_str}_{safe_text}_{params.text.mode.lower()}"
 
 
 # ==============================================================================
