@@ -36,22 +36,22 @@ OUTPUT_DIR: str = "exports"             # Output folder (relative to this script
 class CoreParams:
     """Shaft / bore and collar sleeve dimensions."""
 
-    shaft_diameter: float = 12.0           # Nominal shaft/rod diameter in mm (12.7 mm = 1/2 inch)
-    fit_clearance: float = 0.2             # Diametral press-fit clearance in mm (bore dia = shaft_diameter + fit_clearance)
-    collar_length: float = 18.0            # Length of collar sleeve pressing onto shaft (mm)
-    collar_wall_thickness: float = 2.4     # Wall thickness of collar cylinder (mm)
-    lead_in_chamfer: float = 1.0           # Internal chamfer at collar mouth for effortless sliding onto rod (mm)
+    shaft_diameter: float = field(default=12.0, metadata={"min": 4.0, "max": 60.0, "step": 0.1})  # Nominal shaft/rod diameter in mm (12.7 mm = 1/2 inch)
+    fit_clearance: float = field(default=0.2, metadata={"min": -0.5, "max": 1.0, "step": 0.05})  # Diametral press-fit clearance in mm (bore dia = shaft_diameter + fit_clearance)
+    collar_length: float = field(default=18.0, metadata={"min": 5.0, "max": 60.0, "step": 1.0})  # Length of collar sleeve pressing onto shaft (mm)
+    collar_wall_thickness: float = field(default=2.4, metadata={"min": 1.2, "max": 8.0, "step": 0.2})  # Wall thickness of collar cylinder (mm)
+    lead_in_chamfer: float = field(default=1.0, metadata={"min": 0.0, "max": 3.0, "step": 0.1})  # Internal chamfer at collar mouth for effortless sliding onto rod (mm)
 
 
 @dataclass
 class FlangeParams:
     """Retaining flange (spool stop) dimensions."""
 
-    diameter: float = 40.0                 # Outer diameter of retaining flange (mm)
-    thickness: float = 4.0                 # Axial thickness of flange disc (mm)
-    fillet: float = 2.0                    # Stress-relief fillet radius between collar body and flange underside (mm)
-    front_radius: float = 2.0              # Outer rim fillet radius on front / tip side of flange (mm, 0.0 for crisp edge)
-    rear_radius: float = 2.0               # Outer rim fillet radius on rear / collar side of flange (mm, 0.0 for crisp edge)
+    diameter: float = field(default=40.0, metadata={"min": 12.0, "max": 100.0, "step": 1.0})  # Outer diameter of retaining flange (mm)
+    thickness: float = field(default=4.0, metadata={"min": 1.5, "max": 12.0, "step": 0.5})  # Axial thickness of flange disc (mm)
+    fillet: float = field(default=2.0, metadata={"min": 0.0, "max": 8.0, "step": 0.2})  # Stress-relief fillet radius between collar body and flange underside (mm)
+    front_radius: float = field(default=2.0, metadata={"min": 0.0, "max": 8.0, "step": 0.2, "when": {"cap.style": ["round", "flat"]}})  # Outer rim fillet radius on front / tip side of flange (mm, 0.0 for crisp edge)
+    rear_radius: float = field(default=2.0, metadata={"min": 0.0, "max": 8.0, "step": 0.2})  # Outer rim fillet radius on rear / collar side of flange (mm, 0.0 for crisp edge)
 
 
 @dataclass
@@ -59,8 +59,8 @@ class CapTipParams:
     """End cap tip style & geometry."""
 
     style: Literal["round", "dome", "flat", "chamfer"] = "round"  # End cap style
-    dome_height: Optional[float] = 0.0     # Height of dome above flange (mm). None/0 defaults to full hemisphere
-    chamfer_length: float = 2.5            # Axial length of 45-deg bevel when style is 'chamfer' (mm)
+    dome_height: Optional[float] = field(default=0.0, metadata={"min": 0.0, "max": 40.0, "step": 0.5, "when": {"style": "dome"}})  # Height of dome above flange (mm). None/0 defaults to full hemisphere
+    chamfer_length: float = field(default=2.5, metadata={"min": 0.5, "max": 15.0, "step": 0.5, "when": {"style": "chamfer"}})  # Axial length of 45-deg bevel when style is 'chamfer' (mm)
 
 
 @dataclass
@@ -68,7 +68,7 @@ class VentHoleParams:
     """Coaxial air-relief through-hole."""
 
     enabled: bool = False                  # Enable coaxial air-relief through-hole
-    diameter: float = 2.0                  # Coaxial air-relief vent hole diameter in mm
+    diameter: float = field(default=2.0, metadata={"min": 1.0, "max": 10.0, "step": 0.2})  # Coaxial air-relief vent hole diameter in mm
 
 
 @dataclass
@@ -76,8 +76,8 @@ class VentChannelParams:
     """Internal axial air-relief vent channel along collar bore."""
 
     enabled: bool = True                   # Enable invisible internal axial vent channel
-    width: float = 1.0                     # Width of internal axial vent channel along collar bore in mm
-    depth: float = 0.6                     # Radial depth of internal vent channel into collar wall in mm
+    width: float = field(default=1.0, metadata={"min": 0.4, "max": 4.0, "step": 0.1})  # Width of internal axial vent channel along collar bore in mm
+    depth: float = field(default=0.6, metadata={"min": 0.2, "max": 2.0, "step": 0.1})  # Radial depth of internal vent channel into collar wall in mm
 
 
 @dataclass
@@ -85,8 +85,8 @@ class GripGroovesParams:
     """Perimeter scalloped finger grip grooves."""
 
     enabled: bool = False                  # Enable perimeter scalloped finger grip grooves
-    count: int = 12                        # Number of perimeter grip grooves for finger twisting
-    radius: float = 1.2                    # Radius of scalloped finger grip cuts around flange perimeter (mm)
+    count: int = field(default=12, metadata={"min": 4, "max": 36, "step": 1})  # Number of perimeter grip grooves for finger twisting
+    radius: float = field(default=1.2, metadata={"min": 0.5, "max": 5.0, "step": 0.1})  # Radius of scalloped finger grip cuts around flange perimeter (mm)
 
 
 @dataclass
@@ -294,6 +294,12 @@ def create_shaft_end_cap(params: ShaftEndCapParams) -> Part:
     return cap.part
 
 
+def export_filename(params: ShaftEndCapParams) -> str:
+    """Return standardized lowercase filename stem (without extension) for exports."""
+    safe_style = params.cap.style.lower().replace(" ", "_")
+    return f"shaft_end_cap_{params.core.shaft_diameter:.1f}mm_{safe_style}"
+
+
 if __name__ == "__main__":
     # Generates model using the parameters configured in ShaftEndCapParams
     params = ShaftEndCapParams()
@@ -304,8 +310,7 @@ if __name__ == "__main__":
         exports_path = Path(__file__).resolve().parent / OUTPUT_DIR
         exports_path.mkdir(parents=True, exist_ok=True)
 
-        safe_style = params.cap.style.lower().replace(" ", "_")
-        stem = f"shaft_end_cap_{params.core.shaft_diameter:.1f}mm_{safe_style}"
+        stem = export_filename(params)
 
         if EXPORT_STL:
             stl_file = exports_path / f"{stem}.stl"
