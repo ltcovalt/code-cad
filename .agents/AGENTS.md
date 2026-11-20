@@ -9,8 +9,11 @@ When building CAD models in this repository:
    - **Parametric `@dataclass` as Single Source of Truth**:
      - Define all geometric and feature parameters at the top of the file in a dedicated dataclass named `<Model>Params` (e.g. `RackBracketParams`, `ContainerLidParams`).
      - Provide clear type annotations, default values, and comments for all fields.
-     - **Uniform Feature Toggle Pattern (`*_enabled` Booleans)**: Group optional or toggleable features into logical sections in the dataclass and lead each section with a master boolean toggle (e.g. `label_enabled: bool = True`, `scoop_enabled: bool = True`, `dividers_enabled: bool = False`, `overhang_enabled: bool = False`). This allows users to quickly toggle entire features on and off during testing without losing their tuned dimensional values, and maps 1:1 to section toggles in a future web generator UI.
-     - Avoid redundant alias properties or duplicate getters.
+     - **Explicit Nested `@dataclass` Grouping & Feature Toggles**:
+       - Group related parameters into explicit nested `@dataclass`es composed on the root `<Model>Params` dataclass using `field(default_factory=...)` (e.g., `core: CoreParams`, `scoop: ScoopParams`, `label: LabelHolderParams`, `dividers: DividersParams`, `overhang: OverhangParams`).
+       - For any optional/toggleable feature section, include an `enabled: bool` field inside that section's dataclass (e.g. `ScoopParams.enabled`, `DividersParams.enabled`). The GUI (`code-cad-studio`) automatically renders each nested dataclass as a collapsible section card and promotes `enabled: bool` into the section header toggle.
+       - Use `Literal[...]` for constrained string choices so the GUI renders dropdowns, and optional `field(default=..., metadata={"min": ..., "max": ..., "step": ...})` for slider bounds.
+       - Avoid string-prefix `*_enabled` grouping heuristics and redundant alias properties.
    - **Decoupled Generator Function & Side-Effect-Free Imports**:
      - Implement CAD logic as a standalone generator function `create_<model>(params: <Model>Params) -> Part | Compound | Solid`.
      - It must accept the dataclass instance and return the generated geometry without side effects (no exports, file writes, or viewer calls inside the generator). This ensures it can be imported and plugged directly into an external GUI/web viewer worker.
