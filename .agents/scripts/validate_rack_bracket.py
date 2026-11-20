@@ -13,6 +13,8 @@ if models_dir not in sys.path:
     sys.path.append(models_dir)
 
 from rack_bracket import (
+    CoreParams,
+    CutoutParams,
     RackBracketParams,
     create_rack_bracket,
 )
@@ -22,7 +24,7 @@ def validate():
     print("Beginning validation of unified rack_bracket...")
 
     # Test 1: 1U Bracket
-    p1 = RackBracketParams(u_count=1, cutout_style="none")
+    p1 = RackBracketParams(core=CoreParams(u_count=1), cutout=CutoutParams(style="none"))
     b1 = create_rack_bracket(p1)
     bbox1 = b1.bounding_box()
     expected_h1 = 1 * 44.45 - 1.2
@@ -31,7 +33,7 @@ def validate():
     print(f"✓ 1U Bracket passed: height={bbox1.size.Z:.2f}mm, valid={b1.is_valid}")
 
     # Test 2: 2U Bracket with hex cutout (default)
-    p2 = RackBracketParams(u_count=2, cutout_style="hex")
+    p2 = RackBracketParams(core=CoreParams(u_count=2), cutout=CutoutParams(style="hex"))
     b2 = create_rack_bracket(p2)
     bbox2 = b2.bounding_box()
     expected_h2 = 2 * 44.45 - 1.2  # 87.7 mm
@@ -39,8 +41,8 @@ def validate():
     assert b2.is_valid, "2U bracket solid is invalid"
     print(f"✓ 2U Hex Bracket passed: height={bbox2.size.Z:.2f}mm, valid={b2.is_valid}")
 
-    # Test 4: 3U Bracket with hex cutout
-    p3 = RackBracketParams(u_count=3, cutout_style="hex")
+    # Test 3: 3U Bracket with hex cutout
+    p3 = RackBracketParams(core=CoreParams(u_count=3), cutout=CutoutParams(style="hex"))
     b3 = create_rack_bracket(p3)
     bbox3 = b3.bounding_box()
     expected_h3 = 3 * 44.45 - 1.2  # 132.15 mm
@@ -48,8 +50,8 @@ def validate():
     assert b3.is_valid, "3U bracket solid is invalid"
     print(f"✓ 3U Hex Bracket passed: height={bbox3.size.Z:.2f}mm, valid={b3.is_valid}")
 
-    # Test 5: 4U Bracket with window cutout
-    p4 = RackBracketParams(u_count=4, cutout_style="window")
+    # Test 4: 4U Bracket with window cutout
+    p4 = RackBracketParams(core=CoreParams(u_count=4), cutout=CutoutParams(style="window"))
     b4 = create_rack_bracket(p4)
     bbox4 = b4.bounding_box()
     expected_h4 = 4 * 44.45 - 1.2  # 176.60 mm
@@ -57,8 +59,11 @@ def validate():
     assert b4.is_valid, "4U bracket solid is invalid"
     print(f"✓ 4U Window Bracket passed: height={bbox4.size.Z:.2f}mm, valid={b4.is_valid}")
 
-    # Test 6: Custom length and thickness
-    p_custom = RackBracketParams(u_count=2, bracket_length=120.0, thickness=4.0, cutout_style="none")
+    # Test 5: Custom length and thickness
+    p_custom = RackBracketParams(
+        core=CoreParams(u_count=2, bracket_length=120.0, thickness=4.0),
+        cutout=CutoutParams(style="none"),
+    )
     b_custom = create_rack_bracket(p_custom)
     bbox_custom = b_custom.bounding_box()
     assert abs(bbox_custom.size.X - 120.0) < 0.05
