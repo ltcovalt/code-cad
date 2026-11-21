@@ -18,10 +18,21 @@ Features:
 """
 
 import copy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Optional
 from build123d import *
+
+try:
+    from utils.params import group, param
+except ImportError:
+    import sys
+
+    for _p in Path(__file__).resolve().parents:
+        if (_p / "utils").is_dir():
+            sys.path.insert(0, str(_p))
+            break
+    from utils.params import group, param
 
 # ==============================================================================
 # Standardized Export Configuration
@@ -35,102 +46,102 @@ OUTPUT_DIR: str = "exports"             # Output folder (relative to this script
 class CoreParams:
     """Material, container shape, rim dimensions, and fit tolerance."""
 
-    material: Literal["tpu", "pctg", "petg", "rigid"] = "tpu"  # Flexible stretch vs rigid compliant flex
-    shape: Literal["round", "rectangular"] = "round"           # Round or rectangular/square container
-    rim_style: Literal["beaded", "smooth"] = "beaded"          # Beaded glass rim lip vs smooth straight wall
-    friction_ribs: bool = False         # Adds wiper gasket ribs for grip on smooth glass
-    diameter: float = field(default=150.0, metadata={"min": 40.0, "max": 350.0, "step": 1.0, "when": {"shape": "round"}})  # Round: outer diameter of rim lip in mm (Pyrex 4-cup = ~150 mm)
-    length: float = field(default=182.0, metadata={"min": 60.0, "max": 400.0, "step": 1.0, "when": {"shape": "rectangular"}})  # Rectangular: outer length of rim lip in mm (Pyrex 3-cup = ~182 mm)
-    width: float = field(default=132.0, metadata={"min": 60.0, "max": 350.0, "step": 1.0, "when": {"shape": "rectangular"}})  # Rectangular: outer width of rim lip in mm (Pyrex 3-cup = ~132 mm)
-    corner_radius: float = field(default=20.0, metadata={"min": 2.0, "max": 60.0, "step": 1.0, "when": {"shape": "rectangular"}})  # Rectangular: corner radius of glass dish in mm
-    diameter_in: Optional[float] = field(default=None, metadata={"min": 2.0, "max": 14.0, "step": 0.25, "when": {"shape": "round"}})  # Round: diameter in inches (overrides diameter if set)
-    length_in: Optional[float] = field(default=None, metadata={"min": 2.0, "max": 16.0, "step": 0.25, "when": {"shape": "rectangular"}})  # Rectangular: length in inches (overrides length if set)
-    width_in: Optional[float] = field(default=None, metadata={"min": 2.0, "max": 14.0, "step": 0.25, "when": {"shape": "rectangular"}})  # Rectangular: width in inches (overrides width if set)
-    test_ring: bool = False             # Hollows center for quick fit-check test ring
-    rim_lip_height: float = field(default=5.0, metadata={"min": 2.0, "max": 15.0, "step": 0.2, "when": {"rim_style": "beaded"}})  # Vertical height/thickness of glass rim bead in mm
-    glass_wall_thickness: float = field(default=4.0, metadata={"min": 1.5, "max": 10.0, "step": 0.2})  # Thickness of glass at container rim in mm
-    fit_tolerance: Optional[float] = field(default=None, metadata={"min": -2.0, "max": 2.0, "step": 0.05})  # mm added to container dim (None = auto: -0.2 TPU, +0.2 PCTG)
+    material: Literal["tpu", "pctg", "petg", "rigid"] = param("tpu", desc="Flexible stretch vs rigid compliant flex")
+    shape: Literal["round", "rectangular"] = param("round", desc="Round or rectangular/square container")
+    rim_style: Literal["beaded", "smooth"] = param("beaded", desc="Beaded glass rim lip vs smooth straight wall")
+    friction_ribs: bool = param(False, desc="Add wiper gasket ribs for grip on smooth glass")
+    diameter: float = param(150.0, min=40.0, max=350.0, step=1.0, unit="mm", when={"shape": "round"}, desc="Outer rim lip diameter (Pyrex 4-cup ≈ 150 mm)")
+    length: float = param(182.0, min=60.0, max=400.0, step=1.0, unit="mm", when={"shape": "rectangular"}, desc="Outer rim lip length (Pyrex 3-cup ≈ 182 mm)")
+    width: float = param(132.0, min=60.0, max=350.0, step=1.0, unit="mm", when={"shape": "rectangular"}, desc="Outer rim lip width (Pyrex 3-cup ≈ 132 mm)")
+    corner_radius: float = param(20.0, min=2.0, max=60.0, step=1.0, unit="mm", when={"shape": "rectangular"}, desc="Outer corner radius of glass dish")
+    diameter_in: Optional[float] = param(None, min=2.0, max=14.0, step=0.25, label="Diameter Override", unit="in", when={"shape": "round"}, desc="Overrides mm diameter when set")
+    length_in: Optional[float] = param(None, min=2.0, max=16.0, step=0.25, label="Length Override", unit="in", when={"shape": "rectangular"}, desc="Overrides mm length when set")
+    width_in: Optional[float] = param(None, min=2.0, max=14.0, step=0.25, label="Width Override", unit="in", when={"shape": "rectangular"}, desc="Overrides mm width when set")
+    test_ring: bool = param(False, desc="Hollow center for quick fit-check test ring")
+    rim_lip_height: float = param(5.0, min=2.0, max=15.0, step=0.2, unit="mm", when={"rim_style": "beaded"}, desc="Vertical thickness of glass rim bead")
+    glass_wall_thickness: float = param(4.0, min=1.5, max=10.0, step=0.2, unit="mm", desc="Glass thickness at container rim")
+    fit_tolerance: Optional[float] = param(None, min=-2.0, max=2.0, step=0.05, unit="mm", desc="Added to container size (Auto: -0.2 TPU, +0.2 rigid)")
 
 
 @dataclass
 class LidStructureParams:
     """Lid top plate and downward skirt wall dimensions."""
 
-    top_thickness: float = field(default=1.8, metadata={"min": 0.8, "max": 5.0, "step": 0.2})  # Solid top plate thickness in mm
-    skirt_height: float = field(default=10.0, metadata={"min": 5.0, "max": 25.0, "step": 0.5})  # Total vertical depth of outer downward skirt in mm
-    skirt_wall_thickness: float = field(default=1.8, metadata={"min": 1.0, "max": 5.0, "step": 0.2})  # Outer side skirt wall thickness in mm
-    outer_fillet: float = field(default=1.2, metadata={"min": 0.0, "max": 4.0, "step": 0.2})  # Fillet radius on top exterior perimeter edge in mm
-    lead_in_chamfer: float = field(default=0.8, metadata={"min": 0.0, "max": 3.0, "step": 0.1})  # Chamfer on inside bottom rim of skirt for smooth mounting
+    top_thickness: float = param(1.8, min=0.8, max=5.0, step=0.2, unit="mm", desc="Solid top plate thickness")
+    skirt_height: float = param(10.0, min=5.0, max=25.0, step=0.5, unit="mm", desc="Vertical depth of outer downward skirt")
+    skirt_wall_thickness: float = param(1.8, min=1.0, max=5.0, step=0.2, unit="mm", desc="Outer skirt side wall thickness")
+    outer_fillet: float = param(1.2, min=0.0, max=4.0, step=0.2, unit="mm", desc="Top exterior perimeter edge fillet")
+    lead_in_chamfer: float = param(0.8, min=0.0, max=3.0, step=0.1, unit="mm", desc="Inside bottom rim bevel for easy mounting")
 
 
 @dataclass
 class SnapBeadParams:
     """Inward retention snap bead under container glass lip."""
 
-    enabled: bool = True                # Enable inward protruding snap ridge
-    depth: Optional[float] = field(default=None, metadata={"min": 0.1, "max": 2.5, "step": 0.05})  # Inward protrusion (None = auto: 0.8mm TPU, 0.35mm PCTG)
-    height: float = field(default=1.5, metadata={"min": 0.5, "max": 5.0, "step": 0.1})  # Vertical height of retention bead profile in mm
-    offset: Optional[float] = field(default=None, metadata={"min": 1.0, "max": 15.0, "step": 0.2})  # Distance from underside to top of bead (None = rim_lip_height + 0.2mm)
+    enabled: bool = param(True, desc="Add inward protruding snap ridge")
+    depth: Optional[float] = param(None, min=0.1, max=2.5, step=0.05, unit="mm", desc="Inward protrusion (Auto: 0.8 TPU, 0.35 rigid)")
+    height: float = param(1.5, min=0.5, max=5.0, step=0.1, unit="mm", desc="Vertical height of retention bead profile")
+    offset: Optional[float] = param(None, min=1.0, max=15.0, step=0.2, unit="mm", desc="Distance below lid underside (Auto = rim lip + 0.2)")
 
 
 @dataclass
 class InnerSealParams:
     """Inner seal plug ring sitting inside the container wall."""
 
-    enabled: bool = True                # Enable downward inner seal tongue
-    height: float = field(default=3.5, metadata={"min": 1.0, "max": 10.0, "step": 0.5})  # Downward depth of seal ring in mm
-    thickness: float = field(default=1.2, metadata={"min": 0.6, "max": 3.0, "step": 0.1})  # Thickness of seal ring wall in mm
-    clearance: float = field(default=0.6, metadata={"min": 0.0, "max": 3.0, "step": 0.1})  # Radial gap between glass inner wall and seal ring in mm
+    enabled: bool = param(True, desc="Add downward inner seal tongue")
+    height: float = param(3.5, min=1.0, max=10.0, step=0.5, unit="mm", desc="Downward depth of seal ring")
+    thickness: float = param(1.2, min=0.6, max=3.0, step=0.1, unit="mm", desc="Seal ring wall thickness")
+    clearance: float = param(0.6, min=0.0, max=3.0, step=0.1, unit="mm", desc="Radial gap between glass inner wall and seal")
 
 
 @dataclass
 class StackingRimParams:
     """Raised top nesting rim for stacked containers."""
 
-    enabled: bool = True                # Enable raised stacking rim on top surface
-    height: float = field(default=1.5, metadata={"min": 0.5, "max": 5.0, "step": 0.2})  # Height of stacking rim in mm
-    thickness: float = field(default=1.5, metadata={"min": 0.8, "max": 4.0, "step": 0.2})  # Wall thickness of stacking rim in mm
-    inset: float = field(default=4.0, metadata={"min": 1.0, "max": 15.0, "step": 0.5})  # Inward distance from lid edge to stacking rim in mm
+    enabled: bool = param(True, desc="Add raised stacking rim on top surface")
+    height: float = param(1.5, min=0.5, max=5.0, step=0.2, unit="mm", desc="Stacking rim height")
+    thickness: float = param(1.5, min=0.8, max=4.0, step=0.2, unit="mm", desc="Stacking rim wall thickness")
+    inset: float = param(4.0, min=1.0, max=15.0, step=0.5, unit="mm", desc="Inward distance from lid edge")
 
 
 @dataclass
 class PullTabParams:
     """Ergonomic outer pull tab for lid removal."""
 
-    enabled: bool = True                # Enable outer peel tab
-    location: Literal["auto", "corner", "edge"] = field(default="auto", metadata={"when": {"core.shape": "rectangular"}})  # Corner for rect, edge for round
-    length: float = field(default=8.5, metadata={"min": 4.0, "max": 25.0, "step": 0.5})  # Protrusion length beyond skirt in mm
-    width: float = field(default=22.0, metadata={"min": 10.0, "max": 50.0, "step": 1.0})  # Width of tab in mm
-    root_overlap: float = field(default=6.0, metadata={"min": 2.0, "max": 15.0, "step": 0.5})  # Root overlap into top plate/skirt in mm
-    gusset_depth: float = field(default=2.5, metadata={"min": 0.0, "max": 8.0, "step": 0.5})  # Under-tab structural gusset depth down skirt wall in mm
-    thickness: float = field(default=2.0, metadata={"min": 1.0, "max": 5.0, "step": 0.2})  # Thickness of tab plate in mm
-    grip_ribs: bool = True              # Raised non-slip traction ribs on tab surface
-    hanging_hole: bool = False          # Pegboard / dish-rack drying hole
-    hole_diameter: float = field(default=4.0, metadata={"min": 2.0, "max": 10.0, "step": 0.5, "when": {"hanging_hole": True}})  # Diameter of hanging hole in mm
+    enabled: bool = param(True, desc="Add outer peel tab")
+    location: Literal["auto", "corner", "edge"] = param("auto", when={"core.shape": "rectangular"}, desc="Corner for rectangular, edge for round")
+    length: float = param(8.5, min=4.0, max=25.0, step=0.5, unit="mm", desc="Protrusion length beyond skirt")
+    width: float = param(22.0, min=10.0, max=50.0, step=1.0, unit="mm", desc="Tab width")
+    root_overlap: float = param(6.0, min=2.0, max=15.0, step=0.5, unit="mm", desc="Root overlap into top plate/skirt")
+    gusset_depth: float = param(2.5, min=0.0, max=8.0, step=0.5, unit="mm", desc="Under-tab structural gusset depth")
+    thickness: float = param(2.0, min=1.0, max=5.0, step=0.2, unit="mm", desc="Tab plate thickness")
+    grip_ribs: bool = param(True, desc="Add raised non-slip traction ribs")
+    hanging_hole: bool = param(False, desc="Add pegboard / drying rack hole")
+    hole_diameter: float = param(4.0, min=2.0, max=10.0, step=0.5, unit="mm", when={"hanging_hole": True}, desc="Hanging hole diameter")
 
 
 @dataclass
 class FlexSlotsParams:
     """Rigid flexure relief slots (for PCTG / PETG / rigid plastics)."""
 
-    enabled: Optional[bool] = None      # None = auto (True for rigid beaded lids, False for TPU)
-    slot_width: float = field(default=1.5, metadata={"min": 0.5, "max": 4.0, "step": 0.1})  # Width of vertical cutouts through skirt in mm
-    round_slot_count: int = field(default=6, metadata={"min": 0, "max": 16, "step": 1, "when": {"core.shape": "round"}})  # Number of relief slots around round circumference
-    rect_slots_long_side: int = field(default=2, metadata={"min": 0, "max": 8, "step": 1, "when": {"core.shape": "rectangular"}})  # Number of relief slots along each long side
-    rect_slots_short_side: int = field(default=1, metadata={"min": 0, "max": 6, "step": 1, "when": {"core.shape": "rectangular"}})  # Number of relief slots along each short side
+    enabled: Optional[bool] = param(None, desc="Auto: enabled for rigid beaded lids, off for TPU")
+    slot_width: float = param(1.5, min=0.5, max=4.0, step=0.1, unit="mm", desc="Vertical skirt relief cutout width")
+    round_slot_count: int = param(6, min=0, max=16, step=1, when={"core.shape": "round"}, desc="Relief slots around round circumference")
+    rect_slots_long_side: int = param(2, min=0, max=8, step=1, when={"core.shape": "rectangular"}, desc="Relief slots along each long side")
+    rect_slots_short_side: int = param(1, min=0, max=6, step=1, when={"core.shape": "rectangular"}, desc="Relief slots along each short side")
 
 
 @dataclass
 class ContainerLidParams:
     """Parameters for container lid generation."""
 
-    core: CoreParams = field(default_factory=CoreParams)
-    structure: LidStructureParams = field(default_factory=LidStructureParams)
-    snap_bead: SnapBeadParams = field(default_factory=SnapBeadParams, metadata={"when": {"core.rim_style": "beaded"}})
-    inner_seal: InnerSealParams = field(default_factory=InnerSealParams)
-    stacking_rim: StackingRimParams = field(default_factory=StackingRimParams)
-    pull_tab: PullTabParams = field(default_factory=PullTabParams)
-    flex_slots: FlexSlotsParams = field(default_factory=FlexSlotsParams)
+    core: CoreParams = group(CoreParams)
+    structure: LidStructureParams = group(LidStructureParams, label="Lid Structure")
+    snap_bead: SnapBeadParams = group(SnapBeadParams, when={"core.rim_style": "beaded"})
+    inner_seal: InnerSealParams = group(InnerSealParams)
+    stacking_rim: StackingRimParams = group(StackingRimParams)
+    pull_tab: PullTabParams = group(PullTabParams)
+    flex_slots: FlexSlotsParams = group(FlexSlotsParams)
 
     def get_effective_params(self) -> "ContainerLidParams":
         """Return a copy of params with auto-resolved defaults based on active material, rim style, and units."""
