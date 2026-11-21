@@ -45,40 +45,102 @@ OUTPUT_DIR: str = "exports"   # Relative subfolder alongside the script
 class CoreParams:
     """Primary C-clip spacer dimensions."""
 
-    thickness: float = param(12.0, min=2.0, max=60.0, step=0.5, unit="mm", desc="Axial height added along shaft")
-    inside_diameter: float = param(44.0, min=6.0, max=120.0, step=0.5, unit="mm", desc="Nominal rod/shaft diameter")
-    outside_diameter: float = param(76.0, min=12.0, max=180.0, step=0.5, unit="mm", desc="Outer spacer diameter")
-    fit_clearance: float = param(0.2, min=-0.5, max=1.0, step=0.05, unit="mm", desc="Added to inside diameter for bore fit")
+    thickness: float = param(
+        12.0,
+        desc="Axial height added along shaft",
+        unit="mm", min=2.0, max=60.0, step=0.5,
+    )
+    inside_diameter: float = param(
+        44.0,
+        desc="Nominal rod/shaft diameter",
+        unit="mm", min=6.0, max=120.0, step=0.5,
+    )
+    outside_diameter: float = param(
+        76.0,
+        desc="Outer spacer diameter",
+        unit="mm", min=12.0, max=180.0, step=0.5,
+    )
+    fit_clearance: float = param(
+        0.2,
+        desc="Added to inside diameter for bore fit",
+        unit="mm", min=-0.5, max=1.0, step=0.05,
+    )
 
 
 @dataclass
 class JawParams:
     """Snap-on C-opening jaw geometry."""
 
-    opening_angle: float = param(95.0, min=20.0, max=165.0, step=1.0, unit="°", desc="Inner C-opening angle (< 180° for retention)")
-    jaw_flare_angle: float = param(8.0, min=-20.0, max=45.0, step=1.0, unit="°", desc="Jaw cut angle (0° = parallel slot)")
-    jaw_curve_depth: float = param(1.2, min=0.0, max=6.0, step=0.1, unit="mm", desc="Concave bow depth along jaw face (0 = straight)")
-    inner_tip_fillet: float = param(4.0, min=0.0, max=10.0, step=0.2, unit="mm", desc="Rounding where jaw meets inner bore (0 = crisp)")
-    outer_tip_fillet: float = param(2.4, min=0.0, max=10.0, step=0.2, unit="mm", desc="Outer jaw tip rounding radius (0 = crisp)")
+    opening_angle: float = param(
+        95.0,
+        desc="Inner C-opening angle (< 180° for retention)",
+        unit="°", min=20.0, max=165.0, step=1.0,
+    )
+    jaw_flare_angle: float = param(
+        8.0,
+        desc="Jaw cut angle (0° = parallel slot)",
+        unit="°", min=-20.0, max=45.0, step=1.0,
+    )
+    jaw_curve_depth: float = param(
+        1.2,
+        desc="Concave bow depth along jaw face (0 = straight)",
+        unit="mm", min=0.0, max=6.0, step=0.1,
+    )
+    inner_tip_fillet: float = param(
+        4.0,
+        desc="Rounding where jaw meets inner bore (0 = crisp)",
+        unit="mm", min=0.0, max=10.0, step=0.2,
+    )
+    outer_tip_fillet: float = param(
+        2.4,
+        desc="Outer jaw tip rounding radius (0 = crisp)",
+        unit="mm", min=0.0, max=10.0, step=0.2,
+    )
 
 
 @dataclass
 class RemovalNotchParams:
     """Inside-edge removal cutout bordering the shaft."""
 
-    enabled: bool = param(True, desc="Add inside-edge grab/pry cutout")
-    width: float = param(32.0, min=4.0, max=60.0, step=1.0, unit="mm", desc="Tangential width of cutout")
-    depth: float = param(8.0, min=1.0, max=25.0, step=0.5, unit="mm", desc="Radial depth outward from inner bore")
-    angle: float = param(180.0, min=0.0, max=360.0, step=5.0, unit="°", desc="Angular position (180° = opposite opening)")
-    fillet: float = param(0.6, min=0.0, max=5.0, step=0.1, unit="mm", desc="Transition fillet at inner bore (0 = crisp)")
+    enabled: bool = param(
+        True,
+        desc="Add inside-edge grab/pry cutout",
+    )
+    width: float = param(
+        32.0,
+        desc="Tangential width of cutout",
+        unit="mm", min=4.0, max=60.0, step=1.0,
+    )
+    depth: float = param(
+        8.0,
+        desc="Radial depth outward from inner bore",
+        unit="mm", min=1.0, max=25.0, step=0.5,
+    )
+    angle: float = param(
+        180.0,
+        desc="Angular position (180° = opposite opening)",
+        unit="°", min=0.0, max=360.0, step=5.0,
+    )
+    fillet: float = param(
+        0.6,
+        desc="Transition fillet at inner bore (0 = crisp)",
+        unit="mm", min=0.0, max=5.0, step=0.1,
+    )
 
 
 @dataclass
 class EdgeChamferParams:
     """Top and bottom perimeter edge bevel."""
 
-    enabled: bool = param(True, desc="Add subtle top/bottom perimeter bevel")
-    size: float = param(0.3, min=0.0, max=3.0, step=0.1, unit="mm", desc="Top and bottom edge chamfer size")
+    enabled: bool = param(
+        True,
+        desc="Add subtle top/bottom perimeter bevel",
+    )
+    size: float = param(
+        0.3,
+        desc="Top and bottom edge chamfer size",
+        unit="mm", min=0.0, max=3.0, step=0.1,
+    )
 
 
 @dataclass
