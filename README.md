@@ -47,6 +47,7 @@ cad/
 ├── .gitignore
 ├── README.md                   # Repository overview (this file)
 ├── docs/                       # Manuals and general reference PDFs
+├── utils/                      # Core zero-dependency helper scripts (e.g. params.py)
 ├── models/                     # Parametric generator projects
 │   ├── c_clip_spacer/          # Parametric snap-on C-clip shaft spacers
 │   ├── container_lid/          # Container lid generator (Pyrex, etc.)
