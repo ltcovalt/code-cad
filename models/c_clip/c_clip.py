@@ -1,17 +1,19 @@
 """
-Parametric C-Clip Spacer (build123d Model)
+Parametric C-Clip (build123d Model)
 
-Snap-on C-clip shaft spacer designed to add precise axial spacing along a
-cylindrical rod or shaft without requiring disassembly.
+Snap-on C-clip for cylindrical rods and shafts—usable as a retaining clip
+(e.g., filament spool keeper, shaft collar) or axial spacer without requiring
+disassembly.
 
 Features:
-- Parametric spacer thickness (axial space added along the shaft).
+- Parametric clip thickness (axial width along the shaft).
 - Parametric inside diameter (rod/shaft size) with optional 3D-print fit clearance.
 - Parametric outside diameter.
 - Snap-on C-opening with configurable opening angle and smooth rounded jaw tips.
 - Smooth inside-edge removal cutout bordering the shaft (spine pry/grab pocket)
-  for easy removal with a fingernail, pick, or small tool without creating sharp
-  stress risers.
+  for easy removal with a fingernail, finger, or small tool without creating sharp
+  stress risers, with optional G1-tangent outer wall reinforcement for large
+  finger-pull cutouts.
 - Optional subtle top/bottom edge chamfer to eliminate print-bed elephant's foot
   and sharp edges.
 """
@@ -19,6 +21,7 @@ Features:
 import math
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 from build123d import *
 
@@ -43,11 +46,11 @@ OUTPUT_DIR: str = "exports"   # Relative subfolder alongside the script
 
 @dataclass
 class CoreParams:
-    """Primary C-clip spacer dimensions."""
+    """Primary C-clip dimensions."""
 
     thickness: float = param(
         12.0,
-        desc="Axial height added along shaft",
+        desc="Axial thickness along shaft",
         unit="mm", min=2.0, max=60.0, step=0.5,
     )
     inside_diameter: float = param(
@@ -57,7 +60,7 @@ class CoreParams:
     )
     outside_diameter: float = param(
         76.0,
-        desc="Outer spacer diameter",
+        desc="Outer clip diameter",
         unit="mm", min=12.0, max=180.0, step=0.5,
     )
     fit_clearance: float = param(
@@ -114,7 +117,7 @@ class RemovalNotchParams:
     depth: float = param(
         8.0,
         desc="Radial depth outward from inner bore",
-        unit="mm", min=1.0, max=25.0, step=0.5,
+        unit="mm", min=1.0, max=35.0, step=0.5,
     )
     angle: float = param(
         180.0,
@@ -125,6 +128,18 @@ class RemovalNotchParams:
         0.6,
         desc="Transition fillet at inner bore (0 = crisp)",
         unit="mm", min=0.0, max=5.0, step=0.1,
+    )
+    reinforce_outer: bool = param(
+        False,
+        label="Reinforce Outer Wall",
+        desc="Smoothly expand outer profile behind cutout to preserve spine wall thickness",
+    )
+    spine_wall: Optional[float] = param(
+        None,
+        label="Spine Wall",
+        desc="Minimum outer wall thickness behind cutout (Auto = match ring wall)",
+        unit="mm", min=1.5, max=30.0, step=0.5,
+        when={"reinforce_outer": True},
     )
 
 
@@ -144,8 +159,8 @@ class EdgeChamferParams:
 
 
 @dataclass
-class CClipSpacerParams:
-    """Parameters for the parametric snap-on C-clip spacer."""
+class CClipParams:
+    """Parameters for the parametric snap-on C-clip."""
 
     core: CoreParams = group(CoreParams)
     jaw: JawParams = group(JawParams)
@@ -318,8 +333,158 @@ def _solve_nose_and_jaw_arc(
     return best
 
 
-def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
-    """Generate a parametric snap-on C-clip spacer solid body."""
+def _solve_reinforced_lobe(
+    r_in: float,
+    r_out: float,
+    notch_width: float,
+    notch_depth: float,
+    spine_wall: float,
+) -> dict[str, float | tuple[float, float] | list[tuple[float, float]]] | None:
+    """Solve G1-tangent reinforced outer lobe geometry in notch-local coordinates.
+
+    Computes the exact outward ``spine_wall`` offset of the right half-ellipse
+    removal notch (extending along ``+X``) joined by common external tangent
+    lines to the outer circle of radius ``r_out``. Returns ``None`` when the
+    notch offset already fits inside ``r_out``.
+    """
+    b = notch_width / 2.0
+    x_e = math.sqrt(r_in * r_in - b * b)
+    a = (r_in + notch_depth) - x_e
+    t = spine_wall
+
+    # Already fits strictly inside r_out: no outer expansion needed
+    if r_in + notch_depth + t <= r_out + 1e-3 and r_in + t <= r_out + 1e-3:
+        return None
+
+    r_prime = r_out - t
+
+    # Solve exact common external tangent between circle(0, r_out) and the
+    # t-offset of ellipse((x_e, 0), a, b):
+    #   sqrt(a^2 u^2 + b^2 (1 - u^2)) = (r_out - t) - x_e * u,   u = cos(phi)
+    a_q = a * a - b * b - x_e * x_e
+    b_q = 2.0 * r_prime * x_e
+    c_q = b * b - r_prime * r_prime
+
+    candidates: list[float] = []
+    if abs(a_q) < 1e-12:
+        if abs(b_q) > 1e-12:
+            candidates.append(-c_q / b_q)
+    else:
+        disc = b_q * b_q - 4.0 * a_q * c_q
+        if disc >= 0.0:
+            sq = math.sqrt(max(0.0, disc))
+            candidates.append((-b_q + sq) / (2.0 * a_q))
+            candidates.append((-b_q - sq) / (2.0 * a_q))
+
+    valid_u: float | None = None
+    for u_cand in candidates:
+        if 1e-6 < u_cand < 1.0 - 1e-9:
+            rhs = r_prime - x_e * u_cand
+            if rhs > 1e-9:
+                lhs = math.sqrt(max(0.0, a * a * u_cand * u_cand + b * b * (1.0 - u_cand * u_cand)))
+                if abs(lhs - rhs) < 1e-5:
+                    valid_u = u_cand
+                    break
+
+    if valid_u is not None:
+        u = valid_u
+        v = math.sqrt(max(0.0, 1.0 - u * u))
+        phi = math.acos(u)
+        s = r_prime - x_e * u
+        cos_th = max(-1.0, min(1.0, a * u / s))
+        sin_th = max(-1.0, min(1.0, b * v / s))
+        theta_1 = math.atan2(sin_th, cos_th)
+
+        x1 = x_e + a * cos_th + t * u
+        y1 = b * sin_th + t * v
+        xc = r_out * u
+        yc = r_out * v
+
+        if theta_1 <= 1e-4 or math.hypot(x1 - xc, y1 - yc) <= 1e-3:
+            return None
+
+        n_pts = 33
+        pts: list[tuple[float, float]] = []
+        for i in range(n_pts):
+            th = -theta_1 + (2.0 * theta_1) * i / (n_pts - 1)
+            ct, st = math.cos(th), math.sin(th)
+            nx, ny = b * ct, a * st
+            nlen = math.hypot(nx, ny)
+            nx /= nlen
+            ny /= nlen
+            pts.append((x_e + a * ct + t * nx, b * st + t * ny))
+
+        return {
+            "phi_deg": math.degrees(phi),
+            "p_c_neg": (xc, -yc),
+            "p_c_pos": (xc, yc),
+            "p_lobe_neg": (x1, -y1),
+            "p_lobe_pos": (x1, y1),
+            "pts": pts,
+            "t_start": (v, u),
+            "t_end": (-v, u),
+            "cap_sweep_deg": 0.0,
+            "cap_radius": t,
+            "cap_center_neg": (x_e, -b),
+            "cap_center_pos": (x_e, b),
+        }
+
+    # When spine_wall >= r_out - b, the tangent touches the circular radius-t
+    # offset cap around the notch entry corner (x_e, ±b).
+    ratio = r_prime / r_in
+    if ratio <= -1.0 + 1e-6 or ratio >= 1.0 - 1e-6:
+        raise ValueError(
+            f"removal_notch.spine_wall ({spine_wall}mm) is too large to blend "
+            f"into outside_diameter ({2.0 * r_out:g}mm)"
+        )
+    alpha = math.atan2(b, x_e)
+    phi = alpha + math.acos(ratio)
+    if phi >= math.pi - 1e-3:
+        raise ValueError(
+            f"removal_notch.spine_wall ({spine_wall}mm) causes the reinforced lobe "
+            f"to engulf the outer perimeter"
+        )
+
+    u, v = math.cos(phi), math.sin(phi)
+    xc, yc = r_out * u, r_out * v
+    x1, y1 = x_e + t * u, b + t * v
+
+    n_ell = 33
+    pts = []
+    for i in range(n_ell):
+        th = -math.pi / 2.0 + math.pi * i / (n_ell - 1)
+        ct, st = math.cos(th), math.sin(th)
+        nx, ny = b * ct, a * st
+        nlen = math.hypot(nx, ny)
+        nx /= nlen
+        ny /= nlen
+        pts.append((x_e + a * ct + t * nx, b * st + t * ny))
+
+    cap_sweep_deg = max(0.0, math.degrees(phi) - 90.0)
+    return {
+        "phi_deg": math.degrees(phi),
+        "p_c_neg": (xc, -yc),
+        "p_c_pos": (xc, yc),
+        "p_lobe_neg": (x1, -y1),
+        "p_lobe_pos": (x1, y1),
+        "pts": pts,
+        "t_start": (1.0, 0.0),
+        "t_end": (-1.0, 0.0),
+        "cap_sweep_deg": cap_sweep_deg,
+        "cap_radius": t,
+        "cap_center_neg": (x_e, -b),
+        "cap_center_pos": (x_e, b),
+    }
+
+
+def _rotate_2d(pt: tuple[float, float], angle_rad: float) -> tuple[float, float]:
+    """Rotate a 2D point or vector counter-clockwise by ``angle_rad``."""
+    ca, sa = math.cos(angle_rad), math.sin(angle_rad)
+    return (pt[0] * ca - pt[1] * sa, pt[0] * sa + pt[1] * ca)
+
+
+def create_c_clip(params: CClipParams) -> Part:
+    """Generate a parametric snap-on C-clip solid body."""
     core = params.core
     jaw = params.jaw
     notch = params.removal_notch
@@ -386,6 +551,7 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
     # Validate removal notch geometry before constructing CAD shapes
     notch_half_w = notch.width / 2.0
     notch_x_entry = 0.0
+    target_spine_wall = wall_thickness
     if notch.enabled:
         if notch.width <= 0:
             raise ValueError(f"removal_notch.width must be positive, got {notch.width}")
@@ -398,10 +564,19 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
                 f"removal_notch.width ({notch.width}mm) must be smaller than "
                 f"90% of bore diameter ({bore_diameter * 0.9:.2f}mm)"
             )
-        if notch.depth >= wall_thickness * 0.85:
+        if notch.reinforce_outer:
+            if notch.spine_wall is not None and notch.spine_wall <= 0:
+                raise ValueError(
+                    f"removal_notch.spine_wall must be positive, got {notch.spine_wall}"
+                )
+            target_spine_wall = (
+                wall_thickness if notch.spine_wall is None else notch.spine_wall
+            )
+        elif notch.depth >= wall_thickness * 0.85:
             raise ValueError(
                 f"removal_notch.depth ({notch.depth}mm) must be less than "
-                f"85% of radial wall thickness ({wall_thickness * 0.85:.2f}mm) to preserve spine strength"
+                f"85% of radial wall thickness ({wall_thickness * 0.85:.2f}mm) to preserve spine strength "
+                f"(or enable removal_notch.reinforce_outer)"
             )
 
         notch_half_angle_deg = math.degrees(math.asin(notch_half_w / r_in))
@@ -436,6 +611,7 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
         eff_jaw_curve = float(nose_sol["sag"])
         jaw_chord_len = float(nose_sol["chord"])
         dx_in_jaw, dy_in_jaw = nose_sol["in_dir"]  # type: ignore[misc]
+        outer_arc_start_deg = math.degrees(float(nose_sol["outer_tan_rad"]))
     else:
         eff_outer_fillet = 0.0
         x_mid = 0.5 * (x_in + x_out)
@@ -461,6 +637,43 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
         jaw_chord_len = jaw_length
         dx_in_jaw = math.cos(flare_rad + alpha_arc)
         dy_in_jaw = math.sin(flare_rad + alpha_arc)
+        outer_arc_start_deg = math.degrees(math.atan2(y_out, x_out))
+    outer_arc_end_deg = 360.0 - outer_arc_start_deg
+
+    # Solve optional reinforced outer lobe behind the removal cutout
+    lobe_sol = None
+    lobe_start_deg = 0.0
+    lobe_end_deg = 0.0
+    notch_angle_norm = notch.angle % 360.0
+    if notch.enabled and notch.reinforce_outer:
+        lobe_sol = _solve_reinforced_lobe(
+            r_in=r_in,
+            r_out=r_out,
+            notch_width=notch.width,
+            notch_depth=notch.depth,
+            spine_wall=target_spine_wall,
+        )
+        if lobe_sol is not None:
+            phi_deg = float(lobe_sol["phi_deg"])
+            lobe_start_deg = notch_angle_norm - phi_deg
+            lobe_end_deg = notch_angle_norm + phi_deg
+            if (
+                lobe_start_deg <= outer_arc_start_deg + 0.5
+                or lobe_end_deg >= outer_arc_end_deg - 0.5
+            ):
+                raise ValueError(
+                    f"Reinforced outer lobe ([{lobe_start_deg:.1f}°, {lobe_end_deg:.1f}°]) "
+                    f"extends into the C-opening jaws ([{outer_arc_start_deg:.1f}°, "
+                    f"{outer_arc_end_deg:.1f}°]); move removal_notch.angle closer to 180°, "
+                    f"reduce spine_wall/width/depth, or narrow opening_angle"
+                )
+
+    remaining_spine = wall_thickness
+    if notch.enabled:
+        if notch.reinforce_outer:
+            remaining_spine = max(wall_thickness - notch.depth, target_spine_wall)
+        else:
+            remaining_spine = wall_thickness - notch.depth
 
     cos_gamma_in = max(
         -0.999, min(0.999, t_in_arc_x * dx_in_jaw + t_in_arc_y * dy_in_jaw)
@@ -478,7 +691,8 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
         eff_notch_fillet = min(
             notch.fillet,
             notch.depth * 0.45,
-            (wall_thickness - notch.depth) * 0.45,
+            remaining_spine * 0.45,
+            wall_thickness * 0.45,
             notch.width * 0.25,
         )
 
@@ -494,19 +708,47 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
                 Rectangle(width=clip_w, height=notch.width + 1.0, mode=Mode.INTERSECT)
         notch_cutter = notch_sk.sketch.rotate(Axis.Z, notch.angle)
 
-    with BuildPart() as spacer:
+    with BuildPart() as clip:
         with BuildSketch(Plane.XY) as profile:
             # 1. Base C-clip perimeter with tangent rounded outer nose & curved/straight jaws
             half_open_deg = jaw.opening_angle / 2.0
             with BuildLine():
+                # Outer perimeter: either plain circular arc or G1-tangent reinforced lobe
+                if lobe_sol is not None:
+                    ang_rad = math.radians(notch_angle_norm)
+                    p_c1 = _rotate_2d(lobe_sol["p_c_neg"], ang_rad)  # type: ignore[arg-type]
+                    p_l1 = _rotate_2d(lobe_sol["p_lobe_neg"], ang_rad)  # type: ignore[arg-type]
+                    p_l2 = _rotate_2d(lobe_sol["p_lobe_pos"], ang_rad)  # type: ignore[arg-type]
+                    p_c2 = _rotate_2d(lobe_sol["p_c_pos"], ang_rad)  # type: ignore[arg-type]
+                    lobe_pts = [_rotate_2d(p, ang_rad) for p in lobe_sol["pts"]]  # type: ignore[union-attr]
+                    t1 = _rotate_2d(lobe_sol["t_start"], ang_rad)  # type: ignore[arg-type]
+                    t2 = _rotate_2d(lobe_sol["t_end"], ang_rad)  # type: ignore[arg-type]
+                    cap_sweep_deg = float(lobe_sol["cap_sweep_deg"])
+                    cap_radius = float(lobe_sol["cap_radius"])
+
+                    CenterArc((0.0, 0.0), r_out, outer_arc_start_deg, lobe_start_deg - outer_arc_start_deg)
+                    if cap_sweep_deg > 1e-3:
+                        cap_c1 = _rotate_2d(lobe_sol["cap_center_neg"], ang_rad)  # type: ignore[arg-type]
+                        cap_c2 = _rotate_2d(lobe_sol["cap_center_pos"], ang_rad)  # type: ignore[arg-type]
+                        Line(p_c1, p_l1)
+                        CenterArc(cap_c1, cap_radius, lobe_start_deg, cap_sweep_deg)
+                        Spline(lobe_pts, tangents=(t1, t2))
+                        CenterArc(cap_c2, cap_radius, notch_angle_norm + 90.0, cap_sweep_deg)
+                        Line(p_l2, p_c2)
+                    else:
+                        Line(p_c1, lobe_pts[0])
+                        Spline(lobe_pts, tangents=(t1, t2))
+                        Line(lobe_pts[-1], p_c2)
+                    CenterArc((0.0, 0.0), r_out, lobe_end_deg, outer_arc_end_deg - lobe_end_deg)
+                else:
+                    CenterArc((0.0, 0.0), r_out, outer_arc_start_deg, 360.0 - 2.0 * outer_arc_start_deg)
+
                 if nose_sol is not None:
                     px_tan, py_tan = nose_sol["p_tan"]  # type: ignore[misc]
                     mx_nose, my_nose = nose_sol["nose_mid"]  # type: ignore[misc]
                     tx, ty = nose_sol["p_tan_jaw"]  # type: ignore[misc]
                     mx_jaw, my_jaw = nose_sol["jaw_mid"]  # type: ignore[misc]
-                    theta_tan_deg = math.degrees(float(nose_sol["outer_tan_rad"]))
 
-                    CenterArc((0.0, 0.0), r_out, theta_tan_deg, 360.0 - 2.0 * theta_tan_deg)
                     ThreePointArc((px_tan, -py_tan), (mx_nose, -my_nose), (tx, -ty))
                     if eff_jaw_curve > 1e-4:
                         ThreePointArc((tx, -ty), (mx_jaw, -my_jaw), (x_in, -y_in))
@@ -519,8 +761,6 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
                         Line((x_in, y_in), (tx, ty))
                     ThreePointArc((tx, ty), (mx_nose, my_nose), (px_tan, py_tan))
                 else:
-                    theta_out_deg = math.degrees(math.atan2(y_out, x_out))
-                    CenterArc((0.0, 0.0), r_out, theta_out_deg, 360.0 - 2.0 * theta_out_deg)
                     if eff_jaw_curve > 1e-4:
                         ThreePointArc((x_out, -y_out), (x_mid_arc, -y_mid_arc), (x_in, -y_in))
                     else:
@@ -567,16 +807,11 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
                 if len(inner_verts) > 0:
                     fillet(inner_verts, radius=eff_inner_fillet)
 
-        # 5. Extrude axially to spacer thickness (Z = 0 to thickness)
+        # 5. Extrude axially to clip thickness (Z = 0 to thickness)
         extrude(amount=core.thickness)
 
         # 6. Subtle top & bottom perimeter edge chamfer for clean bed release and burr-free handling
         if chamf.enabled and chamf.size > 0:
-            remaining_spine = (
-                wall_thickness - notch.depth
-                if notch.enabled
-                else wall_thickness
-            )
             max_safe_chamfer = min(
                 core.thickness * 0.35,
                 wall_thickness * 0.3,
@@ -588,27 +823,32 @@ def create_c_clip_spacer(params: CClipSpacerParams) -> Part:
 
             eff_chamfer = min(chamf.size, max_safe_chamfer)
             if eff_chamfer > 1e-3:
-                top_face = spacer.faces().sort_by(Axis.Z)[-1]
-                bot_face = spacer.faces().sort_by(Axis.Z)[0]
+                top_face = clip.faces().sort_by(Axis.Z)[-1]
+                bot_face = clip.faces().sort_by(Axis.Z)[0]
                 chamfer(top_face.edges() + bot_face.edges(), length=eff_chamfer)
 
-    assert spacer.part is not None, "C-clip spacer generation failed"
-    return spacer.part
+    assert clip.part is not None, "C-clip generation failed"
+    return clip.part
 
 
-def export_filename(params: CClipSpacerParams) -> str:
+def export_filename(params: CClipParams) -> str:
     """Return standardized lowercase filename stem (without extension) for exports."""
-    variant = "notch" if params.removal_notch.enabled else "plain"
+    if not params.removal_notch.enabled:
+        variant = "plain"
+    elif params.removal_notch.reinforce_outer:
+        variant = "reinforced"
+    else:
+        variant = "notch"
     return (
-        f"c_clip_spacer_{params.core.inside_diameter:g}x"
+        f"c_clip_{params.core.inside_diameter:g}x"
         f"{params.core.outside_diameter:g}x{params.core.thickness:g}mm_{variant}"
     )
 
 
 if __name__ == "__main__":
     # Single source of truth: dataclass defaults take effect directly
-    params = CClipSpacerParams()
-    spacer_part = create_c_clip_spacer(params)
+    params = CClipParams()
+    clip_part = create_c_clip(params)
 
     # Standardized exports to the exports/ directory alongside this script
     if EXPORT_STEP or EXPORT_STL:
@@ -619,12 +859,12 @@ if __name__ == "__main__":
 
         if EXPORT_STL:
             stl_file = exports_path / f"{stem}.stl"
-            export_stl(spacer_part, str(stl_file))
+            export_stl(clip_part, str(stl_file))
             print(f"Exported STL:  {stl_file}")
 
         if EXPORT_STEP:
             step_file = exports_path / f"{stem}.step"
-            export_step(spacer_part, str(step_file))
+            export_step(clip_part, str(step_file))
             print(f"Exported STEP: {step_file}")
 
     try:
@@ -638,4 +878,4 @@ if __name__ == "__main__":
             def show(*args, **kwargs):
                 pass
 
-    show(spacer_part)
+    show(clip_part)

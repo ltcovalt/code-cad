@@ -49,7 +49,7 @@ cad/
 ├── docs/                       # Manuals and general reference PDFs
 ├── utils/                      # Core zero-dependency helper scripts (e.g. params.py)
 ├── models/                     # Parametric generator projects
-│   ├── c_clip_spacer/          # Parametric snap-on C-clip shaft spacers
+│   ├── c_clip/                 # Parametric snap-on C-clips for rods and shafts
 │   ├── container_lid/          # Container lid generator (Pyrex, etc.)
 │   ├── gridfinity_bin/         # Parametric Gridfinity bin with Pred printable label holder
 │   ├── magnetic_label/         # Magnetic label generator
@@ -65,7 +65,7 @@ cad/
 
 | Model | Description | Output Formats |
 | :--- | :--- | :--- |
-| **[C-Clip Spacer](models/c_clip_spacer/)** | Parametric snap-on C-clip shaft spacer with configurable thickness, inside/outside diameters, and an inside-edge removal cutout bordering the shaft. | STL, STEP |
+| **[C-Clip](models/c_clip/)** | Parametric snap-on C-clip for cylindrical rods and shafts with configurable thickness, inside/outside diameters, inside-edge removal cutout, and optional reinforced outer finger-pull lobe. | STL, STEP |
 | **[Container Lid](models/container_lid/)** | Airtight container lid generator with sealing bead, stacking rim, and pull tab. Built-in presets for Pyrex rectangular and round glass dishes. | STL, STEP |
 | **[Gridfinity Bin](models/gridfinity_bin/)** | Parametric Gridfinity bin with Pred-compatible printable label holder, finger scoops, dividers, and drawer spacer gap overhangs. | STL, STEP |
 | **[Magnetic Label](models/magnetic_label/)** | Magnetic label generator with auto-sizing to text, embossed/debossed/flush inlay styles, and press-fit round magnet pockets. | STL, STEP (Single & Multi-body) |
