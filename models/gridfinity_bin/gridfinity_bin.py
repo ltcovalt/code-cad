@@ -42,100 +42,303 @@ OUTPUT_DIR: str = "exports"   # Relative subfolder alongside this script
 class CoreParams:
     """Grid units, pitch, walls, floor, and corner radius."""
 
-    grid_x: int = param(2, min=1, max=8, step=1, label="Grid X (Width)", desc="Number of grid units along X")
-    grid_y: int = param(2, min=1, max=8, step=1, label="Grid Y (Depth)", desc="Number of grid units along Y")
-    grid_z: int = param(6, min=2, max=12, step=1, label="Grid Z (Height)", desc="Number of 7 mm height units along Z")
-    unit_size: float = param(42.0, unit="mm", desc="Base XY grid pitch (standard Gridfinity = 42)")
-    unit_z: float = param(7.0, label="Z Unit Pitch", unit="mm", desc="Vertical height unit pitch (standard = 7)")
-    grid_clearance: float = param(0.5, unit="mm", desc="Total XY clearance gap between adjacent bins")
-    wall_thickness: float = param(1.2, min=0.8, max=4.0, step=0.2, unit="mm", desc="Exterior wall thickness")
-    floor_thickness: float = param(2.0, min=1.0, max=6.0, step=0.2, unit="mm", desc="Solid floor thickness above base feet")
-    corner_radius: float = param(3.75, min=1.0, max=8.0, step=0.25, unit="mm", desc="Outer vertical corner radius")
+    grid_x: int = param(
+        2,
+        label="Grid X (Width)",
+        desc="Number of grid units along X",
+        min=1, max=8, step=1,
+    )
+    grid_y: int = param(
+        2,
+        label="Grid Y (Depth)",
+        desc="Number of grid units along Y",
+        min=1, max=8, step=1,
+    )
+    grid_z: int = param(
+        6,
+        label="Grid Z (Height)",
+        desc="Number of 7 mm height units along Z",
+        min=2, max=12, step=1,
+    )
+    unit_size: float = param(
+        42.0,
+        desc="Base XY grid pitch (standard Gridfinity = 42)",
+        unit="mm",
+    )
+    unit_z: float = param(
+        7.0,
+        label="Z Unit Pitch",
+        desc="Vertical height unit pitch (standard = 7)",
+        unit="mm",
+    )
+    grid_clearance: float = param(
+        0.5,
+        desc="Total XY clearance gap between adjacent bins",
+        unit="mm",
+    )
+    wall_thickness: float = param(
+        1.2,
+        desc="Exterior wall thickness",
+        unit="mm", min=0.8, max=4.0, step=0.2,
+    )
+    floor_thickness: float = param(
+        2.0,
+        desc="Solid floor thickness above base feet",
+        unit="mm", min=1.0, max=6.0, step=0.2,
+    )
+    corner_radius: float = param(
+        3.75,
+        desc="Outer vertical corner radius",
+        unit="mm", min=1.0, max=8.0, step=0.25,
+    )
 
 
 @dataclass
 class MagnetHolesParams:
     """Base foot corner magnet pockets."""
 
-    enabled: bool = param(True, desc="Cut 4 corner pockets per foot cell (6×2 mm magnets)")
-    diameter: float = param(6.1, unit="mm", desc="Magnet pocket diameter")
-    depth: float = param(2.2, unit="mm", desc="Magnet pocket depth")
-    offset: float = param(13.0, unit="mm", desc="Distance from foot cell center to magnet centers")
+    enabled: bool = param(
+        True,
+        desc="Cut 4 corner pockets per foot cell (6×2 mm magnets)",
+    )
+    diameter: float = param(
+        6.1,
+        desc="Magnet pocket diameter",
+        unit="mm",
+    )
+    depth: float = param(
+        2.2,
+        desc="Magnet pocket depth",
+        unit="mm",
+    )
+    offset: float = param(
+        13.0,
+        desc="Distance from foot cell center to magnet centers",
+        unit="mm",
+    )
 
 
 @dataclass
 class ScrewHolesParams:
     """Base foot M3 mounting screw through-holes."""
 
-    enabled: bool = param(False, desc="Cut through-holes for M3 mounting screws")
-    diameter: float = param(3.2, unit="mm", desc="Through-hole diameter")
+    enabled: bool = param(
+        False,
+        desc="Cut through-holes for M3 mounting screws",
+    )
+    diameter: float = param(
+        3.2,
+        desc="Through-hole diameter",
+        unit="mm",
+    )
 
 
 @dataclass
 class StackingLipParams:
     """Continuous top stacking rim."""
 
-    enabled: bool = param(True, desc="Add continuous top stacking rim")
-    height: float = param(3.8, unit="mm", desc="Stacking lip height above body")
-    top_flat: float = param(0.6, unit="mm", desc="Flat top rim width (prevents fragile knife-edge)")
+    enabled: bool = param(
+        True,
+        desc="Add continuous top stacking rim",
+    )
+    height: float = param(
+        3.8,
+        desc="Stacking lip height above body",
+        unit="mm",
+    )
+    top_flat: float = param(
+        0.6,
+        desc="Flat top rim width (prevents fragile knife-edge)",
+        unit="mm",
+    )
 
 
 @dataclass
 class LabelHolderParams:
     """Pred-compatible printable label holder shelf & recessed socket."""
 
-    enabled: bool = param(True, desc="Add printable label shelf & recessed socket")
-    shelf_full_width: bool = param(False, desc="Span shelf full compartment width instead of sizing to label")
-    placement: Literal["center", "left", "right", "per_column"] = param("center", desc="Label placement along X")
-    units: int = param(1, min=1, max=6, step=1, when={"placement": ["center", "left", "right"]}, desc="Label width in grid units (clamped to Grid X)")
-    column: Optional[int] = param(None, min=1, max=8, step=1, when={"placement": ["center", "left", "right"]}, desc="1-indexed column start (overrides left/center/right)")
-    wall: Literal["back", "front"] = param("back", desc="Compartment wall for label shelf")
-    height: float = param(11.5, unit="mm", desc="Label plate depth (Y)")
-    thickness: float = param(1.0, unit="mm", desc="Recessed pocket & tab slot height (Z)")
-    shelf_depth: float = param(13.5, unit="mm", desc="Inward depth (Y) of supporting shelf overhang")
-    shelf_thickness: float = param(2.4, unit="mm", desc="Vertical thickness of shelf deck")
-    fin_count: Optional[int] = param(None, min=0, max=12, step=1, desc="Manual support fin count per compartment (Auto = calculated)")
-    fin_max_span: float = param(12.0, min=4.0, max=30.0, step=1.0, unit="mm", when={"fin_count": None}, desc="Max unsupported bridge span when fin count is Auto")
-    fin_thickness: float = param(0.8, unit="mm", desc="Thickness of each support fin")
-    overhang_angle: float = param(35.0, unit="°", desc="Support fin angle underneath label shelf")
-    width_margin: float = param(5.6, unit="mm", desc="Margin subtracted from unit width for pocket")
-    tab_width: float = param(6.5, unit="mm", desc="Width (Y) of side snap-in retention tab slots")
-    tab_extension: float = param(0.8, unit="mm", desc="Extension (X) of side retention tab notches per side")
+    enabled: bool = param(
+        True,
+        desc="Add printable label shelf & recessed socket",
+    )
+    shelf_full_width: bool = param(
+        False,
+        desc="Span shelf full compartment width instead of sizing to label",
+    )
+    placement: Literal["center", "left", "right", "per_column"] = param(
+        "center",
+        desc="Label placement along X",
+    )
+    units: int = param(
+        1,
+        desc="Label width in grid units (clamped to Grid X)",
+        min=1, max=6, step=1, when={"placement": ["center", "left", "right"]},
+    )
+    column: Optional[int] = param(
+        None,
+        desc="1-indexed column start (overrides left/center/right)",
+        min=1, max=8, step=1, when={"placement": ["center", "left", "right"]},
+    )
+    wall: Literal["back", "front"] = param(
+        "back",
+        desc="Compartment wall for label shelf",
+    )
+    height: float = param(
+        11.5,
+        desc="Label plate depth (Y)",
+        unit="mm",
+    )
+    thickness: float = param(
+        1.0,
+        desc="Recessed pocket & tab slot height (Z)",
+        unit="mm",
+    )
+    shelf_depth: float = param(
+        13.5,
+        desc="Inward depth (Y) of supporting shelf overhang",
+        unit="mm",
+    )
+    shelf_thickness: float = param(
+        2.4,
+        desc="Vertical thickness of shelf deck",
+        unit="mm",
+    )
+    fin_count: Optional[int] = param(
+        None,
+        desc="Manual support fin count per compartment (Auto = calculated)",
+        min=0, max=12, step=1,
+    )
+    fin_max_span: float = param(
+        12.0,
+        desc="Max unsupported bridge span when fin count is Auto",
+        unit="mm", min=4.0, max=30.0, step=1.0, when={"fin_count": None},
+    )
+    fin_thickness: float = param(
+        0.8,
+        desc="Thickness of each support fin",
+        unit="mm",
+    )
+    overhang_angle: float = param(
+        35.0,
+        desc="Support fin angle underneath label shelf",
+        unit="°",
+    )
+    width_margin: float = param(
+        5.6,
+        desc="Margin subtracted from unit width for pocket",
+        unit="mm",
+    )
+    tab_width: float = param(
+        6.5,
+        desc="Width (Y) of side snap-in retention tab slots",
+        unit="mm",
+    )
+    tab_extension: float = param(
+        0.8,
+        desc="Extension (X) of side retention tab notches per side",
+        unit="mm",
+    )
 
 
 @dataclass
 class ScoopParams:
     """Ergonomic compartment finger scoops."""
 
-    enabled: bool = param(True, desc="Enable interior finger scoops")
-    style: Literal["directional", "bowl"] = param("directional", desc="Per-wall scoops or 360° dish bottom")
-    bowl_radius: float = param(8.0, min=0.0, max=25.0, step=0.5, unit="mm", when={"style": "bowl"}, desc="All-around floor fillet radius")
-    front_radius: float = param(12.0, min=0.0, max=25.0, step=0.5, unit="mm", when={"style": "directional"}, desc="Front (-Y) finger scoop radius (0 = off)")
-    back_radius: float = param(6.0, min=0.0, max=25.0, step=0.5, unit="mm", when={"style": "directional"}, desc="Back (+Y) finger scoop radius (0 = off)")
-    left_radius: float = param(0.0, min=0.0, max=25.0, step=0.5, unit="mm", when={"style": "directional"}, desc="Left (-X) finger scoop radius (0 = off)")
-    right_radius: float = param(0.0, min=0.0, max=25.0, step=0.5, unit="mm", when={"style": "directional"}, desc="Right (+X) finger scoop radius (0 = off)")
+    enabled: bool = param(
+        True,
+        desc="Enable interior finger scoops",
+    )
+    style: Literal["directional", "bowl"] = param(
+        "directional",
+        desc="Per-wall scoops or 360° dish bottom",
+    )
+    bowl_radius: float = param(
+        8.0,
+        desc="All-around floor fillet radius",
+        unit="mm", min=0.0, max=25.0, step=0.5, when={"style": "bowl"},
+    )
+    front_radius: float = param(
+        12.0,
+        desc="Front (-Y) finger scoop radius (0 = off)",
+        unit="mm", min=0.0, max=25.0, step=0.5, when={"style": "directional"},
+    )
+    back_radius: float = param(
+        6.0,
+        desc="Back (+Y) finger scoop radius (0 = off)",
+        unit="mm", min=0.0, max=25.0, step=0.5, when={"style": "directional"},
+    )
+    left_radius: float = param(
+        0.0,
+        desc="Left (-X) finger scoop radius (0 = off)",
+        unit="mm", min=0.0, max=25.0, step=0.5, when={"style": "directional"},
+    )
+    right_radius: float = param(
+        0.0,
+        desc="Right (+X) finger scoop radius (0 = off)",
+        unit="mm", min=0.0, max=25.0, step=0.5, when={"style": "directional"},
+    )
 
 
 @dataclass
 class DividersParams:
     """Interior compartment dividing walls."""
 
-    enabled: bool = param(False, desc="Add interior dividing walls")
-    x: int = param(1, min=0, max=6, step=1, label="X Dividers", desc="Divider walls along X (0 = undivided)")
-    y: int = param(0, min=0, max=6, step=1, label="Y Dividers", desc="Divider walls along Y (0 = undivided)")
-    thickness: float = param(1.2, min=0.8, max=3.0, step=0.2, unit="mm", desc="Dividing wall thickness")
+    enabled: bool = param(
+        False,
+        desc="Add interior dividing walls",
+    )
+    x: int = param(
+        1,
+        label="X Dividers",
+        desc="Divider walls along X (0 = undivided)",
+        min=0, max=6, step=1,
+    )
+    y: int = param(
+        0,
+        label="Y Dividers",
+        desc="Divider walls along Y (0 = undivided)",
+        min=0, max=6, step=1,
+    )
+    thickness: float = param(
+        1.2,
+        desc="Dividing wall thickness",
+        unit="mm", min=0.8, max=3.0, step=0.2,
+    )
 
 
 @dataclass
 class OverhangParams:
     """Drawer spacer gap overhangs (fills dead space above baseplate padding)."""
 
-    enabled: bool = param(False, desc="Extend upper body over drawer spacer gaps")
-    front: float = param(0.0, min=0.0, max=40.0, step=0.5, unit="mm", desc="Extension past front (-Y) grid boundary")
-    back: float = param(0.0, min=0.0, max=40.0, step=0.5, unit="mm", desc="Extension past back (+Y) grid boundary")
-    left: float = param(0.0, min=0.0, max=40.0, step=0.5, unit="mm", desc="Extension past left (-X) grid boundary")
-    right: float = param(0.0, min=0.0, max=40.0, step=0.5, unit="mm", desc="Extension past right (+X) grid boundary")
-    chamfer_angle: float = param(45.0, min=30.0, max=65.0, step=1.0, unit="°", desc="Print-safe underside transition angle")
+    enabled: bool = param(
+        False,
+        desc="Extend upper body over drawer spacer gaps",
+    )
+    front: float = param(
+        0.0,
+        desc="Extension past front (-Y) grid boundary",
+        unit="mm", min=0.0, max=40.0, step=0.5,
+    )
+    back: float = param(
+        0.0,
+        desc="Extension past back (+Y) grid boundary",
+        unit="mm", min=0.0, max=40.0, step=0.5,
+    )
+    left: float = param(
+        0.0,
+        desc="Extension past left (-X) grid boundary",
+        unit="mm", min=0.0, max=40.0, step=0.5,
+    )
+    right: float = param(
+        0.0,
+        desc="Extension past right (+X) grid boundary",
+        unit="mm", min=0.0, max=40.0, step=0.5,
+    )
+    chamfer_angle: float = param(
+        45.0,
+        desc="Print-safe underside transition angle",
+        unit="°", min=30.0, max=65.0, step=1.0,
+    )
 
 
 @dataclass
