@@ -20,6 +20,17 @@ from pathlib import Path
 from typing import List, Literal, Optional
 from build123d import *
 
+try:
+    from utils.params import group, param
+except ImportError:
+    import sys
+
+    for _p in Path(__file__).resolve().parents:
+        if (_p / "utils").is_dir():
+            sys.path.insert(0, str(_p))
+            break
+    from utils.params import group, param
+
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
@@ -51,84 +62,87 @@ class SpacerCutout:
 class CoreParams:
     """Shared height and X/Y leg dimensions."""
 
-    height: float = field(default=56.0, metadata={"min": 2.0, "max": 150.0, "step": 1.0})  # Spacer height in mm (Z dimension)
-    leg_x_length: float = field(default=0.0, metadata={"min": 0.0, "max": 350.0, "step": 1.0})  # Length along X wall in mm (set 0 to omit)
-    leg_x_width: float = field(default=15.0, metadata={"min": 3.0, "max": 80.0, "step": 0.5})  # Width / thickness of X leg in mm
-    leg_y_length: float = field(default=238.0, metadata={"min": 0.0, "max": 350.0, "step": 1.0})  # Length along Y wall in mm (set 0 to omit)
-    leg_y_width: float = field(default=15.0, metadata={"min": 3.0, "max": 80.0, "step": 0.5})  # Width / thickness of Y leg in mm
+    height: float = param(56.0, min=2.0, max=150.0, step=1.0, unit="mm", desc="Spacer height (Z dimension)")
+    leg_x_length: float = param(0.0, min=0.0, max=350.0, step=1.0, unit="mm", desc="Length along X wall (0 = omit leg)")
+    leg_x_width: float = param(15.0, min=3.0, max=80.0, step=0.5, unit="mm", desc="Thickness of X leg")
+    leg_y_length: float = param(238.0, min=0.0, max=350.0, step=1.0, unit="mm", desc="Length along Y wall (0 = omit leg)")
+    leg_y_width: float = param(15.0, min=3.0, max=80.0, step=0.5, unit="mm", desc="Thickness of Y leg")
 
 
 @dataclass
 class JunctionParams:
     """Orientation and junction position (Inverse L, T-Shape, Cross)."""
 
-    mirror_x: bool = False              # Mirror left <-> right (inverts L-shape for opposite corner)
-    mirror_y: bool = False              # Mirror front <-> back
-    leg_y_align: Literal["start", "center", "end"] = "start"  # Anchor for Leg Y along X
-    leg_y_offset: float = 0.0           # Fine-tune shift of Leg Y from leg_y_align in mm (+ or -)
-    leg_x_align: Literal["start", "center", "end"] = "start"  # Anchor for Leg X along Y
-    leg_x_offset: float = 0.0           # Fine-tune shift of Leg X from leg_x_align in mm (+ or -)
+    mirror_x: bool = param(False, desc="Mirror left ↔ right (inverts L for opposite corner)")
+    mirror_y: bool = param(False, desc="Mirror front ↔ back")
+    leg_y_align: Literal["start", "center", "end"] = param("start", desc="Anchor for Leg Y along X")
+    leg_y_offset: float = param(0.0, unit="mm", desc="Fine shift of Leg Y from alignment (+ or -)")
+    leg_x_align: Literal["start", "center", "end"] = param("start", desc="Anchor for Leg X along Y")
+    leg_x_offset: float = param(0.0, unit="mm", desc="Fine shift of Leg X from alignment (+ or -)")
 
 
 @dataclass
 class EdgeTreatmentParams:
     """Corner radii and top perimeter edge treatment."""
 
-    corner_radius: float = field(default=2.0, metadata={"min": 0.0, "max": 20.0, "step": 0.5})  # General vertical corner radius in mm (XY profile corners)
-    outer_corner_radius: Optional[float] = field(default=None, metadata={"min": 0.0, "max": 20.0, "step": 0.5})  # Outer junction corner radius in mm (None = corner_radius)
-    inner_corner_radius: Optional[float] = field(default=4.0, metadata={"min": 0.0, "max": 20.0, "step": 0.5})  # Inside junction corner radius in mm (None = corner_radius)
-    end_corner_radius: float = field(default=0.0, metadata={"min": 0.0, "max": 10.0, "step": 0.5})  # Radius on mating arm ends in mm (0.0 for flush butt-joints)
-    edge_radius: float = field(default=1.0, metadata={"min": 0.0, "max": 8.0, "step": 0.2})  # Top perimeter edge radius/bevel in mm
-    edge_treatment: Literal["fillet", "chamfer"] = "fillet"  # Top edge profile
+    corner_radius: float = param(2.0, min=0.0, max=20.0, step=0.5, unit="mm", desc="General vertical corner radius")
+    outer_corner_radius: Optional[float] = param(None, min=0.0, max=20.0, step=0.5, unit="mm", desc="Outer junction corner radius (Auto = corner radius)")
+    inner_corner_radius: Optional[float] = param(4.0, min=0.0, max=20.0, step=0.5, unit="mm", desc="Inside junction corner radius (Auto = corner radius)")
+    end_corner_radius: float = param(0.0, min=0.0, max=10.0, step=0.5, unit="mm", desc="Mating arm end corner radius (0 = flush butt-joint)")
+    edge_radius: float = param(1.0, min=0.0, max=8.0, step=0.2, unit="mm", desc="Top perimeter edge fillet/chamfer size")
+    edge_treatment: Literal["fillet", "chamfer"] = param("fillet", desc="Top perimeter edge profile")
 
 
 @dataclass
 class HollowParams:
     """Hollow / shell underside options (saves filament on thick spacers)."""
 
-    enabled: bool = False               # Hollow out the bottom with an open underside
-    wall_thickness: float = field(default=2.0, metadata={"min": 1.0, "max": 8.0, "step": 0.2})  # Side wall thickness when enabled in mm
-    top_thickness: float = field(default=2.0, metadata={"min": 1.0, "max": 8.0, "step": 0.2})  # Top solid roof thickness when enabled in mm
+    enabled: bool = param(False, desc="Hollow out bottom with open underside")
+    wall_thickness: float = param(2.0, min=1.0, max=8.0, step=0.2, unit="mm", desc="Side wall thickness when hollowed")
+    top_thickness: float = param(2.0, min=1.0, max=8.0, step=0.2, unit="mm", desc="Top solid roof thickness when hollowed")
 
 
 @dataclass
 class FingerNotchParams:
     """Ergonomic finger-lift scoop on top face."""
 
-    enabled: bool = False               # Add recessed scoop on top face for easy prying/removal
-    radius: float = field(default=12.0, metadata={"min": 4.0, "max": 30.0, "step": 0.5})  # Radius of spherical scoop cutter in mm
-    depth: float = field(default=2.5, metadata={"min": 0.5, "max": 10.0, "step": 0.2})  # Depth of scoop recess from top surface in mm
+    enabled: bool = param(False, desc="Add top-face scoop for easy prying/removal")
+    radius: float = param(12.0, min=4.0, max=30.0, step=0.5, unit="mm", desc="Spherical scoop cutter radius")
+    depth: float = param(2.5, min=0.5, max=10.0, step=0.2, unit="mm", desc="Scoop recess depth from top surface")
 
 
 @dataclass
 class CutoutsParams:
     """Notches & cutouts (for drawer locks, latches, handle bolts, etc.)."""
 
-    enabled: bool = False               # Enable/disable all cutouts
-    items: List[SpacerCutout] = field(default_factory=lambda: [
-        SpacerCutout(
-            leg="x",
-            align="end",
-            offset=12.0,
-            length=42.0,
-            height=16.0,
-            shape="rectangle",
-            radius=2.0,
-            entry_radius=2.0,
-        ),
-    ])
+    enabled: bool = param(False, desc="Apply configured leg notches and cutouts")
+    items: List[SpacerCutout] = field(
+        default_factory=lambda: [
+            SpacerCutout(
+                leg="x",
+                align="end",
+                offset=12.0,
+                length=42.0,
+                height=16.0,
+                shape="rectangle",
+                radius=2.0,
+                entry_radius=2.0,
+            ),
+        ],
+        metadata={"description": "Cutout definitions (JSON list)"},
+    )
 
 
 @dataclass
 class SpacerParams:
     """Single source of truth parameters for parametric spacers."""
 
-    core: CoreParams = field(default_factory=CoreParams)
-    junction: JunctionParams = field(default_factory=JunctionParams)
-    edges: EdgeTreatmentParams = field(default_factory=EdgeTreatmentParams)
-    hollow: HollowParams = field(default_factory=HollowParams)
-    finger_notch: FingerNotchParams = field(default_factory=FingerNotchParams)
-    cutouts: CutoutsParams = field(default_factory=CutoutsParams)
+    core: CoreParams = group(CoreParams)
+    junction: JunctionParams = group(JunctionParams)
+    edges: EdgeTreatmentParams = group(EdgeTreatmentParams, label="Edge Treatment")
+    hollow: HollowParams = group(HollowParams)
+    finger_notch: FingerNotchParams = group(FingerNotchParams)
+    cutouts: CutoutsParams = group(CutoutsParams)
 
 
 def _apply_cutout(
