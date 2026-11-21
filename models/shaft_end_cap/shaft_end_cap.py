@@ -18,11 +18,22 @@ Features:
 - Optional perimeter grip flutes/grooves for easy twist-off removal.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Optional
 
 from build123d import *
+
+try:
+    from utils.params import group, param
+except ImportError:
+    import sys
+
+    for _p in Path(__file__).resolve().parents:
+        if (_p / "utils").is_dir():
+            sys.path.insert(0, str(_p))
+            break
+    from utils.params import group, param
 
 # ==============================================================================
 # Standardized Export Configuration
@@ -36,69 +47,69 @@ OUTPUT_DIR: str = "exports"             # Output folder (relative to this script
 class CoreParams:
     """Shaft / bore and collar sleeve dimensions."""
 
-    shaft_diameter: float = field(default=12.0, metadata={"min": 4.0, "max": 60.0, "step": 0.1})  # Nominal shaft/rod diameter in mm (12.7 mm = 1/2 inch)
-    fit_clearance: float = field(default=0.2, metadata={"min": -0.5, "max": 1.0, "step": 0.05})  # Diametral press-fit clearance in mm (bore dia = shaft_diameter + fit_clearance)
-    collar_length: float = field(default=18.0, metadata={"min": 5.0, "max": 60.0, "step": 1.0})  # Length of collar sleeve pressing onto shaft (mm)
-    collar_wall_thickness: float = field(default=2.4, metadata={"min": 1.2, "max": 8.0, "step": 0.2})  # Wall thickness of collar cylinder (mm)
-    lead_in_chamfer: float = field(default=1.0, metadata={"min": 0.0, "max": 3.0, "step": 0.1})  # Internal chamfer at collar mouth for effortless sliding onto rod (mm)
+    shaft_diameter: float = param(12.0, min=4.0, max=60.0, step=0.1, unit="mm", desc="Nominal shaft/rod diameter (12.7 mm = 1/2 in)")
+    fit_clearance: float = param(0.2, min=-0.5, max=1.0, step=0.05, unit="mm", desc="Diametral press-fit clearance added to bore")
+    collar_length: float = param(18.0, min=5.0, max=60.0, step=1.0, unit="mm", desc="Sleeve length pressing onto shaft")
+    collar_wall_thickness: float = param(2.4, min=1.2, max=8.0, step=0.2, unit="mm", desc="Collar cylinder wall thickness")
+    lead_in_chamfer: float = param(1.0, min=0.0, max=3.0, step=0.1, unit="mm", desc="Internal mouth bevel for easy push-on")
 
 
 @dataclass
 class FlangeParams:
     """Retaining flange (spool stop) dimensions."""
 
-    diameter: float = field(default=40.0, metadata={"min": 12.0, "max": 100.0, "step": 1.0})  # Outer diameter of retaining flange (mm)
-    thickness: float = field(default=4.0, metadata={"min": 1.5, "max": 12.0, "step": 0.5})  # Axial thickness of flange disc (mm)
-    fillet: float = field(default=2.0, metadata={"min": 0.0, "max": 8.0, "step": 0.2})  # Stress-relief fillet radius between collar body and flange underside (mm)
-    front_radius: float = field(default=2.0, metadata={"min": 0.0, "max": 8.0, "step": 0.2, "when": {"cap.style": ["round", "flat"]}})  # Outer rim fillet radius on front / tip side of flange (mm, 0.0 for crisp edge)
-    rear_radius: float = field(default=2.0, metadata={"min": 0.0, "max": 8.0, "step": 0.2})  # Outer rim fillet radius on rear / collar side of flange (mm, 0.0 for crisp edge)
+    diameter: float = param(40.0, min=12.0, max=100.0, step=1.0, unit="mm", desc="Outer diameter of retaining flange")
+    thickness: float = param(4.0, min=1.5, max=12.0, step=0.5, unit="mm", desc="Axial thickness of flange disc")
+    fillet: float = param(2.0, min=0.0, max=8.0, step=0.2, unit="mm", desc="Stress-relief fillet between collar and flange")
+    front_radius: float = param(2.0, min=0.0, max=8.0, step=0.2, unit="mm", when={"cap.style": ["round", "flat"]}, desc="Front outer rim fillet (0 = crisp edge)")
+    rear_radius: float = param(2.0, min=0.0, max=8.0, step=0.2, unit="mm", desc="Rear outer rim fillet (0 = crisp edge)")
 
 
 @dataclass
 class CapTipParams:
     """End cap tip style & geometry."""
 
-    style: Literal["round", "dome", "flat", "chamfer"] = "round"  # End cap style
-    dome_height: Optional[float] = field(default=0.0, metadata={"min": 0.0, "max": 40.0, "step": 0.5, "when": {"style": "dome"}})  # Height of dome above flange (mm). None/0 defaults to full hemisphere
-    chamfer_length: float = field(default=2.5, metadata={"min": 0.5, "max": 15.0, "step": 0.5, "when": {"style": "chamfer"}})  # Axial length of 45-deg bevel when style is 'chamfer' (mm)
+    style: Literal["round", "dome", "flat", "chamfer"] = param("round", desc="End cap tip profile")
+    dome_height: Optional[float] = param(0.0, min=0.0, max=40.0, step=0.5, unit="mm", when={"style": "dome"}, desc="Height above flange (0 / Auto = full hemisphere)")
+    chamfer_length: float = param(2.5, min=0.5, max=15.0, step=0.5, unit="mm", when={"style": "chamfer"}, desc="Axial length of 45° bevel")
 
 
 @dataclass
 class VentHoleParams:
     """Coaxial air-relief through-hole."""
 
-    enabled: bool = False                  # Enable coaxial air-relief through-hole
-    diameter: float = field(default=2.0, metadata={"min": 1.0, "max": 10.0, "step": 0.2})  # Coaxial air-relief vent hole diameter in mm
+    enabled: bool = param(False, desc="Cut coaxial air-relief through-hole")
+    diameter: float = param(2.0, min=1.0, max=10.0, step=0.2, unit="mm", desc="Air-relief vent hole diameter")
 
 
 @dataclass
 class VentChannelParams:
     """Internal axial air-relief vent channel along collar bore."""
 
-    enabled: bool = True                   # Enable invisible internal axial vent channel
-    width: float = field(default=1.0, metadata={"min": 0.4, "max": 4.0, "step": 0.1})  # Width of internal axial vent channel along collar bore in mm
-    depth: float = field(default=0.6, metadata={"min": 0.2, "max": 2.0, "step": 0.1})  # Radial depth of internal vent channel into collar wall in mm
+    enabled: bool = param(True, desc="Cut invisible internal axial vent channel")
+    width: float = param(1.0, min=0.4, max=4.0, step=0.1, unit="mm", desc="Channel width along collar bore")
+    depth: float = param(0.6, min=0.2, max=2.0, step=0.1, unit="mm", desc="Radial depth into collar wall")
 
 
 @dataclass
 class GripGroovesParams:
     """Perimeter scalloped finger grip grooves."""
 
-    enabled: bool = False                  # Enable perimeter scalloped finger grip grooves
-    count: int = field(default=12, metadata={"min": 4, "max": 36, "step": 1})  # Number of perimeter grip grooves for finger twisting
-    radius: float = field(default=1.2, metadata={"min": 0.5, "max": 5.0, "step": 0.1})  # Radius of scalloped finger grip cuts around flange perimeter (mm)
+    enabled: bool = param(False, desc="Add scalloped perimeter grip grooves")
+    count: int = param(12, min=4, max=36, step=1, desc="Number of grip grooves around perimeter")
+    radius: float = param(1.2, min=0.5, max=5.0, step=0.1, unit="mm", desc="Scalloped groove cutter radius")
 
 
 @dataclass
 class ShaftEndCapParams:
     """Parameters for the parametric shaft end cap."""
 
-    core: CoreParams = field(default_factory=CoreParams)
-    flange: FlangeParams = field(default_factory=FlangeParams)
-    cap: CapTipParams = field(default_factory=CapTipParams)
-    vent_hole: VentHoleParams = field(default_factory=VentHoleParams)
-    vent_channel: VentChannelParams = field(default_factory=VentChannelParams)
-    grip_grooves: GripGroovesParams = field(default_factory=GripGroovesParams)
+    core: CoreParams = group(CoreParams)
+    flange: FlangeParams = group(FlangeParams)
+    cap: CapTipParams = group(CapTipParams)
+    vent_hole: VentHoleParams = group(VentHoleParams)
+    vent_channel: VentChannelParams = group(VentChannelParams)
+    grip_grooves: GripGroovesParams = group(GripGroovesParams)
 
     @property
     def bore_radius(self) -> float:
