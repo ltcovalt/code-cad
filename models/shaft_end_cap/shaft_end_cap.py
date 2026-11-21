@@ -47,57 +47,137 @@ OUTPUT_DIR: str = "exports"             # Output folder (relative to this script
 class CoreParams:
     """Shaft / bore and collar sleeve dimensions."""
 
-    shaft_diameter: float = param(12.0, min=4.0, max=60.0, step=0.1, unit="mm", desc="Nominal shaft/rod diameter (12.7 mm = 1/2 in)")
-    fit_clearance: float = param(0.2, min=-0.5, max=1.0, step=0.05, unit="mm", desc="Diametral press-fit clearance added to bore")
-    collar_length: float = param(18.0, min=5.0, max=60.0, step=1.0, unit="mm", desc="Sleeve length pressing onto shaft")
-    collar_wall_thickness: float = param(2.4, min=1.2, max=8.0, step=0.2, unit="mm", desc="Collar cylinder wall thickness")
-    lead_in_chamfer: float = param(1.0, min=0.0, max=3.0, step=0.1, unit="mm", desc="Internal mouth bevel for easy push-on")
+    shaft_diameter: float = param(
+        12.0,
+        desc="Nominal shaft/rod diameter (12.7 mm = 1/2 in)",
+        unit="mm", min=4.0, max=60.0, step=0.1,
+    )
+    fit_clearance: float = param(
+        0.2,
+        desc="Diametral press-fit clearance added to bore",
+        unit="mm", min=-0.5, max=1.0, step=0.05,
+    )
+    collar_length: float = param(
+        18.0,
+        desc="Sleeve length pressing onto shaft",
+        unit="mm", min=5.0, max=60.0, step=1.0,
+    )
+    collar_wall_thickness: float = param(
+        2.4,
+        desc="Collar cylinder wall thickness",
+        unit="mm", min=1.2, max=8.0, step=0.2,
+    )
+    lead_in_chamfer: float = param(
+        1.0,
+        desc="Internal mouth bevel for easy push-on",
+        unit="mm", min=0.0, max=3.0, step=0.1,
+    )
 
 
 @dataclass
 class FlangeParams:
     """Retaining flange (spool stop) dimensions."""
 
-    diameter: float = param(40.0, min=12.0, max=100.0, step=1.0, unit="mm", desc="Outer diameter of retaining flange")
-    thickness: float = param(4.0, min=1.5, max=12.0, step=0.5, unit="mm", desc="Axial thickness of flange disc")
-    fillet: float = param(2.0, min=0.0, max=8.0, step=0.2, unit="mm", desc="Stress-relief fillet between collar and flange")
-    front_radius: float = param(2.0, min=0.0, max=8.0, step=0.2, unit="mm", when={"cap.style": ["round", "flat"]}, desc="Front outer rim fillet (0 = crisp edge)")
-    rear_radius: float = param(2.0, min=0.0, max=8.0, step=0.2, unit="mm", desc="Rear outer rim fillet (0 = crisp edge)")
+    diameter: float = param(
+        40.0,
+        desc="Outer diameter of retaining flange",
+        unit="mm", min=12.0, max=100.0, step=1.0,
+    )
+    thickness: float = param(
+        4.0,
+        desc="Axial thickness of flange disc",
+        unit="mm", min=1.5, max=12.0, step=0.5,
+    )
+    fillet: float = param(
+        2.0,
+        desc="Stress-relief fillet between collar and flange",
+        unit="mm", min=0.0, max=8.0, step=0.2,
+    )
+    front_radius: float = param(
+        2.0,
+        desc="Front outer rim fillet (0 = crisp edge)",
+        unit="mm", min=0.0, max=8.0, step=0.2, when={"cap.style": ["round", "flat"]},
+    )
+    rear_radius: float = param(
+        2.0,
+        desc="Rear outer rim fillet (0 = crisp edge)",
+        unit="mm", min=0.0, max=8.0, step=0.2,
+    )
 
 
 @dataclass
 class CapTipParams:
     """End cap tip style & geometry."""
 
-    style: Literal["round", "dome", "flat", "chamfer"] = param("round", desc="End cap tip profile")
-    dome_height: Optional[float] = param(0.0, min=0.0, max=40.0, step=0.5, unit="mm", when={"style": "dome"}, desc="Height above flange (0 / Auto = full hemisphere)")
-    chamfer_length: float = param(2.5, min=0.5, max=15.0, step=0.5, unit="mm", when={"style": "chamfer"}, desc="Axial length of 45° bevel")
+    style: Literal["round", "dome", "flat", "chamfer"] = param(
+        "round",
+        desc="End cap tip profile",
+    )
+    dome_height: Optional[float] = param(
+        0.0,
+        desc="Height above flange (0 / Auto = full hemisphere)",
+        unit="mm", min=0.0, max=40.0, step=0.5, when={"style": "dome"},
+    )
+    chamfer_length: float = param(
+        2.5,
+        desc="Axial length of 45° bevel",
+        unit="mm", min=0.5, max=15.0, step=0.5, when={"style": "chamfer"},
+    )
 
 
 @dataclass
 class VentHoleParams:
     """Coaxial air-relief through-hole."""
 
-    enabled: bool = param(False, desc="Cut coaxial air-relief through-hole")
-    diameter: float = param(2.0, min=1.0, max=10.0, step=0.2, unit="mm", desc="Air-relief vent hole diameter")
+    enabled: bool = param(
+        False,
+        desc="Cut coaxial air-relief through-hole",
+    )
+    diameter: float = param(
+        2.0,
+        desc="Air-relief vent hole diameter",
+        unit="mm", min=1.0, max=10.0, step=0.2,
+    )
 
 
 @dataclass
 class VentChannelParams:
     """Internal axial air-relief vent channel along collar bore."""
 
-    enabled: bool = param(True, desc="Cut invisible internal axial vent channel")
-    width: float = param(1.0, min=0.4, max=4.0, step=0.1, unit="mm", desc="Channel width along collar bore")
-    depth: float = param(0.6, min=0.2, max=2.0, step=0.1, unit="mm", desc="Radial depth into collar wall")
+    enabled: bool = param(
+        True,
+        desc="Cut invisible internal axial vent channel",
+    )
+    width: float = param(
+        1.0,
+        desc="Channel width along collar bore",
+        unit="mm", min=0.4, max=4.0, step=0.1,
+    )
+    depth: float = param(
+        0.6,
+        desc="Radial depth into collar wall",
+        unit="mm", min=0.2, max=2.0, step=0.1,
+    )
 
 
 @dataclass
 class GripGroovesParams:
     """Perimeter scalloped finger grip grooves."""
 
-    enabled: bool = param(False, desc="Add scalloped perimeter grip grooves")
-    count: int = param(12, min=4, max=36, step=1, desc="Number of grip grooves around perimeter")
-    radius: float = param(1.2, min=0.5, max=5.0, step=0.1, unit="mm", desc="Scalloped groove cutter radius")
+    enabled: bool = param(
+        False,
+        desc="Add scalloped perimeter grip grooves",
+    )
+    count: int = param(
+        12,
+        desc="Number of grip grooves around perimeter",
+        min=4, max=36, step=1,
+    )
+    radius: float = param(
+        1.2,
+        desc="Scalloped groove cutter radius",
+        unit="mm", min=0.5, max=5.0, step=0.1,
+    )
 
 
 @dataclass
