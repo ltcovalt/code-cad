@@ -35,52 +35,167 @@ OUTPUT_DIR: str = "exports"             # Output folder (relative to this script
 class CoreParams:
     """Primary rack unit and L-bracket structural dimensions."""
 
-    u_count: int = param(1, min=1, max=6, step=1, label="Rack Units", unit="U", desc="Number of rack units (1U, 2U, 3U, ...)")
-    u_height_unit: float = param(44.45, label="1U Height", unit="mm", desc="Nominal 1U pitch (1.75 in)")
-    height_margin: float = param(1.2, min=0.0, max=4.0, step=0.1, unit="mm", desc="Subtracted clearance for clean rack stacking")
-    bracket_length: float = param(150.0, min=40.0, max=300.0, step=5.0, unit="mm", desc="Side plate depth along rack")
-    front_flange_width: float = param(20.0, min=15.0, max=40.0, step=1.0, unit="mm", desc="Front mounting ear width")
-    thickness: float = param(3.0, min=1.5, max=8.0, step=0.5, unit="mm", desc="Bracket wall thickness")
-    inner_bend_radius: float = param(1.5, min=0.0, max=5.0, step=0.5, unit="mm", desc="Inside L-corner fillet radius")
-    outer_corner_radius: float = param(1.5, min=0.0, max=5.0, step=0.5, unit="mm", desc="Outer vertical corner fillet radius")
+    u_count: int = param(
+        1,
+        label="Rack Units",
+        desc="Number of rack units (1U, 2U, 3U, ...)",
+        unit="U", min=1, max=6, step=1,
+    )
+    u_height_unit: float = param(
+        44.45,
+        label="1U Height",
+        desc="Nominal 1U pitch (1.75 in)",
+        unit="mm",
+    )
+    height_margin: float = param(
+        1.2,
+        desc="Subtracted clearance for clean rack stacking",
+        unit="mm", min=0.0, max=4.0, step=0.1,
+    )
+    bracket_length: float = param(
+        150.0,
+        desc="Side plate depth along rack",
+        unit="mm", min=40.0, max=300.0, step=5.0,
+    )
+    front_flange_width: float = param(
+        20.0,
+        desc="Front mounting ear width",
+        unit="mm", min=15.0, max=40.0, step=1.0,
+    )
+    thickness: float = param(
+        3.0,
+        desc="Bracket wall thickness",
+        unit="mm", min=1.5, max=8.0, step=0.5,
+    )
+    inner_bend_radius: float = param(
+        1.5,
+        desc="Inside L-corner fillet radius",
+        unit="mm", min=0.0, max=5.0, step=0.5,
+    )
+    outer_corner_radius: float = param(
+        1.5,
+        desc="Outer vertical corner fillet radius",
+        unit="mm", min=0.0, max=5.0, step=0.5,
+    )
 
 
 @dataclass
 class SideHolesParams:
     """Side M4 thread-in pilot hole array."""
 
-    enabled: bool = param(True, desc="Cut side M4 pilot hole array")
-    diameter: float = param(3.3, min=2.0, max=6.0, step=0.1, unit="mm", desc="M4 thread-in pilot hole diameter")
-    spacing_x: float = param(25.0, min=10.0, max=60.0, step=1.0, label="Column Spacing (X)", unit="mm", desc="Horizontal spacing between hole columns")
-    rear_offset: float = param(15.0, min=5.0, max=40.0, step=1.0, unit="mm", desc="Offset from rear edge to first column")
-    min_front_clearance: float = param(10.0, min=5.0, max=30.0, step=1.0, unit="mm", desc="Minimum clearance before front bend")
-    edge_offset: float = param(9.7, min=5.0, max=20.0, step=0.5, unit="mm", desc="Offset from top/bottom edges to outer rows")
-    include_intermediate: bool = param(False, when={"cutout.style": "none"}, desc="Add hole rows at intermediate U centers")
-    rows: Optional[List[float]] = param(None, desc="Explicit Z heights for side hole rows (Auto = calculated)")
+    enabled: bool = param(
+        True,
+        desc="Cut side M4 pilot hole array",
+    )
+    diameter: float = param(
+        3.3,
+        desc="M4 thread-in pilot hole diameter",
+        unit="mm", min=2.0, max=6.0, step=0.1,
+    )
+    spacing_x: float = param(
+        25.0,
+        label="Column Spacing (X)",
+        desc="Horizontal spacing between hole columns",
+        unit="mm", min=10.0, max=60.0, step=1.0,
+    )
+    rear_offset: float = param(
+        15.0,
+        desc="Offset from rear edge to first column",
+        unit="mm", min=5.0, max=40.0, step=1.0,
+    )
+    min_front_clearance: float = param(
+        10.0,
+        desc="Minimum clearance before front bend",
+        unit="mm", min=5.0, max=30.0, step=1.0,
+    )
+    edge_offset: float = param(
+        9.7,
+        desc="Offset from top/bottom edges to outer rows",
+        unit="mm", min=5.0, max=20.0, step=0.5,
+    )
+    include_intermediate: bool = param(
+        False,
+        desc="Add hole rows at intermediate U centers",
+        when={"cutout.style": "none"},
+    )
+    rows: Optional[List[float]] = param(
+        None,
+        desc="Explicit Z heights for side hole rows (Auto = calculated)",
+    )
 
 
 @dataclass
 class CutoutParams:
     """Center cutout window options (snapped to hex cell centers)."""
 
-    style: Literal["hex", "window", "none"] = param("hex", desc="Ventilation cutout style")
-    margin_z: float = param(15.7, min=6.0, max=30.0, step=0.5, label="Z Margin", unit="mm", when={"style": ["hex", "window"]}, desc="Solid margin reserved at top & bottom")
-    corner_radius: float = param(1.0, min=0.0, max=10.0, step=0.5, unit="mm", when={"style": ["hex", "window"]}, desc="Corner radius of cutout window")
-    hex_pitch_count: int = param(11, min=1, max=25, step=1, when={"style": ["hex", "window"]}, desc="Horizontal hex pitches to snap window width")
-    hex_radius: float = param(4.5, min=2.0, max=12.0, step=0.5, unit="mm", when={"style": "hex"}, desc="Circumradius of hex cutouts")
-    hex_wall_thickness: float = param(1.5, min=0.8, max=5.0, step=0.1, unit="mm", when={"style": "hex"}, desc="Wall thickness between hex flats")
+    style: Literal["hex", "window", "none"] = param(
+        "hex",
+        desc="Ventilation cutout style",
+    )
+    margin_z: float = param(
+        15.7,
+        label="Z Margin",
+        desc="Solid margin reserved at top & bottom",
+        unit="mm", min=6.0, max=30.0, step=0.5, when={"style": ["hex", "window"]},
+    )
+    corner_radius: float = param(
+        1.0,
+        desc="Corner radius of cutout window",
+        unit="mm", min=0.0, max=10.0, step=0.5, when={"style": ["hex", "window"]},
+    )
+    hex_pitch_count: int = param(
+        11,
+        desc="Horizontal hex pitches to snap window width",
+        min=1, max=25, step=1, when={"style": ["hex", "window"]},
+    )
+    hex_radius: float = param(
+        4.5,
+        desc="Circumradius of hex cutouts",
+        unit="mm", min=2.0, max=12.0, step=0.5, when={"style": "hex"},
+    )
+    hex_wall_thickness: float = param(
+        1.5,
+        desc="Wall thickness between hex flats",
+        unit="mm", min=0.8, max=5.0, step=0.1, when={"style": "hex"},
+    )
 
 
 @dataclass
 class RackSlotsParams:
     """Front EIA-310 rack mounting slots."""
 
-    width: float = param(9.5, min=5.0, max=15.0, step=0.5, unit="mm", desc="Mounting slot width")
-    height: float = param(6.5, min=4.0, max=10.0, step=0.5, unit="mm", desc="Mounting slot height")
-    x_center: float = param(10.0, min=5.0, max=25.0, step=0.5, label="Slot X Center", unit="mm", desc="Center position on front flange")
-    offset_end: float = param(5.75, min=3.0, max=12.0, step=0.25, unit="mm", desc="EIA-310 offset from outer edge to slot center")
-    single_slot_1u: bool = param(True, label="Single Slot (1U)", when={"core.u_count": 1}, desc="Center 1 slot for 1U instead of 2 end slots")
-    z_positions: Optional[List[float]] = param(None, label="Z Positions", desc="Explicit Z heights for rack slots (Auto = EIA-310)")
+    width: float = param(
+        9.5,
+        desc="Mounting slot width",
+        unit="mm", min=5.0, max=15.0, step=0.5,
+    )
+    height: float = param(
+        6.5,
+        desc="Mounting slot height",
+        unit="mm", min=4.0, max=10.0, step=0.5,
+    )
+    x_center: float = param(
+        10.0,
+        label="Slot X Center",
+        desc="Center position on front flange",
+        unit="mm", min=5.0, max=25.0, step=0.5,
+    )
+    offset_end: float = param(
+        5.75,
+        desc="EIA-310 offset from outer edge to slot center",
+        unit="mm", min=3.0, max=12.0, step=0.25,
+    )
+    single_slot_1u: bool = param(
+        True,
+        label="Single Slot (1U)",
+        desc="Center 1 slot for 1U instead of 2 end slots",
+        when={"core.u_count": 1},
+    )
+    z_positions: Optional[List[float]] = param(
+        None,
+        label="Z Positions",
+        desc="Explicit Z heights for rack slots (Auto = EIA-310)",
+    )
 
 
 @dataclass
