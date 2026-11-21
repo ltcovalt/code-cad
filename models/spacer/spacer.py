@@ -62,60 +62,148 @@ class SpacerCutout:
 class CoreParams:
     """Shared height and X/Y leg dimensions."""
 
-    height: float = param(56.0, min=2.0, max=150.0, step=1.0, unit="mm", desc="Spacer height (Z dimension)")
-    leg_x_length: float = param(0.0, min=0.0, max=350.0, step=1.0, unit="mm", desc="Length along X wall (0 = omit leg)")
-    leg_x_width: float = param(15.0, min=3.0, max=80.0, step=0.5, unit="mm", desc="Thickness of X leg")
-    leg_y_length: float = param(238.0, min=0.0, max=350.0, step=1.0, unit="mm", desc="Length along Y wall (0 = omit leg)")
-    leg_y_width: float = param(15.0, min=3.0, max=80.0, step=0.5, unit="mm", desc="Thickness of Y leg")
+    height: float = param(
+        56.0,
+        desc="Spacer height (Z dimension)",
+        unit="mm", min=2.0, max=150.0, step=1.0,
+    )
+    leg_x_length: float = param(
+        0.0,
+        desc="Length along X wall (0 = omit leg)",
+        unit="mm", min=0.0, max=350.0, step=1.0,
+    )
+    leg_x_width: float = param(
+        15.0,
+        desc="Thickness of X leg",
+        unit="mm", min=3.0, max=80.0, step=0.5,
+    )
+    leg_y_length: float = param(
+        238.0,
+        desc="Length along Y wall (0 = omit leg)",
+        unit="mm", min=0.0, max=350.0, step=1.0,
+    )
+    leg_y_width: float = param(
+        15.0,
+        desc="Thickness of Y leg",
+        unit="mm", min=3.0, max=80.0, step=0.5,
+    )
 
 
 @dataclass
 class JunctionParams:
     """Orientation and junction position (Inverse L, T-Shape, Cross)."""
 
-    mirror_x: bool = param(False, desc="Mirror left ↔ right (inverts L for opposite corner)")
-    mirror_y: bool = param(False, desc="Mirror front ↔ back")
-    leg_y_align: Literal["start", "center", "end"] = param("start", desc="Anchor for Leg Y along X")
-    leg_y_offset: float = param(0.0, unit="mm", desc="Fine shift of Leg Y from alignment (+ or -)")
-    leg_x_align: Literal["start", "center", "end"] = param("start", desc="Anchor for Leg X along Y")
-    leg_x_offset: float = param(0.0, unit="mm", desc="Fine shift of Leg X from alignment (+ or -)")
+    mirror_x: bool = param(
+        False,
+        desc="Mirror left ↔ right (inverts L for opposite corner)",
+    )
+    mirror_y: bool = param(
+        False,
+        desc="Mirror front ↔ back",
+    )
+    leg_y_align: Literal["start", "center", "end"] = param(
+        "start",
+        desc="Anchor for Leg Y along X",
+    )
+    leg_y_offset: float = param(
+        0.0,
+        desc="Fine shift of Leg Y from alignment (+ or -)",
+        unit="mm",
+    )
+    leg_x_align: Literal["start", "center", "end"] = param(
+        "start",
+        desc="Anchor for Leg X along Y",
+    )
+    leg_x_offset: float = param(
+        0.0,
+        desc="Fine shift of Leg X from alignment (+ or -)",
+        unit="mm",
+    )
 
 
 @dataclass
 class EdgeTreatmentParams:
     """Corner radii and top perimeter edge treatment."""
 
-    corner_radius: float = param(2.0, min=0.0, max=20.0, step=0.5, unit="mm", desc="General vertical corner radius")
-    outer_corner_radius: Optional[float] = param(None, min=0.0, max=20.0, step=0.5, unit="mm", desc="Outer junction corner radius (Auto = corner radius)")
-    inner_corner_radius: Optional[float] = param(4.0, min=0.0, max=20.0, step=0.5, unit="mm", desc="Inside junction corner radius (Auto = corner radius)")
-    end_corner_radius: float = param(0.0, min=0.0, max=10.0, step=0.5, unit="mm", desc="Mating arm end corner radius (0 = flush butt-joint)")
-    edge_radius: float = param(1.0, min=0.0, max=8.0, step=0.2, unit="mm", desc="Top perimeter edge fillet/chamfer size")
-    edge_treatment: Literal["fillet", "chamfer"] = param("fillet", desc="Top perimeter edge profile")
+    corner_radius: float = param(
+        2.0,
+        desc="General vertical corner radius",
+        unit="mm", min=0.0, max=20.0, step=0.5,
+    )
+    outer_corner_radius: Optional[float] = param(
+        None,
+        desc="Outer junction corner radius (Auto = corner radius)",
+        unit="mm", min=0.0, max=20.0, step=0.5,
+    )
+    inner_corner_radius: Optional[float] = param(
+        4.0,
+        desc="Inside junction corner radius (Auto = corner radius)",
+        unit="mm", min=0.0, max=20.0, step=0.5,
+    )
+    end_corner_radius: float = param(
+        0.0,
+        desc="Mating arm end corner radius (0 = flush butt-joint)",
+        unit="mm", min=0.0, max=10.0, step=0.5,
+    )
+    edge_radius: float = param(
+        1.0,
+        desc="Top perimeter edge fillet/chamfer size",
+        unit="mm", min=0.0, max=8.0, step=0.2,
+    )
+    edge_treatment: Literal["fillet", "chamfer"] = param(
+        "fillet",
+        desc="Top perimeter edge profile",
+    )
 
 
 @dataclass
 class HollowParams:
     """Hollow / shell underside options (saves filament on thick spacers)."""
 
-    enabled: bool = param(False, desc="Hollow out bottom with open underside")
-    wall_thickness: float = param(2.0, min=1.0, max=8.0, step=0.2, unit="mm", desc="Side wall thickness when hollowed")
-    top_thickness: float = param(2.0, min=1.0, max=8.0, step=0.2, unit="mm", desc="Top solid roof thickness when hollowed")
+    enabled: bool = param(
+        False,
+        desc="Hollow out bottom with open underside",
+    )
+    wall_thickness: float = param(
+        2.0,
+        desc="Side wall thickness when hollowed",
+        unit="mm", min=1.0, max=8.0, step=0.2,
+    )
+    top_thickness: float = param(
+        2.0,
+        desc="Top solid roof thickness when hollowed",
+        unit="mm", min=1.0, max=8.0, step=0.2,
+    )
 
 
 @dataclass
 class FingerNotchParams:
     """Ergonomic finger-lift scoop on top face."""
 
-    enabled: bool = param(False, desc="Add top-face scoop for easy prying/removal")
-    radius: float = param(12.0, min=4.0, max=30.0, step=0.5, unit="mm", desc="Spherical scoop cutter radius")
-    depth: float = param(2.5, min=0.5, max=10.0, step=0.2, unit="mm", desc="Scoop recess depth from top surface")
+    enabled: bool = param(
+        False,
+        desc="Add top-face scoop for easy prying/removal",
+    )
+    radius: float = param(
+        12.0,
+        desc="Spherical scoop cutter radius",
+        unit="mm", min=4.0, max=30.0, step=0.5,
+    )
+    depth: float = param(
+        2.5,
+        desc="Scoop recess depth from top surface",
+        unit="mm", min=0.5, max=10.0, step=0.2,
+    )
 
 
 @dataclass
 class CutoutsParams:
     """Notches & cutouts (for drawer locks, latches, handle bolts, etc.)."""
 
-    enabled: bool = param(False, desc="Apply configured leg notches and cutouts")
+    enabled: bool = param(
+        False,
+        desc="Apply configured leg notches and cutouts",
+    )
     items: List[SpacerCutout] = field(
         default_factory=lambda: [
             SpacerCutout(
