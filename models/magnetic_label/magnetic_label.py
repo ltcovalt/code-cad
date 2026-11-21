@@ -22,7 +22,7 @@ from __future__ import annotations
 import math
 import os
 import sys
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path
 from typing import List, Literal, Optional, Tuple, Union
@@ -32,6 +32,15 @@ if os.path.isdir("build123d") and sys.path and sys.path[0] in ("", "."):
     sys.path.pop(0)
 
 from build123d import *
+
+try:
+    from utils.params import group, param
+except ImportError:
+    for _p in Path(__file__).resolve().parents:
+        if (_p / "utils").is_dir():
+            sys.path.insert(0, str(_p))
+            break
+    from utils.params import group, param
 
 
 def _get_viewer():
@@ -99,70 +108,70 @@ def _resolve_font_style(style_input: Union[str, FontStyle]) -> FontStyle:
 class TextParams:
     """Text content, typography, and rendering mode."""
 
-    content: str = "FASTENERS"
-    font_size: float = field(default=12.0, metadata={"min": 4.0, "max": 36.0, "step": 0.5})  # Font height in mm
-    font: str = "Arial"                    # Font family (e.g. 'Arial', 'FreeSans', 'Helvetica')
-    font_style: Literal["regular", "bold", "italic", "bold_italic"] = "bold"  # Font weight/slant
-    align: Literal["center", "left", "right"] = "center"  # Horizontal text alignment
-    offset_y: float = field(default=0.0, metadata={"min": -10.0, "max": 10.0, "step": 0.2})  # Fine vertical offset adjustment in mm
-    mode: Literal["embossed", "debossed", "flush"] = "embossed"  # Text rendering style
-    depth: float = field(default=1.2, metadata={"min": 0.4, "max": 4.0, "step": 0.1})  # Height of raised letters or depth of engraving (mm)
+    content: str = param("FASTENERS", desc="Label text string")
+    font_size: float = param(12.0, min=4.0, max=36.0, step=0.5, unit="mm", desc="Text cap height")
+    font: str = param("Arial", desc="Font family (e.g. Arial, FreeSans, Helvetica)")
+    font_style: Literal["regular", "bold", "italic", "bold_italic"] = param("bold", desc="Font weight / slant")
+    align: Literal["center", "left", "right"] = param("center", desc="Horizontal text alignment")
+    offset_y: float = param(0.0, min=-10.0, max=10.0, step=0.2, label="Vertical Offset", unit="mm", desc="Fine vertical centering adjustment")
+    mode: Literal["embossed", "debossed", "flush"] = param("embossed", desc="Raised, engraved, or multi-color flush inlay")
+    depth: float = param(1.2, min=0.4, max=4.0, step=0.1, unit="mm", desc="Raised letter height or engraving depth")
 
 
 @dataclass
 class SizingParams:
     """Plate dimensions and auto-sizing margins."""
 
-    auto_size: bool = False                # Adaptive text sizing (True) or static dimensions (False)
-    width: float = field(default=100.0, metadata={"min": 20.0, "max": 250.0, "step": 1.0, "when": {"auto_size": False}})  # Used when auto_size is False (mm)
-    height: float = field(default=16.0, metadata={"min": 10.0, "max": 80.0, "step": 1.0, "when": {"auto_size": False}})  # Used when auto_size is False (mm)
-    padding_x: float = field(default=4.0, metadata={"min": 1.0, "max": 25.0, "step": 0.5, "when": {"auto_size": True}})  # Margin around text in auto-size mode (mm)
-    padding_y: float = field(default=4.0, metadata={"min": 1.0, "max": 25.0, "step": 0.5, "when": {"auto_size": True}})  # Margin around text in auto-size mode (mm)
-    min_width: float = field(default=30.0, metadata={"min": 15.0, "max": 150.0, "step": 1.0, "when": {"auto_size": True}})  # Minimum plate width limit (mm)
-    min_height: float = field(default=16.0, metadata={"min": 10.0, "max": 60.0, "step": 1.0, "when": {"auto_size": True}})  # Minimum plate height limit (mm)
+    auto_size: bool = param(False, desc="Fit plate automatically to text bounds")
+    width: float = param(100.0, min=20.0, max=250.0, step=1.0, unit="mm", when={"auto_size": False}, desc="Fixed plate width")
+    height: float = param(16.0, min=10.0, max=80.0, step=1.0, unit="mm", when={"auto_size": False}, desc="Fixed plate height")
+    padding_x: float = param(4.0, min=1.0, max=25.0, step=0.5, label="Horizontal Padding", unit="mm", when={"auto_size": True}, desc="Left/right margin around text")
+    padding_y: float = param(4.0, min=1.0, max=25.0, step=0.5, label="Vertical Padding", unit="mm", when={"auto_size": True}, desc="Top/bottom margin around text")
+    min_width: float = param(30.0, min=15.0, max=150.0, step=1.0, unit="mm", when={"auto_size": True}, desc="Minimum auto-sized plate width")
+    min_height: float = param(16.0, min=10.0, max=60.0, step=1.0, unit="mm", when={"auto_size": True}, desc="Minimum auto-sized plate height")
 
 
 @dataclass
 class PlateParams:
     """Base plate thickness and edge styling."""
 
-    base_thickness: float = field(default=3.0, metadata={"min": 1.5, "max": 8.0, "step": 0.2})  # Overall plate thickness (mm)
-    corner_radius: float = field(default=3.0, metadata={"min": 0.0, "max": 15.0, "step": 0.5})  # Corner fillet radius (mm; 0 for square)
-    top_chamfer: float = field(default=0.6, metadata={"min": 0.0, "max": 2.0, "step": 0.1})  # 45-degree bevel on front perimeter (mm; 0 to disable)
-    min_floor_thickness: float = field(default=0.8, metadata={"min": 0.4, "max": 3.0, "step": 0.1})  # Minimum solid plastic floor thickness behind magnets (mm)
+    base_thickness: float = param(3.0, min=1.5, max=8.0, step=0.2, unit="mm", desc="Overall plate thickness")
+    corner_radius: float = param(3.0, min=0.0, max=15.0, step=0.5, unit="mm", desc="Corner fillet radius (0 = square)")
+    top_chamfer: float = param(0.6, min=0.0, max=2.0, step=0.1, unit="mm", desc="45° front perimeter bevel (0 = none)")
+    min_floor_thickness: float = param(0.8, min=0.4, max=3.0, step=0.1, unit="mm", desc="Minimum solid plastic behind magnets")
 
 
 @dataclass
 class BorderRimParams:
     """Optional raised border frame around front face."""
 
-    enabled: bool = True                   # Enable raised border frame around face
-    width: float = field(default=1.2, metadata={"min": 0.6, "max": 4.0, "step": 0.2})  # Width of raised border frame (mm)
+    enabled: bool = param(True, desc="Add raised perimeter border frame")
+    width: float = param(1.2, min=0.6, max=4.0, step=0.2, unit="mm", desc="Raised border frame width")
 
 
 @dataclass
 class MagnetParams:
     """Rear press-fit magnet pockets."""
 
-    enabled: bool = True                   # Enable/disable rear magnet pockets
-    diameter: float = field(default=10.0, metadata={"min": 3.0, "max": 20.0, "step": 0.5})  # Nominal magnet diameter in mm
-    thickness: float = field(default=2.0, metadata={"min": 1.0, "max": 5.0, "step": 0.2})  # Nominal magnet thickness in mm
-    clearance: float = field(default=0.0, metadata={"min": -0.2, "max": 0.5, "step": 0.05})  # Press-fit diameter tolerance for 3D printing (mm)
-    pocket_depth_offset: float = field(default=0.2, metadata={"min": 0.0, "max": 1.0, "step": 0.05})  # Extra depth allowance to keep magnets sub-flush (mm)
-    count: Optional[int] = field(default=None, metadata={"min": 1, "max": 10, "step": 1})  # Specific magnet count, or None for automatic spacing
-    edge_margin: float = field(default=8.0, metadata={"min": 4.0, "max": 30.0, "step": 0.5})  # Distance from ends to magnet centers (mm)
-    positions: Optional[List[Tuple[float, float]]] = None
+    enabled: bool = param(True, desc="Cut rear press-fit magnet pockets")
+    diameter: float = param(10.0, min=3.0, max=20.0, step=0.5, unit="mm", desc="Nominal magnet diameter")
+    thickness: float = param(2.0, min=1.0, max=5.0, step=0.2, unit="mm", desc="Nominal magnet thickness")
+    clearance: float = param(0.0, min=-0.2, max=0.5, step=0.05, unit="mm", desc="Press-fit diameter tolerance")
+    pocket_depth_offset: float = param(0.2, min=0.0, max=1.0, step=0.05, unit="mm", desc="Extra depth to keep magnets sub-flush")
+    count: Optional[int] = param(None, min=1, max=10, step=1, desc="Fixed magnet count (Auto = spaced by length)")
+    edge_margin: float = param(8.0, min=4.0, max=30.0, step=0.5, unit="mm", desc="Distance from plate ends to outer magnets")
+    positions: Optional[List[Tuple[float, float]]] = param(None, desc="Explicit (x, y) magnet centers (Auto = calculated)")
 
 
 @dataclass
 class MagneticLabelParams:
     """Configuration parameters for the parametric magnetic label generator."""
 
-    text: TextParams = field(default_factory=TextParams)
-    sizing: SizingParams = field(default_factory=SizingParams)
-    plate: PlateParams = field(default_factory=PlateParams)
-    border: BorderRimParams = field(default_factory=BorderRimParams)
-    magnets: MagnetParams = field(default_factory=MagnetParams)
+    text: TextParams = group(TextParams)
+    sizing: SizingParams = group(SizingParams)
+    plate: PlateParams = group(PlateParams)
+    border: BorderRimParams = group(BorderRimParams)
+    magnets: MagnetParams = group(MagnetParams)
 
 
 @dataclass
