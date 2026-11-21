@@ -17,10 +17,21 @@ Features:
 """
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from build123d import *
+
+try:
+    from utils.params import group, param
+except ImportError:
+    import sys
+
+    for _p in Path(__file__).resolve().parents:
+        if (_p / "utils").is_dir():
+            sys.path.insert(0, str(_p))
+            break
+    from utils.params import group, param
 
 # ==============================================================================
 # Standardized Export Configuration
@@ -34,50 +45,50 @@ OUTPUT_DIR: str = "exports"   # Relative subfolder alongside the script
 class CoreParams:
     """Primary C-clip spacer dimensions."""
 
-    thickness: float = field(default=12.0, metadata={"min": 2.0, "max": 60.0, "step": 0.5})  # Axial thickness / space added by spacer in mm (Z height)
-    inside_diameter: float = field(default=44.0, metadata={"min": 6.0, "max": 120.0, "step": 0.5})  # Nominal diameter of the rod/shaft to fit in mm
-    outside_diameter: float = field(default=76.0, metadata={"min": 12.0, "max": 180.0, "step": 0.5})  # Outer diameter of the spacer in mm
-    fit_clearance: float = field(default=0.2, metadata={"min": -0.5, "max": 1.0, "step": 0.05})  # Diametral bore clearance in mm (bore = inside_diameter + fit_clearance)
+    thickness: float = param(12.0, min=2.0, max=60.0, step=0.5, unit="mm", desc="Axial height added along shaft")
+    inside_diameter: float = param(44.0, min=6.0, max=120.0, step=0.5, unit="mm", desc="Nominal rod/shaft diameter")
+    outside_diameter: float = param(76.0, min=12.0, max=180.0, step=0.5, unit="mm", desc="Outer spacer diameter")
+    fit_clearance: float = param(0.2, min=-0.5, max=1.0, step=0.05, unit="mm", desc="Added to inside diameter for bore fit")
 
 
 @dataclass
 class JawParams:
     """Snap-on C-opening jaw geometry."""
 
-    opening_angle: float = field(default=95.0, metadata={"min": 20.0, "max": 165.0, "step": 1.0})  # Angular width of inner C-opening in degrees (< 180 for shaft retention)
-    jaw_flare_angle: float = field(default=8.0, metadata={"min": -20.0, "max": 45.0, "step": 1.0})  # Jaw cut angle from +X in deg (0 = straight parallel slot, smaller = more closed outer rim)
-    jaw_curve_depth: float = field(default=1.2, metadata={"min": 0.0, "max": 6.0, "step": 0.1})  # Concave C-curve bow depth along each jaw face in mm (0.0 for straight jaw)
-    inner_tip_fillet: float = field(default=4.0, metadata={"min": 0.0, "max": 10.0, "step": 0.2})  # Rounding radius transitioning jaw edge into inner bore in mm (0.0 for crisp corner)
-    outer_tip_fillet: float = field(default=2.4, metadata={"min": 0.0, "max": 10.0, "step": 0.2})  # Rounding radius curving outer jaw point toward inner point in mm (0.0 for crisp tip)
+    opening_angle: float = param(95.0, min=20.0, max=165.0, step=1.0, unit="°", desc="Inner C-opening angle (< 180° for retention)")
+    jaw_flare_angle: float = param(8.0, min=-20.0, max=45.0, step=1.0, unit="°", desc="Jaw cut angle (0° = parallel slot)")
+    jaw_curve_depth: float = param(1.2, min=0.0, max=6.0, step=0.1, unit="mm", desc="Concave bow depth along jaw face (0 = straight)")
+    inner_tip_fillet: float = param(4.0, min=0.0, max=10.0, step=0.2, unit="mm", desc="Rounding where jaw meets inner bore (0 = crisp)")
+    outer_tip_fillet: float = param(2.4, min=0.0, max=10.0, step=0.2, unit="mm", desc="Outer jaw tip rounding radius (0 = crisp)")
 
 
 @dataclass
 class RemovalNotchParams:
     """Inside-edge removal cutout bordering the shaft."""
 
-    enabled: bool = True                    # Enable inside-edge grab/remove cutout
-    width: float = field(default=32.0, metadata={"min": 4.0, "max": 60.0, "step": 1.0})  # Tangential width of the inside-edge cutout in mm
-    depth: float = field(default=8.0, metadata={"min": 1.0, "max": 25.0, "step": 0.5})  # Radial depth of cutout extending outward from inner bore in mm
-    angle: float = field(default=180.0, metadata={"min": 0.0, "max": 360.0, "step": 5.0})  # Angular position of cutout in degrees (180 = spine opposite C-opening)
-    fillet: float = field(default=0.6, metadata={"min": 0.0, "max": 5.0, "step": 0.1})  # Transition fillet where cutout meets inner bore in mm (0.0 for crisp edge)
+    enabled: bool = param(True, desc="Add inside-edge grab/pry cutout")
+    width: float = param(32.0, min=4.0, max=60.0, step=1.0, unit="mm", desc="Tangential width of cutout")
+    depth: float = param(8.0, min=1.0, max=25.0, step=0.5, unit="mm", desc="Radial depth outward from inner bore")
+    angle: float = param(180.0, min=0.0, max=360.0, step=5.0, unit="°", desc="Angular position (180° = opposite opening)")
+    fillet: float = param(0.6, min=0.0, max=5.0, step=0.1, unit="mm", desc="Transition fillet at inner bore (0 = crisp)")
 
 
 @dataclass
 class EdgeChamferParams:
     """Top and bottom perimeter edge bevel."""
 
-    enabled: bool = True                    # Enable subtle top/bottom perimeter bevel
-    size: float = field(default=0.3, metadata={"min": 0.0, "max": 3.0, "step": 0.1})  # Chamfer size on top and bottom edges in mm
+    enabled: bool = param(True, desc="Add subtle top/bottom perimeter bevel")
+    size: float = param(0.3, min=0.0, max=3.0, step=0.1, unit="mm", desc="Top and bottom edge chamfer size")
 
 
 @dataclass
 class CClipSpacerParams:
     """Parameters for the parametric snap-on C-clip spacer."""
 
-    core: CoreParams = field(default_factory=CoreParams)
-    jaw: JawParams = field(default_factory=JawParams)
-    removal_notch: RemovalNotchParams = field(default_factory=RemovalNotchParams)
-    edge_chamfer: EdgeChamferParams = field(default_factory=EdgeChamferParams)
+    core: CoreParams = group(CoreParams)
+    jaw: JawParams = group(JawParams)
+    removal_notch: RemovalNotchParams = group(RemovalNotchParams)
+    edge_chamfer: EdgeChamferParams = group(EdgeChamferParams)
 
 
 def _shortest_angle_diff_deg(a: float, b: float) -> float:
