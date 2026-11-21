@@ -108,59 +108,169 @@ def _resolve_font_style(style_input: Union[str, FontStyle]) -> FontStyle:
 class TextParams:
     """Text content, typography, and rendering mode."""
 
-    content: str = param("FASTENERS", desc="Label text string")
-    font_size: float = param(12.0, min=4.0, max=36.0, step=0.5, unit="mm", desc="Text cap height")
-    font: str = param("Arial", desc="Font family (e.g. Arial, FreeSans, Helvetica)")
-    font_style: Literal["regular", "bold", "italic", "bold_italic"] = param("bold", desc="Font weight / slant")
-    align: Literal["center", "left", "right"] = param("center", desc="Horizontal text alignment")
-    offset_y: float = param(0.0, min=-10.0, max=10.0, step=0.2, label="Vertical Offset", unit="mm", desc="Fine vertical centering adjustment")
-    mode: Literal["embossed", "debossed", "flush"] = param("embossed", desc="Raised, engraved, or multi-color flush inlay")
-    depth: float = param(1.2, min=0.4, max=4.0, step=0.1, unit="mm", desc="Raised letter height or engraving depth")
+    content: str = param(
+        "FASTENERS",
+        desc="Label text string",
+    )
+    font_size: float = param(
+        12.0,
+        desc="Text cap height",
+        unit="mm", min=4.0, max=36.0, step=0.5,
+    )
+    font: str = param(
+        "Arial",
+        desc="Font family (e.g. Arial, FreeSans, Helvetica)",
+    )
+    font_style: Literal["regular", "bold", "italic", "bold_italic"] = param(
+        "bold",
+        desc="Font weight / slant",
+    )
+    align: Literal["center", "left", "right"] = param(
+        "center",
+        desc="Horizontal text alignment",
+    )
+    offset_y: float = param(
+        0.0,
+        label="Vertical Offset",
+        desc="Fine vertical centering adjustment",
+        unit="mm", min=-10.0, max=10.0, step=0.2,
+    )
+    mode: Literal["embossed", "debossed", "flush"] = param(
+        "embossed",
+        desc="Raised, engraved, or multi-color flush inlay",
+    )
+    depth: float = param(
+        1.2,
+        desc="Raised letter height or engraving depth",
+        unit="mm", min=0.4, max=4.0, step=0.1,
+    )
 
 
 @dataclass
 class SizingParams:
     """Plate dimensions and auto-sizing margins."""
 
-    auto_size: bool = param(False, desc="Fit plate automatically to text bounds")
-    width: float = param(100.0, min=20.0, max=250.0, step=1.0, unit="mm", when={"auto_size": False}, desc="Fixed plate width")
-    height: float = param(16.0, min=10.0, max=80.0, step=1.0, unit="mm", when={"auto_size": False}, desc="Fixed plate height")
-    padding_x: float = param(4.0, min=1.0, max=25.0, step=0.5, label="Horizontal Padding", unit="mm", when={"auto_size": True}, desc="Left/right margin around text")
-    padding_y: float = param(4.0, min=1.0, max=25.0, step=0.5, label="Vertical Padding", unit="mm", when={"auto_size": True}, desc="Top/bottom margin around text")
-    min_width: float = param(30.0, min=15.0, max=150.0, step=1.0, unit="mm", when={"auto_size": True}, desc="Minimum auto-sized plate width")
-    min_height: float = param(16.0, min=10.0, max=60.0, step=1.0, unit="mm", when={"auto_size": True}, desc="Minimum auto-sized plate height")
+    auto_size: bool = param(
+        False,
+        desc="Fit plate automatically to text bounds",
+    )
+    width: float = param(
+        100.0,
+        desc="Fixed plate width",
+        unit="mm", min=20.0, max=250.0, step=1.0, when={"auto_size": False},
+    )
+    height: float = param(
+        16.0,
+        desc="Fixed plate height",
+        unit="mm", min=10.0, max=80.0, step=1.0, when={"auto_size": False},
+    )
+    padding_x: float = param(
+        4.0,
+        label="Horizontal Padding",
+        desc="Left/right margin around text",
+        unit="mm", min=1.0, max=25.0, step=0.5, when={"auto_size": True},
+    )
+    padding_y: float = param(
+        4.0,
+        label="Vertical Padding",
+        desc="Top/bottom margin around text",
+        unit="mm", min=1.0, max=25.0, step=0.5, when={"auto_size": True},
+    )
+    min_width: float = param(
+        30.0,
+        desc="Minimum auto-sized plate width",
+        unit="mm", min=15.0, max=150.0, step=1.0, when={"auto_size": True},
+    )
+    min_height: float = param(
+        16.0,
+        desc="Minimum auto-sized plate height",
+        unit="mm", min=10.0, max=60.0, step=1.0, when={"auto_size": True},
+    )
 
 
 @dataclass
 class PlateParams:
     """Base plate thickness and edge styling."""
 
-    base_thickness: float = param(3.0, min=1.5, max=8.0, step=0.2, unit="mm", desc="Overall plate thickness")
-    corner_radius: float = param(3.0, min=0.0, max=15.0, step=0.5, unit="mm", desc="Corner fillet radius (0 = square)")
-    top_chamfer: float = param(0.6, min=0.0, max=2.0, step=0.1, unit="mm", desc="45° front perimeter bevel (0 = none)")
-    min_floor_thickness: float = param(0.8, min=0.4, max=3.0, step=0.1, unit="mm", desc="Minimum solid plastic behind magnets")
+    base_thickness: float = param(
+        3.0,
+        desc="Overall plate thickness",
+        unit="mm", min=1.5, max=8.0, step=0.2,
+    )
+    corner_radius: float = param(
+        3.0,
+        desc="Corner fillet radius (0 = square)",
+        unit="mm", min=0.0, max=15.0, step=0.5,
+    )
+    top_chamfer: float = param(
+        0.6,
+        desc="45° front perimeter bevel (0 = none)",
+        unit="mm", min=0.0, max=2.0, step=0.1,
+    )
+    min_floor_thickness: float = param(
+        0.8,
+        desc="Minimum solid plastic behind magnets",
+        unit="mm", min=0.4, max=3.0, step=0.1,
+    )
 
 
 @dataclass
 class BorderRimParams:
     """Optional raised border frame around front face."""
 
-    enabled: bool = param(True, desc="Add raised perimeter border frame")
-    width: float = param(1.2, min=0.6, max=4.0, step=0.2, unit="mm", desc="Raised border frame width")
+    enabled: bool = param(
+        True,
+        desc="Add raised perimeter border frame",
+    )
+    width: float = param(
+        1.2,
+        desc="Raised border frame width",
+        unit="mm", min=0.6, max=4.0, step=0.2,
+    )
 
 
 @dataclass
 class MagnetParams:
     """Rear press-fit magnet pockets."""
 
-    enabled: bool = param(True, desc="Cut rear press-fit magnet pockets")
-    diameter: float = param(10.0, min=3.0, max=20.0, step=0.5, unit="mm", desc="Nominal magnet diameter")
-    thickness: float = param(2.0, min=1.0, max=5.0, step=0.2, unit="mm", desc="Nominal magnet thickness")
-    clearance: float = param(0.0, min=-0.2, max=0.5, step=0.05, unit="mm", desc="Press-fit diameter tolerance")
-    pocket_depth_offset: float = param(0.2, min=0.0, max=1.0, step=0.05, unit="mm", desc="Extra depth to keep magnets sub-flush")
-    count: Optional[int] = param(None, min=1, max=10, step=1, desc="Fixed magnet count (Auto = spaced by length)")
-    edge_margin: float = param(8.0, min=4.0, max=30.0, step=0.5, unit="mm", desc="Distance from plate ends to outer magnets")
-    positions: Optional[List[Tuple[float, float]]] = param(None, desc="Explicit (x, y) magnet centers (Auto = calculated)")
+    enabled: bool = param(
+        True,
+        desc="Cut rear press-fit magnet pockets",
+    )
+    diameter: float = param(
+        10.0,
+        desc="Nominal magnet diameter",
+        unit="mm", min=3.0, max=20.0, step=0.5,
+    )
+    thickness: float = param(
+        2.0,
+        desc="Nominal magnet thickness",
+        unit="mm", min=1.0, max=5.0, step=0.2,
+    )
+    clearance: float = param(
+        0.0,
+        desc="Press-fit diameter tolerance",
+        unit="mm", min=-0.2, max=0.5, step=0.05,
+    )
+    pocket_depth_offset: float = param(
+        0.2,
+        desc="Extra depth to keep magnets sub-flush",
+        unit="mm", min=0.0, max=1.0, step=0.05,
+    )
+    count: Optional[int] = param(
+        None,
+        desc="Fixed magnet count (Auto = spaced by length)",
+        min=1, max=10, step=1,
+    )
+    edge_margin: float = param(
+        8.0,
+        desc="Distance from plate ends to outer magnets",
+        unit="mm", min=4.0, max=30.0, step=0.5,
+    )
+    positions: Optional[List[Tuple[float, float]]] = param(
+        None,
+        desc="Explicit (x, y) magnet centers (Auto = calculated)",
+    )
 
 
 @dataclass
