@@ -18,6 +18,7 @@ When building CAD models in this repository:
        - Use `Literal[...]` for constrained string choices so the GUI renders dropdowns.
        - **Structured UI Metadata (`utils/params.py` & `code-cad-studio`)**:
          - Use `param(default, *, label=None, desc=None, unit=None, min=None, max=None, step=None, when=None)` from `utils/params.py` (which outputs standard `dataclasses.Field.metadata`).
+         - Always format `param(...)` calls across multiple lines with the bare default value on its own line, `label`/`desc` below, and `unit`/`min`/`max`/`step`/`when` grouped underneath for consistent visual scanning.
          - Do **not** rely on `#` comments for UI descriptions—Studio reads strictly from `Field.metadata` (plus runtime nested class `"""docstrings"""`), leaving `#` comments purely for developer notes.
          - Specify `unit` (`"mm"`, `"in"`, `"°"`, `"U"`, etc.) instead of repeating units inside `desc`, and specify `label` only when the humanized field name needs improvement (e.g. `diameter_in` → `label="Diameter Override", unit="in"`).
          - Use `when={"<field_or_path>": <value_or_list>}` for mode-dependent/conditional parameters (bare keys resolve from the current group; dotted paths like `"core.shape"` resolve from root params; also supported on `group(...)`).
