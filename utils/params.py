@@ -36,6 +36,7 @@ def param(
     *,
     label: str | None = None,
     desc: str | None = None,
+    item_label: str | None = None,
     unit: str | None = None,
     min: int | float | None = None,
     max: int | float | None = None,
@@ -48,6 +49,8 @@ def param(
         meta["label"] = label
     if desc is not None:
         meta["description"] = desc
+    if item_label is not None:
+        meta["item_label"] = item_label
     if unit is not None:
         meta["unit"] = unit
     if min is not None:
@@ -59,6 +62,39 @@ def param(
     if when is not None:
         meta["when"] = when
     return cast(T, field(default=default, metadata=meta))
+
+
+def param_list(
+    factory: Callable[[], list[T]],
+    *,
+    label: str | None = None,
+    desc: str | None = None,
+    item_label: str | None = None,
+    unit: str | None = None,
+    min: int | float | None = None,
+    max: int | float | None = None,
+    step: int | float | None = None,
+    when: dict[str, Any] | None = None,
+) -> list[T]:
+    """Define a list-of-items parameter field with structured UI metadata."""
+    meta: dict[str, Any] = {}
+    if label is not None:
+        meta["label"] = label
+    if desc is not None:
+        meta["description"] = desc
+    if item_label is not None:
+        meta["item_label"] = item_label
+    if unit is not None:
+        meta["unit"] = unit
+    if min is not None:
+        meta["min"] = min
+    if max is not None:
+        meta["max"] = max
+    if step is not None:
+        meta["step"] = step
+    if when is not None:
+        meta["when"] = when
+    return cast(list[T], field(default_factory=factory, metadata=meta))
 
 
 def group(
