@@ -26,7 +26,7 @@ from typing import Optional
 from build123d import *
 
 try:
-    from utils.params import group, param
+    from utils.params import default_preset, group, param
 except ImportError:
     import sys
 
@@ -34,7 +34,7 @@ except ImportError:
         if (_p / "utils").is_dir():
             sys.path.insert(0, str(_p))
             break
-    from utils.params import group, param
+    from utils.params import default_preset, group, param
 
 # ==============================================================================
 # Standardized Export Configuration
@@ -51,22 +51,22 @@ class CoreParams:
     thickness: float = param(
         12.0,
         desc="Axial thickness along shaft",
-        unit="mm", min=2.0, max=60.0, step=0.5,
+        unit="mm", min=2.0, max=60.0, step=0.1,
     )
     inside_diameter: float = param(
         44.0,
         desc="Nominal rod/shaft diameter",
-        unit="mm", min=6.0, max=120.0, step=0.5,
+        unit="mm", min=6.0, max=120.0, step=0.1,
     )
     outside_diameter: float = param(
-        76.0,
+        64.0,
         desc="Outer clip diameter",
-        unit="mm", min=12.0, max=180.0, step=0.5,
+        unit="mm", min=12.0, max=180.0, step=0.1,
     )
     fit_clearance: float = param(
         0.2,
         desc="Added to inside diameter for bore fit",
-        unit="mm", min=-0.5, max=1.0, step=0.05,
+        unit="mm", min=-0.5, max=1.0, step=0.01,
     )
 
 
@@ -75,7 +75,7 @@ class JawParams:
     """Snap-on C-opening jaw geometry."""
 
     opening_angle: float = param(
-        95.0,
+        120.0,
         desc="Inner C-opening angle (< 180° for retention)",
         unit="°", min=20.0, max=165.0, step=1.0,
     )
@@ -158,6 +158,7 @@ class EdgeChamferParams:
     )
 
 
+@default_preset("Prusa Core One Spool", desc="44 mm spool hub retaining clip")
 @dataclass
 class CClipParams:
     """Parameters for the parametric snap-on C-clip."""
