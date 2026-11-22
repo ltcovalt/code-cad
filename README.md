@@ -40,14 +40,15 @@ All model scripts include universal viewer bindings that automatically support b
 
 ## Repository Structure
 
-Each generator is structured in its own self-contained directory with its source script, dedicated documentation, and 3D export files (`.stl` / `.step`):
+Each generator is structured in its own directory with its source script, optional `presets.json`, and dedicated documentation. Standalone script exports write to the gitignored root `exports/` directory:
 
 ```
 cad/
 ├── .gitignore
 ├── README.md                   # Repository overview (this file)
 ├── docs/                       # Manuals and general reference PDFs
-├── utils/                      # Core zero-dependency helper scripts (e.g. params.py)
+├── exports/                    # Gitignored output directory for local STL/STEP/3MF exports
+├── utils/                      # Core zero-dependency helpers (params.py, runner.py)
 ├── models/                     # Parametric generator projects
 │   ├── c_clip/                 # Parametric snap-on C-clips for rods and shafts
 │   ├── container_lid/          # Container lid generator (Pyrex, etc.)

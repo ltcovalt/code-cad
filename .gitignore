@@ -25,3 +25,10 @@ Thumbs.db
 # Temporary CAD/testing files
 *.tmp
 *.log
+
+# Generated CAD exports (reproducible from models + presets)
+exports/
+*.stl
+*.step
+*.stp
+*.3mf
