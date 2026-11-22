@@ -7,6 +7,7 @@ cutout styles, and EIA-310 mounting slot counts/positions.
 import json
 import os
 import sys
+import time
 
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path = [p for p in sys.path if p not in ("", ".")]
@@ -20,6 +21,7 @@ from rack_bracket import (
     CutoutParams,
     RackBracketParams,
     RackSlotsParams,
+    SideHolesParams,
     create_rack_bracket,
     export_filename,
 )
@@ -52,14 +54,20 @@ def validate():
     assert p_default.rack_slots.single_slot_1u is False, "Expected single_slot_1u=False by default"
     assert export_filename(p_default) == "rack_bracket_2u_hex", f"Unexpected default filename: {export_filename(p_default)}"
 
+    t0 = time.perf_counter()
     b_default = create_rack_bracket(p_default)
+    t_default_ms = (time.perf_counter() - t0) * 1000.0
     bbox_default = b_default.bounding_box()
     expected_h2 = 2 * 44.45 - 1.2  # 87.7 mm
     assert abs(bbox_default.size.Z - expected_h2) < 0.05, f"2U height mismatch: {bbox_default.size.Z} vs {expected_h2}"
     assert b_default.is_valid, "Default 2U Hex bracket solid is invalid"
+    assert abs(b_default.volume - 31266.639) < 0.1, f"Unexpected 2U Hex volume: {b_default.volume:.4f}"
     default_slots = _front_flange_slot_z_centers(b_default, p_default.core.thickness)
     assert len(default_slots) == 2, f"Expected 2 front slots on 2U, got {default_slots}"
-    print(f"✓ Default 2U Hex Bracket passed: height={bbox_default.size.Z:.2f}mm, slots={default_slots}, valid={b_default.is_valid}")
+    print(
+        f"✓ Default 2U Hex Bracket passed: height={bbox_default.size.Z:.2f}mm, "
+        f"vol={b_default.volume:.2f}mm³, slots={default_slots}, time={t_default_ms:.0f}ms, valid={b_default.is_valid}"
+    )
 
     # Test 2: 1U Solid Bracket preset from presets.json
     presets_path = os.path.join(models_dir, "presets.json")
@@ -128,6 +136,35 @@ def validate():
     assert abs(bbox_custom.size.X - 120.0) < 0.05
     assert b_custom.is_valid
     print(f"✓ Custom length & thickness passed: length={bbox_custom.size.X:.2f}mm, valid={b_custom.is_valid}")
+
+    # Test 7: Sharp window corners (corner_radius=0) and no side holes
+    p_sharp = RackBracketParams(
+        core=CoreParams(u_count=2),
+        side_holes=SideHolesParams(enabled=False),
+        cutout=CutoutParams(style="hex", corner_radius=0.0),
+    )
+    b_sharp = create_rack_bracket(p_sharp)
+    assert b_sharp.is_valid, "Sharp corner hex bracket is invalid"
+    print(f"✓ Sharp-corner hex (no side holes) passed: vol={b_sharp.volume:.2f}mm³, valid={b_sharp.is_valid}")
+
+    # Test 8: Fallback path (side holes intentionally overlapping cutout window)
+    p_overlap = RackBracketParams(
+        core=CoreParams(u_count=2),
+        cutout=CutoutParams(style="window", margin_z=6.0),
+    )
+    b_overlap = create_rack_bracket(p_overlap)
+    assert b_overlap.is_valid, "Overlapping window/holes fallback bracket is invalid"
+    print(f"✓ Overlapping window/holes fallback passed: vol={b_overlap.volume:.2f}mm³, valid={b_overlap.is_valid}")
+
+    # Test 9: Solid plate with no side holes at all
+    p_plain = RackBracketParams(
+        core=CoreParams(u_count=1),
+        side_holes=SideHolesParams(enabled=False),
+        cutout=CutoutParams(style="none"),
+    )
+    b_plain = create_rack_bracket(p_plain)
+    assert b_plain.is_valid, "Plain solid bracket without side holes is invalid"
+    print(f"✓ Plain solid bracket (no side holes) passed: vol={b_plain.volume:.2f}mm³, valid={b_plain.is_valid}")
 
     print("All validation tests passed successfully!")
 
