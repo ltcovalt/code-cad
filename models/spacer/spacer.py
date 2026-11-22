@@ -21,7 +21,7 @@ from typing import List, Literal, Optional
 from build123d import *
 
 try:
-    from utils.params import group, param
+    from utils.params import default_preset, group, param
 except ImportError:
     import sys
 
@@ -29,14 +29,13 @@ except ImportError:
         if (_p / "utils").is_dir():
             sys.path.insert(0, str(_p))
             break
-    from utils.params import group, param
+    from utils.params import default_preset, group, param
 
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = False     # Save .stl file on execution (default: False)
-EXPORT_STEP: bool = False     # Save .step file on execution (default: False)
-OUTPUT_DIR: str = "exports"   # Relative subfolder alongside this script
+EXPORT_STL: bool = False     # Save .stl to repo-root exports/ (default: False)
+EXPORT_STEP: bool = False    # Save .step to repo-root exports/ (default: False)
 
 
 @dataclass
@@ -221,6 +220,7 @@ class CutoutsParams:
     )
 
 
+@default_preset("Penn Elcom Straight", desc="238 x 15 x 56 mm straight drawer side spacer")
 @dataclass
 class SpacerParams:
     """Single source of truth parameters for parametric spacers."""
@@ -765,36 +765,9 @@ def export_filename(params: SpacerParams) -> str:
 
 
 if __name__ == "__main__":
+    from utils.runner import run_model
+
     # Single source of truth: dataclass defaults take effect directly
     params = SpacerParams()
     spacer = create_spacer(params)
-
-    # Standardized exports to the exports/ directory alongside this script
-    if EXPORT_STEP or EXPORT_STL:
-        exports_path = Path(__file__).resolve().parent / OUTPUT_DIR
-        exports_path.mkdir(parents=True, exist_ok=True)
-        stem = export_filename(params)
-
-        if EXPORT_STL:
-            stl_file = exports_path / f"{stem}.stl"
-            export_stl(spacer, str(stl_file))
-            print(f"Exported STL:  {stl_file}")
-
-        if EXPORT_STEP:
-            step_file = exports_path / f"{stem}.step"
-            export_step(spacer, str(step_file))
-            print(f"Exported STEP: {step_file}")
-
-    # Display in ocp_viewer / ocp_vscode viewer if available
-    try:
-        from ocp_viewer import set_defaults, show
-        set_defaults(orbit_control=True)
-    except ImportError:
-        try:
-            from ocp_vscode import set_defaults, show
-            set_defaults(orbit_control=True)
-        except Exception:
-            def show(*args, **kwargs):
-                pass
-
-    show(spacer)
+    run_model(spacer, export_filename(params), stl=EXPORT_STL, step=EXPORT_STEP)

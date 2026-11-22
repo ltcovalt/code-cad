@@ -1,0 +1,26 @@
+{
+  "penn_elcom_left_corner": {
+    "label": "Penn Elcom Left Corner",
+    "description": "180 x 238 x 56 mm L-corner drawer spacer",
+    "params": {
+      "core": {
+        "leg_x_length": 180.0
+      }
+    }
+  },
+  "penn_elcom_notched_right_corner": {
+    "label": "Penn Elcom Notched Right Corner",
+    "description": "180 x 238 x 56 mm mirrored L-corner drawer spacer with lock clearance notch",
+    "params": {
+      "core": {
+        "leg_x_length": 180.0
+      },
+      "junction": {
+        "mirror_x": true
+      },
+      "cutouts": {
+        "enabled": true
+      }
+    }
+  }
+}

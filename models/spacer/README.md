@@ -67,16 +67,15 @@ Configure the parameters in `SpacerParams` at the top of [`spacer.py`](file:///c
 python spacer.py
 ```
 
-When enabled, `.stl` and `.step` files are saved to `models/spacer/exports/`.
+When enabled, `.stl` and `.step` files are saved to the gitignored repo-root `exports/` folder.
 
 ### Export Configuration
 
-At the top of [`spacer.py`](file:///c:/Users/luke/Repos/code-cad/models/spacer/spacer.py), exports can be toggled using standard configuration variables:
+At the top of `spacer.py`, exports can be toggled using standard configuration variables:
 
 ```python
-EXPORT_STL: bool = False               # Save .stl file on execution (default: False)
-EXPORT_STEP: bool = False              # Save .step file on execution (default: False)
-OUTPUT_DIR: str = "exports"            # Output folder alongside this script
+EXPORT_STL: bool = False     # Save .stl to repo-root exports/ (default: False)
+EXPORT_STEP: bool = False    # Save .step to repo-root exports/ (default: False)
 ```
 
 ---
