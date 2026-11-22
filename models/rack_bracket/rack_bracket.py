@@ -120,6 +120,8 @@ class SideHolesParams:
     rows: Optional[List[float]] = param(
         None,
         desc="Explicit Z heights for side hole rows (Auto = calculated)",
+        item_label="Row",
+        unit="mm", step=0.5,
     )
 
 
@@ -194,6 +196,8 @@ class RackSlotsParams:
         None,
         label="Z Positions",
         desc="Explicit Z heights for rack slots (Auto = EIA-310)",
+        item_label="Slot Z",
+        unit="mm", step=0.5,
     )
 
 
