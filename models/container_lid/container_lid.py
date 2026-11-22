@@ -37,9 +37,8 @@ except ImportError:
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = False                # Save .stl file on execution (default: False)
-EXPORT_STEP: bool = False               # Save .step file on execution (default: False)
-OUTPUT_DIR: str = "exports"             # Output folder (relative to this script's directory)
+EXPORT_STL: bool = False                # Save .stl to repo-root exports/ (default: False)
+EXPORT_STEP: bool = False               # Save .step to repo-root exports/ (default: False)
 
 
 @dataclass
@@ -711,33 +710,8 @@ def create_container_lid(params: ContainerLidParams) -> Solid:
 
 
 if __name__ == "__main__":
+    from utils.runner import run_model
+
     params = ContainerLidParams()
     lid = create_container_lid(params)
-
-    if EXPORT_STEP or EXPORT_STL:
-        exports_dir = Path(__file__).resolve().parent / OUTPUT_DIR
-        exports_dir.mkdir(parents=True, exist_ok=True)
-        stem = export_filename(params)
-
-        if EXPORT_STL:
-            stl_file = exports_dir / f"{stem}.stl"
-            export_stl(lid, str(stl_file))
-            print(f"Exported STL: {stl_file}")
-
-        if EXPORT_STEP:
-            step_file = exports_dir / f"{stem}.step"
-            export_step(lid, str(step_file))
-            print(f"Exported STEP: {step_file}")
-
-    try:
-        from ocp_viewer import set_defaults, show
-        set_defaults(orbit_control=True)
-    except ImportError:
-        try:
-            from ocp_vscode import set_defaults, show
-            set_defaults(orbit_control=True)
-        except ImportError:
-            def show(*args, **kwargs):
-                pass
-
-    show(lid)
+    run_model(lid, export_filename(params), stl=EXPORT_STL, step=EXPORT_STEP)
