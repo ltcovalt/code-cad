@@ -134,6 +134,20 @@
       }
     }
   },
+  "anchor_round_6_cup": {
+    "label": "Anchor Hocking Round 6-Cup (1.5 qt)",
+    "description": "187.3 mm (7 3/8 in) round Anchor Hocking mixing bowl",
+    "params": {
+      "core": {
+        "diameter": 187.3,
+        "rim_lip_height": 5.5,
+        "glass_wall_thickness": 4.5
+      },
+      "structure": {
+        "skirt_height": 9.0
+      }
+    }
+  },
   "anchor_round_7_cup": {
     "label": "Anchor Hocking Round 7-Cup",
     "description": "186 mm round Anchor Hocking bowl",
@@ -145,6 +159,20 @@
       },
       "structure": {
         "skirt_height": 11.5
+      }
+    }
+  },
+  "anchor_round_10_cup": {
+    "label": "Anchor Hocking Round 10-Cup (2.5 qt)",
+    "description": "219 mm (8 5/8 in) round Anchor Hocking bowl",
+    "params": {
+      "core": {
+        "diameter": 219.0,
+        "rim_lip_height": 6.0,
+        "glass_wall_thickness": 5.0
+      },
+      "structure": {
+        "skirt_height": 12.0
       }
     }
   },

@@ -206,7 +206,7 @@ class StackingRimParams:
     """Raised top nesting rim for stacked containers."""
 
     enabled: bool = param(
-        True,
+        False,
         desc="Add raised stacking rim on top surface",
     )
     height: float = param(
@@ -266,7 +266,7 @@ class PullTabParams:
     )
     grip_ribs: bool = param(
         True,
-        desc="Add raised non-slip traction ribs",
+        desc="Add recessed non-slip traction grooves",
     )
     hanging_hole: bool = param(
         False,
@@ -455,23 +455,32 @@ def build_round_lid(p: ContainerLidParams) -> Solid:
                         Circle(radius=tab.hole_diameter / 2.0, mode=Mode.SUBTRACT)
             extrude(amount=st.top_thickness, mode=Mode.ADD)
 
-            if tab.gusset_depth > 0:
-                with BuildSketch(Plane.XY.offset(-tab.gusset_depth)):
-                    with Locations(((r_outer - tab.root_overlap) + (tab.root_overlap + tab.length * 0.4) / 2.0, 0)):
-                        RectangleRounded(tab.root_overlap + tab.length * 0.4, tab.width * 0.75, radius=3.0)
-                with BuildSketch(Plane.XY):
-                    with Locations(((r_outer - tab.root_overlap) + (tab.root_overlap + tab.length * 0.8) / 2.0, 0)):
-                        RectangleRounded(tab.root_overlap + tab.length * 0.8, tab.width, radius=3.5)
-                loft(ruled=True, mode=Mode.ADD)
+            eff_gusset_depth = min(tab.gusset_depth, max(0.0, st.skirt_height - st.lead_in_chamfer))
+            if eff_gusset_depth > 0:
+                gusset_cut_r = r_inner + st.skirt_wall_thickness * 0.5
+                with BuildPart() as gusset:
+                    with BuildSketch(Plane.XY.offset(-eff_gusset_depth)):
+                        with Locations(((r_outer - tab.root_overlap) + (tab.root_overlap + tab.length * 0.4) / 2.0, 0)):
+                            RectangleRounded(tab.root_overlap + tab.length * 0.4, tab.width * 0.75, radius=3.0)
+                    with BuildSketch(Plane.XY):
+                        with Locations(((r_outer - tab.root_overlap) + (tab.root_overlap + tab.length * 0.8) / 2.0, 0)):
+                            RectangleRounded(tab.root_overlap + tab.length * 0.8, tab.width, radius=3.5)
+                    loft(ruled=True)
+                    with BuildSketch(Plane.XY.offset(-eff_gusset_depth - 1.0)):
+                        Circle(radius=gusset_cut_r)
+                    extrude(amount=eff_gusset_depth + 2.0, mode=Mode.SUBTRACT)
+                if gusset.part is not None:
+                    add(gusset.part, mode=Mode.ADD)
 
             if tab.grip_ribs:
+                rib_depth = min(0.6, st.top_thickness * 0.4)
                 for i in range(3):
                     rib_x = r_outer + 2.0 + i * 2.2
                     if rib_x + 0.8 < (r_outer + tab.length - 1.0):
-                        with BuildSketch(Plane.XY.offset(st.top_thickness)):
+                        with BuildSketch(Plane.XY.offset(st.top_thickness + 0.1)):
                             with Locations((rib_x, 0)):
                                 RectangleRounded(1.0, tab.width - 8.0, radius=0.4)
-                        extrude(amount=0.6, mode=Mode.ADD)
+                        extrude(amount=-(rib_depth + 0.1), mode=Mode.SUBTRACT)
 
         if flex.enabled and flex.round_slot_count > 0:
             slot_h = st.skirt_height - 1.5
@@ -593,6 +602,11 @@ def build_rectangular_lid(p: ContainerLidParams) -> Solid:
             tab_w = tab.width
             tab_overlap = tab.root_overlap
             tab_total_len = tab_len + tab_overlap
+            eff_gusset_depth = min(tab.gusset_depth, max(0.0, st.skirt_height - st.lead_in_chamfer))
+            wall_mid = st.skirt_wall_thickness * 0.5
+            l_gusset_cut = l_inner + 2 * wall_mid
+            w_gusset_cut = w_inner + 2 * wall_mid
+            r_gusset_cut = r_inner + wall_mid
 
             if is_corner:
                 corner_cx = l_outer / 2.0 - r_outer
@@ -609,26 +623,33 @@ def build_rectangular_lid(p: ContainerLidParams) -> Solid:
                                 Circle(radius=tab.hole_diameter / 2.0, mode=Mode.SUBTRACT)
                 extrude(amount=st.top_thickness, mode=Mode.ADD)
 
-                if tab.gusset_depth > 0:
-                    with BuildSketch(Plane.XY.offset(-tab.gusset_depth)):
-                        with Locations(tab_loc):
-                            with Locations(((r_outer - tab_overlap) + (tab_overlap + tab_len * 0.4) / 2.0, 0)):
-                                RectangleRounded(tab_overlap + tab_len * 0.4, tab_w * 0.75, radius=3.0)
-                    with BuildSketch(Plane.XY):
-                        with Locations(tab_loc):
-                            with Locations(((r_outer - tab_overlap) + (tab_overlap + tab_len * 0.8) / 2.0, 0)):
-                                RectangleRounded(tab_overlap + tab_len * 0.8, tab_w, radius=3.5)
-                    loft(ruled=True, mode=Mode.ADD)
+                if eff_gusset_depth > 0:
+                    with BuildPart() as gusset:
+                        with BuildSketch(Plane.XY.offset(-eff_gusset_depth)):
+                            with Locations(tab_loc):
+                                with Locations(((r_outer - tab_overlap) + (tab_overlap + tab_len * 0.4) / 2.0, 0)):
+                                    RectangleRounded(tab_overlap + tab_len * 0.4, tab_w * 0.75, radius=3.0)
+                        with BuildSketch(Plane.XY):
+                            with Locations(tab_loc):
+                                with Locations(((r_outer - tab_overlap) + (tab_overlap + tab_len * 0.8) / 2.0, 0)):
+                                    RectangleRounded(tab_overlap + tab_len * 0.8, tab_w, radius=3.5)
+                        loft(ruled=True)
+                        with BuildSketch(Plane.XY.offset(-eff_gusset_depth - 1.0)):
+                            RectangleRounded(l_gusset_cut, w_gusset_cut, radius=r_gusset_cut)
+                        extrude(amount=eff_gusset_depth + 2.0, mode=Mode.SUBTRACT)
+                    if gusset.part is not None:
+                        add(gusset.part, mode=Mode.ADD)
 
                 if tab.grip_ribs:
+                    rib_depth = min(0.6, st.top_thickness * 0.4)
                     for i in range(3):
                         rx = r_outer + 2.0 + i * 2.2
                         if rx + 0.8 < (r_outer + tab_len - 1.0):
-                            with BuildSketch(Plane.XY.offset(st.top_thickness)):
+                            with BuildSketch(Plane.XY.offset(st.top_thickness + 0.1)):
                                 with Locations(tab_loc):
                                     with Locations((rx, 0)):
                                         RectangleRounded(1.0, tab_w - 8.0, radius=0.4)
-                            extrude(amount=0.6, mode=Mode.ADD)
+                            extrude(amount=-(rib_depth + 0.1), mode=Mode.SUBTRACT)
             else:
                 tab_center_x = (l_outer / 2.0 - tab_overlap) + tab_total_len / 2.0
                 with BuildSketch(Plane.XY):
@@ -639,23 +660,30 @@ def build_rectangular_lid(p: ContainerLidParams) -> Solid:
                             Circle(radius=tab.hole_diameter / 2.0, mode=Mode.SUBTRACT)
                 extrude(amount=st.top_thickness, mode=Mode.ADD)
 
-                if tab.gusset_depth > 0:
-                    with BuildSketch(Plane.XY.offset(-tab.gusset_depth)):
-                        with Locations(((l_outer / 2.0 - tab_overlap) + (tab_overlap + tab_len * 0.4) / 2.0, 0)):
-                            RectangleRounded(tab_overlap + tab_len * 0.4, tab_w * 0.75, radius=3.0)
-                    with BuildSketch(Plane.XY):
-                        with Locations(((l_outer / 2.0 - tab_overlap) + (tab_overlap + tab_len * 0.8) / 2.0, 0)):
-                            RectangleRounded(tab_overlap + tab_len * 0.8, tab_w, radius=3.5)
-                    loft(ruled=True, mode=Mode.ADD)
+                if eff_gusset_depth > 0:
+                    with BuildPart() as gusset:
+                        with BuildSketch(Plane.XY.offset(-eff_gusset_depth)):
+                            with Locations(((l_outer / 2.0 - tab_overlap) + (tab_overlap + tab_len * 0.4) / 2.0, 0)):
+                                RectangleRounded(tab_overlap + tab_len * 0.4, tab_w * 0.75, radius=3.0)
+                        with BuildSketch(Plane.XY):
+                            with Locations(((l_outer / 2.0 - tab_overlap) + (tab_overlap + tab_len * 0.8) / 2.0, 0)):
+                                RectangleRounded(tab_overlap + tab_len * 0.8, tab_w, radius=3.5)
+                        loft(ruled=True)
+                        with BuildSketch(Plane.XY.offset(-eff_gusset_depth - 1.0)):
+                            RectangleRounded(l_gusset_cut, w_gusset_cut, radius=r_gusset_cut)
+                        extrude(amount=eff_gusset_depth + 2.0, mode=Mode.SUBTRACT)
+                    if gusset.part is not None:
+                        add(gusset.part, mode=Mode.ADD)
 
                 if tab.grip_ribs:
+                    rib_depth = min(0.6, st.top_thickness * 0.4)
                     for i in range(3):
                         rx = l_outer / 2.0 + 2.0 + i * 2.2
                         if rx + 0.8 < (l_outer / 2.0 + tab_len - 1.0):
-                            with BuildSketch(Plane.XY.offset(st.top_thickness)):
+                            with BuildSketch(Plane.XY.offset(st.top_thickness + 0.1)):
                                 with Locations((rx, 0)):
                                     RectangleRounded(1.0, tab_w - 8.0, radius=0.4)
-                            extrude(amount=0.6, mode=Mode.ADD)
+                            extrude(amount=-(rib_depth + 0.1), mode=Mode.SUBTRACT)
 
         if flex.enabled:
             slot_h = st.skirt_height - 1.5
@@ -702,11 +730,15 @@ def create_container_lid(params: ContainerLidParams) -> Solid:
     p = params.get_effective_params()
     shape_lower = p.core.shape.lower()
     if shape_lower == "round":
-        return build_round_lid(p)
+        lid = build_round_lid(p)
     elif shape_lower in ("rectangular", "square", "rect"):
-        return build_rectangular_lid(p)
+        lid = build_rectangular_lid(p)
     else:
         raise ValueError(f"Unsupported shape: {p.core.shape}. Choose 'round' or 'rectangular'.")
+
+    # Orient upside-down for 3D printing and rest the lowest surface flush on Z = 0
+    lid = lid.rotate(Axis.X, 180)
+    return lid.translate((0, 0, -lid.bounding_box().min.Z))
 
 
 if __name__ == "__main__":
