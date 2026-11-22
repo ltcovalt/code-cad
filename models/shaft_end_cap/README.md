@@ -59,12 +59,11 @@ python3 shaft_end_cap.py
 
 ### Export Configuration
 
-Toggle export flags at the top of `shaft_end_cap.py` to generate STEP and STL files into `models/shaft_end_cap/exports/`:
+Toggle export flags at the top of `shaft_end_cap.py` to generate STEP and STL files into the gitignored repo-root `exports/` folder:
 
 ```python
-EXPORT_STL: bool = False                # Save .stl file on execution (default: False)
-EXPORT_STEP: bool = False               # Save .step file on execution (default: False)
-OUTPUT_DIR: str = "exports"            # Output folder alongside this script
+EXPORT_STL: bool = False                # Save .stl to repo-root exports/ (default: False)
+EXPORT_STEP: bool = False               # Save .step to repo-root exports/ (default: False)
 ```
 
 ### Python API Example

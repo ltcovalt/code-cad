@@ -1,0 +1,11 @@
+{
+  "half_inch_rod": {
+    "label": "1/2\" Rod Cap (12.7 mm)",
+    "description": "1/2-inch imperial shelving rod end cap with rounded flange",
+    "params": {
+      "core": {
+        "shaft_diameter": 12.7
+      }
+    }
+  }
+}
