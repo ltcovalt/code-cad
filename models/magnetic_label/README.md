@@ -53,10 +53,9 @@ BATCH_LABELS = [
 ]
 
 EXPORT_STL = True
-OUTPUT_DIR = "./exports"
 ```
 
-Running `python3 magnetic_label.py` will generate all labels, export `.stl` files to `./exports/`, and arrange them stacked in the 3D viewer.
+Running `python3 magnetic_label.py` will generate all labels, export `.stl` files to the gitignored repo-root `exports/` directory, and arrange them stacked in the 3D viewer.
 
 Alternatively, import `batch_generate` into your own scripts:
 

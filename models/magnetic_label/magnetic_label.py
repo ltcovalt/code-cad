@@ -59,9 +59,8 @@ def _get_viewer():
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = False              # Save .stl files on execution (default: False)
-EXPORT_STEP: bool = False             # Save .step files on execution (default: False)
-OUTPUT_DIR: str = "exports"           # Output folder (relative to this script's directory)
+EXPORT_STL: bool = False              # Save .stl files to repo-root exports/ (default: False)
+EXPORT_STEP: bool = False             # Save .step files to repo-root exports/ (default: False)
 
 # Optional batch generation list:
 # Leave empty to generate/preview a single label defined by MagneticLabelParams defaults.
@@ -550,7 +549,7 @@ def export_filename(params: MagneticLabelParams) -> str:
 
 def export_label_files(
     label: GeneratedLabel,
-    output_dir: Union[str, Path] = "exports",
+    output_dir: Optional[Union[str, Path]] = None,
     prefix: str = "magnetic_label",
     do_export_stl: bool = False,
     do_export_step: bool = False,
@@ -558,12 +557,11 @@ def export_label_files(
 ) -> List[str]:
     """
     Exports generated label parts to STL and/or STEP formats.
-    Relative paths in output_dir are automatically anchored relative
-    to this script's directory, ensuring files never spill into the repo root.
+    Defaults to the gitignored repository-root ``exports/`` directory.
     """
-    out_path = Path(output_dir)
-    if not out_path.is_absolute():
-        out_path = Path(__file__).resolve().parent / out_path
+    from utils.runner import get_exports_dir
+
+    out_path = get_exports_dir(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
     saved_files: List[str] = []
 
@@ -609,7 +607,7 @@ def export_label_files(
 def batch_generate(
     labels: list[Union[str, Tuple[str, dict]]],
     defaults: Optional[MagneticLabelParams] = None,
-    output_dir: Union[str, Path] = "exports",
+    output_dir: Optional[Union[str, Path]] = None,
     do_export_stl: bool = False,
     do_export_step: bool = False,
     preview_grid: bool = True,
@@ -722,7 +720,6 @@ def main():
         batch_generate(
             labels=BATCH_LABELS,
             defaults=params,
-            output_dir=OUTPUT_DIR,
             do_export_stl=EXPORT_STL,
             do_export_step=EXPORT_STEP,
             preview_grid=True,
@@ -756,7 +753,6 @@ def main():
     if EXPORT_STL or EXPORT_STEP:
         files = export_label_files(
             label,
-            output_dir=OUTPUT_DIR,
             do_export_stl=EXPORT_STL,
             do_export_step=EXPORT_STEP,
         )
