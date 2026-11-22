@@ -15,13 +15,13 @@ Clean, Unified Leg Architecture:
 - Optional hollow underside mode and top finger-lift scoop.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Literal, Optional
 from build123d import *
 
 try:
-    from utils.params import default_preset, group, param
+    from utils.params import default_preset, group, param, param_list
 except ImportError:
     import sys
 
@@ -29,7 +29,7 @@ except ImportError:
         if (_p / "utils").is_dir():
             sys.path.insert(0, str(_p))
             break
-    from utils.params import default_preset, group, param
+    from utils.params import default_preset, group, param, param_list
 
 # ==============================================================================
 # Standardized Export Configuration
@@ -42,19 +42,67 @@ EXPORT_STEP: bool = False    # Save .step to repo-root exports/ (default: False)
 class SpacerCutout:
     """Defines a notch, step-down, pocket, or through-hole cutout along one leg of the spacer."""
 
-    leg: str = "x"                      # Which leg to cut: "x" or "y"
-    align: str = "start"                # Anchor along the leg: "start" (corner), "center", or "end" (far end)
-    offset: float = 0.0                 # Distance inward from "start"/"end", or +/- shift from "center" in mm
-    v_align: str = "top"                # Vertical anchor: "top", "center", or "bottom"
-    v_offset: float = 0.0               # Distance inward from "top"/"bottom" (0 = edge notch; > 0 = closed hole), or +/- shift from "center" in mm
-    length: float = 50.0                # Length of the cutout along the leg in mm
-    height: float = 20.0                # Vertical height of the cutout in mm
-    shape: str = "rectangle"            # "rectangle" ("square"), "circle" ("arc"), or "chamfer" ("trapezoid")
-    radius: float = 0.0                 # mm: inside corner fillet (rectangle), circle radius (circle; 0=auto), or ramp width (chamfer; 0=45 deg)
-    entry_radius: float = 0.0           # mm: rounds/bevels the 90-deg corners where an edge cutout meets the top or bottom border
-    entry_treatment: str = "fillet"     # "fillet" (rounded) or "chamfer" (45-deg bevel) for entry_radius
-    depth: Optional[float] = None       # Cut depth through spacer thickness in mm (None = full through-cut)
-    side: str = "outer"                 # Face to cut from when depth is set: "outer" (wall side) or "inner" (bin side)
+    leg: Literal["x", "y"] = param(
+        "x",
+        desc="Which leg to cut",
+    )
+    align: Literal["start", "center", "end"] = param(
+        "start",
+        desc="Anchor along the leg (start = junction corner, end = far end)",
+    )
+    offset: float = param(
+        0.0,
+        desc="Distance inward from start/end, or +/- shift from center",
+        unit="mm", step=1.0,
+    )
+    v_align: Literal["top", "center", "bottom"] = param(
+        "top",
+        label="Vertical Align",
+        desc="Vertical anchor along spacer height",
+    )
+    v_offset: float = param(
+        0.0,
+        label="Vertical Offset",
+        desc="Distance inward from top/bottom (0 = edge notch; > 0 = closed hole), or +/- shift from center",
+        unit="mm", step=1.0,
+    )
+    length: float = param(
+        50.0,
+        desc="Length of the cutout along the leg",
+        unit="mm", min=1.0, max=300.0, step=1.0,
+    )
+    height: float = param(
+        20.0,
+        desc="Vertical height of the cutout",
+        unit="mm", min=1.0, max=150.0, step=1.0,
+    )
+    shape: Literal["rectangle", "circle", "chamfer"] = param(
+        "rectangle",
+        desc="Cutout profile shape",
+    )
+    radius: float = param(
+        0.0,
+        desc="Inside corner fillet (rectangle), circle radius (circle; 0 = auto), or ramp width (chamfer; 0 = 45°)",
+        unit="mm", min=0.0, max=50.0, step=0.5,
+    )
+    entry_radius: float = param(
+        0.0,
+        desc="Rounds/bevels the 90° corners where an edge cutout meets the top or bottom border",
+        unit="mm", min=0.0, max=20.0, step=0.5,
+    )
+    entry_treatment: Literal["fillet", "chamfer"] = param(
+        "fillet",
+        desc="Profile applied to entry radius corners",
+    )
+    depth: Optional[float] = param(
+        None,
+        desc="Cut depth through spacer thickness (Auto = full through-cut)",
+        unit="mm", min=0.5, max=80.0, step=0.5,
+    )
+    side: Literal["outer", "inner"] = param(
+        "outer",
+        desc="Face to cut from when partial depth is set (outer = wall side, inner = bin side)",
+    )
 
 
 @dataclass
@@ -203,8 +251,8 @@ class CutoutsParams:
         False,
         desc="Apply configured leg notches and cutouts",
     )
-    items: List[SpacerCutout] = field(
-        default_factory=lambda: [
+    items: List[SpacerCutout] = param_list(
+        lambda: [
             SpacerCutout(
                 leg="x",
                 align="end",
@@ -216,7 +264,8 @@ class CutoutsParams:
                 entry_radius=2.0,
             ),
         ],
-        metadata={"description": "Cutout definitions (JSON list)"},
+        desc="Notch, pocket, and pass-through cutout definitions",
+        item_label="Cutout",
     )
 
 
