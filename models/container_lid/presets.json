@@ -1,15 +1,199 @@
 {
+  "anchor_rect_4_75_cup": {
+    "label": "Anchor Hocking Rectangular 4.75-Cup",
+    "description": "195 x 148 mm rectangular Anchor Hocking dish",
+    "params": {
+      "core": {
+        "corner_radius": 22,
+        "fit_tolerance": -1,
+        "glass_wall_thickness": 4.2,
+        "length": 195,
+        "rim_lip_height": 5.2,
+        "shape": "rectangular",
+        "width": 148
+      },
+      "snap_bead": {
+        "depth": 1.1
+      },
+      "structure": {
+        "skirt_height": 9.5,
+        "skirt_taper": 0.8
+      }
+    }
+  },
+  "anchor_round_10_cup": {
+    "label": "Anchor Hocking Round 10-Cup (2.5 qt)",
+    "description": "219 mm (8 5/8 in) round Anchor Hocking bowl",
+    "params": {
+      "core": {
+        "diameter": 219,
+        "fit_tolerance": -1.4,
+        "glass_wall_thickness": 5,
+        "rim_lip_height": 6
+      },
+      "snap_bead": {
+        "depth": 1.2
+      },
+      "structure": {
+        "skirt_height": 10.5,
+        "skirt_taper": 1.2
+      }
+    }
+  },
+  "anchor_round_1_cup": {
+    "label": "Anchor Hocking Round 1-Cup",
+    "description": "96 mm round Anchor Hocking bowl",
+    "params": {
+      "core": {
+        "diameter": 96,
+        "fit_tolerance": -0.6,
+        "glass_wall_thickness": 3.8,
+        "rim_lip_height": 4.5
+      },
+      "snap_bead": {
+        "depth": 1
+      },
+      "structure": {
+        "skirt_height": 8.5,
+        "skirt_taper": 0.6
+      }
+    }
+  },
+  "anchor_round_2_cup": {
+    "label": "Anchor Hocking Round 2-Cup",
+    "description": "122 mm round Anchor Hocking bowl",
+    "params": {
+      "core": {
+        "diameter": 122,
+        "fit_tolerance": -0.8,
+        "rim_lip_height": 4.8
+      },
+      "snap_bead": {
+        "depth": 1.1
+      },
+      "structure": {
+        "skirt_height": 9,
+        "skirt_taper": 0.7
+      }
+    }
+  },
+  "anchor_round_4_cup": {
+    "label": "Anchor Hocking Round 4-Cup",
+    "description": "152 mm round Anchor Hocking bowl",
+    "params": {
+      "core": {
+        "diameter": 152,
+        "fit_tolerance": -1,
+        "glass_wall_thickness": 4.2,
+        "rim_lip_height": 5.2
+      },
+      "snap_bead": {
+        "depth": 1.1
+      },
+      "structure": {
+        "skirt_height": 9.5,
+        "skirt_taper": 0.8
+      }
+    }
+  },
+  "anchor_round_6_cup": {
+    "label": "Anchor Hocking Round 6-Cup (1.5 qt)",
+    "description": "187.3 mm (7 3/8 in) round Anchor Hocking mixing bowl",
+    "verification": {
+      "status": "usable"
+    },
+    "params": {
+      "core": {
+        "diameter": 187.3,
+        "fit_tolerance": -1.2,
+        "glass_wall_thickness": 4.5,
+        "rim_lip_height": 5.5
+      },
+      "snap_bead": {
+        "depth": 1.2
+      },
+      "structure": {
+        "skirt_height": 10,
+        "skirt_taper": 1
+      }
+    }
+  },
+  "anchor_round_7_cup": {
+    "label": "Anchor Hocking Round 7-Cup",
+    "description": "186 mm round Anchor Hocking bowl",
+    "params": {
+      "core": {
+        "diameter": 186,
+        "fit_tolerance": -1.2,
+        "glass_wall_thickness": 4.5,
+        "rim_lip_height": 5.5
+      },
+      "snap_bead": {
+        "depth": 1.2
+      },
+      "structure": {
+        "skirt_height": 10,
+        "skirt_taper": 1
+      }
+    }
+  },
+  "pyrex_rect_11_cup": {
+    "label": "Pyrex Rectangular 11-Cup",
+    "description": "280 x 200 mm rectangular Pyrex dish",
+    "params": {
+      "core": {
+        "corner_radius": 30,
+        "glass_wall_thickness": 5,
+        "length": 280,
+        "rim_lip_height": 6,
+        "shape": "rectangular",
+        "width": 200
+      },
+      "structure": {
+        "skirt_height": 12
+      }
+    }
+  },
+  "pyrex_rect_3_cup": {
+    "label": "Pyrex Rectangular 3-Cup",
+    "description": "182 x 132 mm rectangular Pyrex dish",
+    "params": {
+      "core": {
+        "corner_radius": 20,
+        "length": 182,
+        "shape": "rectangular",
+        "width": 132
+      }
+    }
+  },
+  "pyrex_rect_6_cup": {
+    "label": "Pyrex Rectangular 6-Cup",
+    "description": "225 x 175 mm rectangular Pyrex dish",
+    "params": {
+      "core": {
+        "corner_radius": 25,
+        "glass_wall_thickness": 4.5,
+        "length": 225,
+        "rim_lip_height": 5.5,
+        "shape": "rectangular",
+        "width": 175
+      },
+      "structure": {
+        "skirt_height": 11
+      }
+    }
+  },
   "pyrex_round_1_cup": {
     "label": "Pyrex Round 1-Cup",
     "description": "98 mm round Pyrex glass bowl",
     "params": {
       "core": {
-        "diameter": 98.0,
-        "rim_lip_height": 4.5,
-        "glass_wall_thickness": 3.8
+        "diameter": 98,
+        "glass_wall_thickness": 3.8,
+        "rim_lip_height": 4.5
       },
       "structure": {
-        "skirt_height": 9.0
+        "skirt_height": 9
       }
     }
   },
@@ -18,7 +202,7 @@
     "description": "120 mm round Pyrex glass bowl",
     "params": {
       "core": {
-        "diameter": 120.0
+        "diameter": 120
       }
     }
   },
@@ -27,9 +211,9 @@
     "description": "150 mm round Pyrex glass bowl",
     "params": {
       "core": {
-        "diameter": 150.0,
-        "rim_lip_height": 5.2,
-        "glass_wall_thickness": 4.2
+        "diameter": 150,
+        "glass_wall_thickness": 4.2,
+        "rim_lip_height": 5.2
       },
       "structure": {
         "skirt_height": 10.5
@@ -41,193 +225,12 @@
     "description": "185 mm round Pyrex glass bowl",
     "params": {
       "core": {
-        "diameter": 185.0,
-        "rim_lip_height": 5.5,
-        "glass_wall_thickness": 4.5
+        "diameter": 185,
+        "glass_wall_thickness": 4.5,
+        "rim_lip_height": 5.5
       },
       "structure": {
         "skirt_height": 11.5
-      }
-    }
-  },
-  "pyrex_rect_3_cup": {
-    "label": "Pyrex Rectangular 3-Cup",
-    "description": "182 x 132 mm rectangular Pyrex dish",
-    "params": {
-      "core": {
-        "shape": "rectangular",
-        "length": 182.0,
-        "width": 132.0,
-        "corner_radius": 20.0
-      }
-    }
-  },
-  "pyrex_rect_6_cup": {
-    "label": "Pyrex Rectangular 6-Cup",
-    "description": "225 x 175 mm rectangular Pyrex dish",
-    "params": {
-      "core": {
-        "shape": "rectangular",
-        "length": 225.0,
-        "width": 175.0,
-        "corner_radius": 25.0,
-        "rim_lip_height": 5.5,
-        "glass_wall_thickness": 4.5
-      },
-      "structure": {
-        "skirt_height": 11.0
-      }
-    }
-  },
-  "pyrex_rect_11_cup": {
-    "label": "Pyrex Rectangular 11-Cup",
-    "description": "280 x 200 mm rectangular Pyrex dish",
-    "params": {
-      "core": {
-        "shape": "rectangular",
-        "length": 280.0,
-        "width": 200.0,
-        "corner_radius": 30.0,
-        "rim_lip_height": 6.0,
-        "glass_wall_thickness": 5.0
-      },
-      "structure": {
-        "skirt_height": 12.0
-      }
-    }
-  },
-  "anchor_round_1_cup": {
-    "label": "Anchor Hocking Round 1-Cup",
-    "description": "96 mm round Anchor Hocking bowl",
-    "params": {
-      "core": {
-        "diameter": 96.0,
-        "rim_lip_height": 4.5,
-        "glass_wall_thickness": 3.8,
-        "fit_tolerance": -0.6
-      },
-      "structure": {
-        "skirt_height": 8.5,
-        "skirt_taper": 0.6
-      },
-      "snap_bead": {
-        "depth": 1.0
-      }
-    }
-  },
-  "anchor_round_2_cup": {
-    "label": "Anchor Hocking Round 2-Cup",
-    "description": "122 mm round Anchor Hocking bowl",
-    "params": {
-      "core": {
-        "diameter": 122.0,
-        "rim_lip_height": 4.8,
-        "fit_tolerance": -0.8
-      },
-      "structure": {
-        "skirt_height": 9.0,
-        "skirt_taper": 0.7
-      },
-      "snap_bead": {
-        "depth": 1.1
-      }
-    }
-  },
-  "anchor_round_4_cup": {
-    "label": "Anchor Hocking Round 4-Cup",
-    "description": "152 mm round Anchor Hocking bowl",
-    "params": {
-      "core": {
-        "diameter": 152.0,
-        "rim_lip_height": 5.2,
-        "glass_wall_thickness": 4.2,
-        "fit_tolerance": -1.0
-      },
-      "structure": {
-        "skirt_height": 9.5,
-        "skirt_taper": 0.8
-      },
-      "snap_bead": {
-        "depth": 1.1
-      }
-    }
-  },
-  "anchor_round_6_cup": {
-    "label": "Anchor Hocking Round 6-Cup (1.5 qt)",
-    "description": "187.3 mm (7 3/8 in) round Anchor Hocking mixing bowl",
-    "params": {
-      "core": {
-        "diameter": 187.3,
-        "rim_lip_height": 5.5,
-        "glass_wall_thickness": 4.5,
-        "fit_tolerance": -1.2
-      },
-      "structure": {
-        "skirt_height": 10.0,
-        "skirt_taper": 1.0
-      },
-      "snap_bead": {
-        "depth": 1.2
-      }
-    }
-  },
-  "anchor_round_7_cup": {
-    "label": "Anchor Hocking Round 7-Cup",
-    "description": "186 mm round Anchor Hocking bowl",
-    "params": {
-      "core": {
-        "diameter": 186.0,
-        "rim_lip_height": 5.5,
-        "glass_wall_thickness": 4.5,
-        "fit_tolerance": -1.2
-      },
-      "structure": {
-        "skirt_height": 10.0,
-        "skirt_taper": 1.0
-      },
-      "snap_bead": {
-        "depth": 1.2
-      }
-    }
-  },
-  "anchor_round_10_cup": {
-    "label": "Anchor Hocking Round 10-Cup (2.5 qt)",
-    "description": "219 mm (8 5/8 in) round Anchor Hocking bowl",
-    "params": {
-      "core": {
-        "diameter": 219.0,
-        "rim_lip_height": 6.0,
-        "glass_wall_thickness": 5.0,
-        "fit_tolerance": -1.4
-      },
-      "structure": {
-        "skirt_height": 10.5,
-        "skirt_taper": 1.2
-      },
-      "snap_bead": {
-        "depth": 1.2
-      }
-    }
-  },
-  "anchor_rect_4_75_cup": {
-    "label": "Anchor Hocking Rectangular 4.75-Cup",
-    "description": "195 x 148 mm rectangular Anchor Hocking dish",
-    "params": {
-      "core": {
-        "shape": "rectangular",
-        "length": 195.0,
-        "width": 148.0,
-        "corner_radius": 22.0,
-        "rim_lip_height": 5.2,
-        "glass_wall_thickness": 4.2,
-        "fit_tolerance": -1.0
-      },
-      "structure": {
-        "skirt_height": 9.5,
-        "skirt_taper": 0.8
-      },
-      "snap_bead": {
-        "depth": 1.1
       }
     }
   }
