@@ -39,9 +39,8 @@ except ImportError:
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = False      # Enable/disable STL file export (default: False)
-EXPORT_STEP: bool = False     # Enable/disable STEP file export (default: False)
-OUTPUT_DIR: str = "exports"   # Relative subfolder alongside the script
+EXPORT_STL: bool = True      # Save .stl to repo-root exports/ (default: False)
+EXPORT_STEP: bool = False     # Save .step to repo-root exports/ (default: False)
 
 
 @dataclass
@@ -847,36 +846,9 @@ def export_filename(params: CClipParams) -> str:
 
 
 if __name__ == "__main__":
+    from utils.runner import run_model
+
     # Single source of truth: dataclass defaults take effect directly
     params = CClipParams()
     clip_part = create_c_clip(params)
-
-    # Standardized exports to the exports/ directory alongside this script
-    if EXPORT_STEP or EXPORT_STL:
-        exports_path = Path(__file__).resolve().parent / OUTPUT_DIR
-        exports_path.mkdir(parents=True, exist_ok=True)
-
-        stem = export_filename(params)
-
-        if EXPORT_STL:
-            stl_file = exports_path / f"{stem}.stl"
-            export_stl(clip_part, str(stl_file))
-            print(f"Exported STL:  {stl_file}")
-
-        if EXPORT_STEP:
-            step_file = exports_path / f"{stem}.step"
-            export_step(clip_part, str(step_file))
-            print(f"Exported STEP: {step_file}")
-
-    try:
-        from ocp_viewer import set_defaults, show
-        set_defaults(orbit_control=True)
-    except ImportError:
-        try:
-            from ocp_vscode import set_defaults, show
-            set_defaults(orbit_control=True)
-        except ImportError:
-            def show(*args, **kwargs):
-                pass
-
-    show(clip_part)
+    run_model(clip_part, export_filename(params), stl=EXPORT_STL, step=EXPORT_STEP)

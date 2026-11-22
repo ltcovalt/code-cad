@@ -49,12 +49,11 @@ python3 c_clip.py
 
 ### Export Configuration
 
-Toggle export flags at the top of `c_clip.py` to generate STEP and STL files into `models/c_clip/exports/`:
+Toggle export flags at the top of `c_clip.py` to generate STEP and STL files into the gitignored repo-root `exports/` folder:
 
 ```python
-EXPORT_STL: bool = False      # Enable/disable STL file export (default: False)
-EXPORT_STEP: bool = False     # Enable/disable STEP file export (default: False)
-OUTPUT_DIR: str = "exports"   # Relative subfolder alongside the script
+EXPORT_STL: bool = False      # Save .stl to repo-root exports/ (default: False)
+EXPORT_STEP: bool = False     # Save .step to repo-root exports/ (default: False)
 ```
 
 ### Python API Example
