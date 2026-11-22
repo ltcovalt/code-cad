@@ -43,12 +43,8 @@ EXPORT_STEP: bool = False               # Save .step to repo-root exports/ (defa
 
 @dataclass
 class CoreParams:
-    """Material, container shape, rim dimensions, and fit tolerance."""
+    """Container shape, rim dimensions, and fit tolerance."""
 
-    material: Literal["tpu", "pctg", "petg", "rigid"] = param(
-        "tpu",
-        desc="Flexible stretch vs rigid compliant flex",
-    )
     shape: Literal["round", "rectangular"] = param(
         "round",
         desc="Round or rectangular/square container",
@@ -81,24 +77,6 @@ class CoreParams:
         desc="Outer corner radius of glass dish",
         unit="mm", min=2.0, max=60.0, step=1.0, when={"shape": "rectangular"},
     )
-    diameter_in: Optional[float] = param(
-        None,
-        label="Diameter Override",
-        desc="Overrides mm diameter when set",
-        unit="in", min=2.0, max=14.0, step=0.25, when={"shape": "round"},
-    )
-    length_in: Optional[float] = param(
-        None,
-        label="Length Override",
-        desc="Overrides mm length when set",
-        unit="in", min=2.0, max=16.0, step=0.25, when={"shape": "rectangular"},
-    )
-    width_in: Optional[float] = param(
-        None,
-        label="Width Override",
-        desc="Overrides mm width when set",
-        unit="in", min=2.0, max=14.0, step=0.25, when={"shape": "rectangular"},
-    )
     test_ring: bool = param(
         False,
         desc="Hollow center for quick fit-check test ring",
@@ -113,9 +91,9 @@ class CoreParams:
         desc="Glass thickness at container rim",
         unit="mm", min=1.5, max=10.0, step=0.2,
     )
-    fit_tolerance: Optional[float] = param(
-        None,
-        desc="Added to container size (Auto: -0.2 TPU, +0.2 rigid)",
+    fit_tolerance: float = param(
+        -0.2,
+        desc="Added to container size (negative = tighter stretch fit, positive = looser)",
         unit="mm", min=-2.0, max=2.0, step=0.05,
     )
 
@@ -139,6 +117,11 @@ class LidStructureParams:
         desc="Outer skirt side wall thickness",
         unit="mm", min=1.0, max=5.0, step=0.2,
     )
+    skirt_taper: float = param(
+        0.0,
+        desc="Inward radial taper at bottom of skirt (for tapered bowls)",
+        unit="mm", min=0.0, max=5.0, step=0.1,
+    )
     outer_fillet: float = param(
         1.2,
         desc="Top exterior perimeter edge fillet",
@@ -159,9 +142,9 @@ class SnapBeadParams:
         True,
         desc="Add inward protruding snap ridge",
     )
-    depth: Optional[float] = param(
-        None,
-        desc="Inward protrusion (Auto: 0.8 TPU, 0.35 rigid)",
+    depth: float = param(
+        0.8,
+        desc="Inward protrusion under container rim",
         unit="mm", min=0.1, max=2.5, step=0.05,
     )
     height: float = param(
@@ -283,9 +266,9 @@ class PullTabParams:
 class FlexSlotsParams:
     """Rigid flexure relief slots (for PCTG / PETG / rigid plastics)."""
 
-    enabled: Optional[bool] = param(
-        None,
-        desc="Auto: enabled for rigid beaded lids, off for TPU",
+    enabled: bool = param(
+        False,
+        desc="Add vertical skirt relief slots for rigid plastics",
     )
     slot_width: float = param(
         1.5,
@@ -322,35 +305,17 @@ class ContainerLidParams:
     flex_slots: FlexSlotsParams = group(FlexSlotsParams)
 
     def get_effective_params(self) -> "ContainerLidParams":
-        """Return a copy of params with auto-resolved defaults based on active material, rim style, and units."""
+        """Return a copy of params with auto-resolved defaults based on rim style."""
         p = copy.deepcopy(self)
-        is_rigid = p.core.material.lower() in ("pctg", "petg", "rigid", "pla")
         is_smooth = p.core.rim_style.lower() in ("smooth", "straight", "flat", "no_rim", "no_lip")
-
-        if p.core.diameter_in is not None:
-            p.core.diameter = p.core.diameter_in * 25.4
-        if p.core.length_in is not None:
-            p.core.length = p.core.length_in * 25.4
-        if p.core.width_in is not None:
-            p.core.width = p.core.width_in * 25.4
 
         if is_smooth:
             p.snap_bead.enabled = False
             if not self.core.friction_ribs:
                 p.core.friction_ribs = True
 
-        if p.core.fit_tolerance is None:
-            if is_smooth:
-                p.core.fit_tolerance = 0.1 if is_rigid else -0.35
-            else:
-                p.core.fit_tolerance = 0.2 if is_rigid else -0.2
-
-        if p.snap_bead.depth is None:
-            p.snap_bead.depth = 0.35 if is_rigid else 0.8
         if p.snap_bead.offset is None:
             p.snap_bead.offset = p.core.rim_lip_height + 0.2
-        if p.flex_slots.enabled is None:
-            p.flex_slots.enabled = is_rigid and not is_smooth
         return p
 
 
@@ -361,7 +326,9 @@ def export_filename(params: ContainerLidParams) -> str:
         dim_str = f"{p_eff.core.diameter:.0f}mm"
     else:
         dim_str = f"{p_eff.core.length:.0f}x{p_eff.core.width:.0f}mm"
-    variant = f"{p_eff.core.shape.lower()}_{p_eff.core.material.lower()}"
+    variant = p_eff.core.shape.lower()
+    if p_eff.core.test_ring:
+        variant = f"{variant}_test_ring"
     return f"container_lid_{dim_str}_{variant}"
 
 
@@ -372,6 +339,13 @@ def build_round_lid(p: ContainerLidParams) -> Solid:
     )
     r_inner = (c.diameter + c.fit_tolerance) / 2.0
     r_outer = r_inner + st.skirt_wall_thickness
+    taper = max(0.0, min(st.skirt_taper, r_inner - 2.0))
+
+    def r_in_at(z: float) -> float:
+        return r_inner - taper * (-z / st.skirt_height)
+
+    def r_out_at(z: float) -> float:
+        return r_outer - taper * (-z / st.skirt_height)
 
     r_seal_outer = r_inner - c.glass_wall_thickness - seal.clearance
     r_seal_inner = r_seal_outer - seal.thickness
@@ -396,26 +370,37 @@ def build_round_lid(p: ContainerLidParams) -> Solid:
     pts.append((r_inner, 0.0))
 
     if bead.enabled and bead.depth > 0:
+        z_b0 = -bead.offset
+        z_b1 = -bead.offset - 0.3
+        z_b2 = -bead.offset - bead.height + 0.6
+        z_b3 = -bead.offset - bead.height
         pts.extend([
-            (r_inner, -bead.offset),
-            (r_inner - bead.depth, -bead.offset - 0.3),
-            (r_inner - bead.depth, -bead.offset - bead.height + 0.6),
-            (r_inner, -bead.offset - bead.height),
+            (r_in_at(z_b0), z_b0),
+            (r_in_at(z_b1) - bead.depth, z_b1),
+            (r_in_at(z_b2) - bead.depth, z_b2),
+            (r_in_at(z_b3), z_b3),
         ])
     elif c.friction_ribs:
         for z_rib in [-3.0, -6.5]:
             if abs(z_rib) + 0.6 < st.skirt_height - st.lead_in_chamfer:
                 pts.extend([
-                    (r_inner, z_rib + 0.5),
-                    (r_inner - 0.3, z_rib),
-                    (r_inner, z_rib - 0.5),
+                    (r_in_at(z_rib + 0.5), z_rib + 0.5),
+                    (r_in_at(z_rib) - 0.3, z_rib),
+                    (r_in_at(z_rib - 0.5), z_rib - 0.5),
                 ])
 
-    pts.extend([
-        (r_inner, -st.skirt_height + st.lead_in_chamfer),
-        (r_inner + st.lead_in_chamfer, -st.skirt_height),
-        (r_outer, -st.skirt_height),
-    ])
+    if st.lead_in_chamfer > 0:
+        z_chamf = -st.skirt_height + st.lead_in_chamfer
+        pts.extend([
+            (r_in_at(z_chamf), z_chamf),
+            (r_in_at(-st.skirt_height) + st.lead_in_chamfer, -st.skirt_height),
+        ])
+    else:
+        pts.append((r_in_at(-st.skirt_height), -st.skirt_height))
+
+    pts.append((r_out_at(-st.skirt_height), -st.skirt_height))
+    if taper > 0:
+        pts.append((r_outer, 0.0))
 
     if st.outer_fillet > 0:
         pts.extend([
@@ -457,7 +442,8 @@ def build_round_lid(p: ContainerLidParams) -> Solid:
 
             eff_gusset_depth = min(tab.gusset_depth, max(0.0, st.skirt_height - st.lead_in_chamfer))
             if eff_gusset_depth > 0:
-                gusset_cut_r = r_inner + st.skirt_wall_thickness * 0.5
+                z_cut_bot = -eff_gusset_depth - 1.0
+                z_cut_top = 1.0
                 with BuildPart() as gusset:
                     with BuildSketch(Plane.XY.offset(-eff_gusset_depth)):
                         with Locations(((r_outer - tab.root_overlap) + (tab.root_overlap + tab.length * 0.4) / 2.0, 0)):
@@ -466,9 +452,16 @@ def build_round_lid(p: ContainerLidParams) -> Solid:
                         with Locations(((r_outer - tab.root_overlap) + (tab.root_overlap + tab.length * 0.8) / 2.0, 0)):
                             RectangleRounded(tab.root_overlap + tab.length * 0.8, tab.width, radius=3.5)
                     loft(ruled=True)
-                    with BuildSketch(Plane.XY.offset(-eff_gusset_depth - 1.0)):
-                        Circle(radius=gusset_cut_r)
-                    extrude(amount=eff_gusset_depth + 2.0, mode=Mode.SUBTRACT)
+                    if taper > 0:
+                        with BuildSketch(Plane.XY.offset(z_cut_bot)) as g_cut_bot:
+                            Circle(radius=max(1.0, r_in_at(z_cut_bot) + st.skirt_wall_thickness * 0.5))
+                        with BuildSketch(Plane.XY.offset(z_cut_top)) as g_cut_top:
+                            Circle(radius=r_in_at(z_cut_top) + st.skirt_wall_thickness * 0.5)
+                        loft([g_cut_bot.sketch, g_cut_top.sketch], ruled=True, mode=Mode.SUBTRACT)
+                    else:
+                        with BuildSketch(Plane.XY.offset(z_cut_bot)):
+                            Circle(radius=r_inner + st.skirt_wall_thickness * 0.5)
+                        extrude(amount=eff_gusset_depth + 2.0, mode=Mode.SUBTRACT)
                 if gusset.part is not None:
                     add(gusset.part, mode=Mode.ADD)
 
@@ -485,16 +478,18 @@ def build_round_lid(p: ContainerLidParams) -> Solid:
         if flex.enabled and flex.round_slot_count > 0:
             slot_h = st.skirt_height - 1.5
             slot_root_r = flex.slot_width
+            slot_radial_len = st.skirt_wall_thickness * 4 + taper * 2
+            slot_center_r = r_outer - taper / 2.0
             for i in range(flex.round_slot_count):
                 ang = i * (360.0 / flex.round_slot_count)
                 if tab.enabled and (ang < 25.0 or ang > 335.0):
                     continue
                 rot = Rotation(0, 0, ang)
                 with Locations(rot):
-                    with Locations((r_outer, 0, -st.skirt_height + slot_h / 2.0)):
-                        Box(st.skirt_wall_thickness * 4, flex.slot_width, slot_h, mode=Mode.SUBTRACT)
-                    with Locations((r_outer, 0, -st.skirt_height + slot_h)):
-                        Cylinder(radius=slot_root_r, height=st.skirt_wall_thickness * 4, rotation=(0, 90, 0), mode=Mode.SUBTRACT)
+                    with Locations((slot_center_r, 0, -st.skirt_height + slot_h / 2.0)):
+                        Box(slot_radial_len, flex.slot_width, slot_h, mode=Mode.SUBTRACT)
+                    with Locations((slot_center_r, 0, -st.skirt_height + slot_h)):
+                        Cylinder(radius=slot_root_r, height=slot_radial_len, rotation=(0, 90, 0), mode=Mode.SUBTRACT)
 
         if c.test_ring:
             gauge_inner_r = max(5.0, (r_seal_inner - 2.0) if has_seal else (r_inner - 6.0))
@@ -518,54 +513,118 @@ def build_rectangular_lid(p: ContainerLidParams) -> Solid:
     l_outer = l_inner + 2 * st.skirt_wall_thickness
     w_outer = w_inner + 2 * st.skirt_wall_thickness
     r_outer = r_inner + st.skirt_wall_thickness
+    taper = max(0.0, min(st.skirt_taper, min(l_inner, w_inner) / 2.0 - 2.0))
+
+    def rect_in_at(z: float) -> tuple[float, float, float]:
+        t = taper * (-z / st.skirt_height)
+        return (l_inner - 2 * t, w_inner - 2 * t, max(1.0, r_inner - t))
+
+    def rect_out_at(z: float) -> tuple[float, float, float]:
+        t = taper * (-z / st.skirt_height)
+        return (l_outer - 2 * t, w_outer - 2 * t, max(1.0, r_outer - t))
 
     with BuildPart() as rect_part:
         with BuildSketch(Plane.XY):
             RectangleRounded(l_outer, w_outer, radius=r_outer)
         extrude(amount=st.top_thickness, mode=Mode.ADD)
-        with BuildSketch(Plane.XY):
-            RectangleRounded(l_outer, w_outer, radius=r_outer)
-        extrude(amount=-st.skirt_height, mode=Mode.ADD)
+        if taper > 0:
+            l_out_bot, w_out_bot, r_out_bot = rect_out_at(-st.skirt_height)
+            with BuildSketch(Plane.XY) as sk_out_top:
+                RectangleRounded(l_outer, w_outer, radius=r_outer)
+            with BuildSketch(Plane.XY.offset(-st.skirt_height)) as sk_out_bot:
+                RectangleRounded(l_out_bot, w_out_bot, radius=r_out_bot)
+            loft([sk_out_top.sketch, sk_out_bot.sketch], ruled=True, mode=Mode.ADD)
+        else:
+            with BuildSketch(Plane.XY):
+                RectangleRounded(l_outer, w_outer, radius=r_outer)
+            extrude(amount=-st.skirt_height, mode=Mode.ADD)
 
         if st.outer_fillet > 0:
             outer_top_edges = [e for e in rect_part.edges() if abs(e.center().Z - st.top_thickness) < 1e-3]
             if outer_top_edges:
                 fillet(outer_top_edges, radius=min(st.outer_fillet, st.skirt_wall_thickness * 0.7))
 
-        with BuildSketch(Plane.XY):
-            RectangleRounded(l_inner, w_inner, radius=r_inner)
-        extrude(amount=-st.skirt_height, mode=Mode.SUBTRACT)
+        if taper > 0:
+            z_in_bot = -st.skirt_height - 0.1
+            l_in_bot, w_in_bot, r_in_bot = rect_in_at(z_in_bot)
+            with BuildSketch(Plane.XY) as sk_in_top:
+                RectangleRounded(l_inner, w_inner, radius=r_inner)
+            with BuildSketch(Plane.XY.offset(z_in_bot)) as sk_in_bot:
+                RectangleRounded(l_in_bot, w_in_bot, radius=r_in_bot)
+            loft([sk_in_top.sketch, sk_in_bot.sketch], ruled=True, mode=Mode.SUBTRACT)
+        else:
+            with BuildSketch(Plane.XY):
+                RectangleRounded(l_inner, w_inner, radius=r_inner)
+            extrude(amount=-st.skirt_height, mode=Mode.SUBTRACT)
 
         if st.lead_in_chamfer > 0:
-            with BuildSketch(Plane.XY.offset(-st.skirt_height)):
-                RectangleRounded(l_inner + 2 * st.lead_in_chamfer, w_inner + 2 * st.lead_in_chamfer, radius=r_inner + st.lead_in_chamfer)
-                RectangleRounded(l_inner, w_inner, radius=r_inner, mode=Mode.SUBTRACT)
-            extrude(amount=st.lead_in_chamfer, mode=Mode.SUBTRACT)
+            if taper > 0:
+                l_in_bot, w_in_bot, r_in_bot = rect_in_at(-st.skirt_height)
+                l_in_ch, w_in_ch, r_in_ch = rect_in_at(-st.skirt_height + st.lead_in_chamfer)
+                ch_ext = st.lead_in_chamfer + 0.1
+                with BuildSketch(Plane.XY.offset(-st.skirt_height - 0.1)) as ch_bot:
+                    RectangleRounded(
+                        l_in_bot + 2 * ch_ext,
+                        w_in_bot + 2 * ch_ext,
+                        radius=r_in_bot + ch_ext,
+                    )
+                with BuildSketch(Plane.XY.offset(-st.skirt_height + st.lead_in_chamfer)) as ch_top:
+                    RectangleRounded(l_in_ch, w_in_ch, radius=r_in_ch)
+                loft([ch_bot.sketch, ch_top.sketch], ruled=True, mode=Mode.SUBTRACT)
+            else:
+                with BuildSketch(Plane.XY.offset(-st.skirt_height)):
+                    RectangleRounded(l_inner + 2 * st.lead_in_chamfer, w_inner + 2 * st.lead_in_chamfer, radius=r_inner + st.lead_in_chamfer)
+                    RectangleRounded(l_inner, w_inner, radius=r_inner, mode=Mode.SUBTRACT)
+                extrude(amount=st.lead_in_chamfer, mode=Mode.SUBTRACT)
 
         if bead.enabled and bead.depth > 0:
-            l_bead = l_inner - 2 * bead.depth
-            w_bead = w_inner - 2 * bead.depth
-            r_bead = max(1.0, r_inner - bead.depth)
-
             bead_flat_height = bead.height * 0.4
-            with BuildSketch(Plane.XY.offset(-bead.offset)):
-                RectangleRounded(l_inner + 0.2, w_inner + 0.2, radius=r_inner)
-                RectangleRounded(l_bead, w_bead, radius=r_bead, mode=Mode.SUBTRACT)
-            extrude(amount=-bead_flat_height, mode=Mode.ADD)
+            z_b0 = -bead.offset
+            z_b1 = -bead.offset - bead_flat_height
+            z_b2 = -bead.offset - bead.height
 
-            with BuildSketch(Plane.XY.offset(-bead.offset - bead_flat_height)) as s1:
-                RectangleRounded(l_inner + 0.2, w_inner + 0.2, radius=r_inner)
-                RectangleRounded(l_bead, w_bead, radius=r_bead, mode=Mode.SUBTRACT)
-            with BuildSketch(Plane.XY.offset(-bead.offset - bead.height)) as s2:
-                RectangleRounded(l_inner + 0.2, w_inner + 0.2, radius=r_inner)
-                RectangleRounded(l_inner, w_inner, radius=r_inner, mode=Mode.SUBTRACT)
-            loft([s1.sketch, s2.sketch], ruled=True, mode=Mode.ADD)
+            if taper > 0:
+                l0, w0, r0 = rect_in_at(z_b0)
+                l1, w1, r1 = rect_in_at(z_b1)
+                l2, w2, r2 = rect_in_at(z_b2)
+                with BuildSketch(Plane.XY.offset(z_b0)) as s0:
+                    RectangleRounded(l0 + 0.2, w0 + 0.2, radius=r0)
+                    RectangleRounded(l0 - 2 * bead.depth, w0 - 2 * bead.depth, radius=max(1.0, r0 - bead.depth), mode=Mode.SUBTRACT)
+                with BuildSketch(Plane.XY.offset(z_b1)) as s1:
+                    RectangleRounded(l1 + 0.2, w1 + 0.2, radius=r1)
+                    RectangleRounded(l1 - 2 * bead.depth, w1 - 2 * bead.depth, radius=max(1.0, r1 - bead.depth), mode=Mode.SUBTRACT)
+                loft([s0.sketch, s1.sketch], ruled=True, mode=Mode.ADD)
+                with BuildSketch(Plane.XY.offset(z_b1)) as s1b:
+                    RectangleRounded(l1 + 0.2, w1 + 0.2, radius=r1)
+                    RectangleRounded(l1 - 2 * bead.depth, w1 - 2 * bead.depth, radius=max(1.0, r1 - bead.depth), mode=Mode.SUBTRACT)
+                with BuildSketch(Plane.XY.offset(z_b2)) as s2:
+                    RectangleRounded(l2 + 0.2, w2 + 0.2, radius=r2)
+                    RectangleRounded(l2, w2, radius=r2, mode=Mode.SUBTRACT)
+                loft([s1b.sketch, s2.sketch], ruled=True, mode=Mode.ADD)
+            else:
+                l_bead = l_inner - 2 * bead.depth
+                w_bead = w_inner - 2 * bead.depth
+                r_bead = max(1.0, r_inner - bead.depth)
+
+                with BuildSketch(Plane.XY.offset(z_b0)):
+                    RectangleRounded(l_inner + 0.2, w_inner + 0.2, radius=r_inner)
+                    RectangleRounded(l_bead, w_bead, radius=r_bead, mode=Mode.SUBTRACT)
+                extrude(amount=-bead_flat_height, mode=Mode.ADD)
+
+                with BuildSketch(Plane.XY.offset(z_b1)) as s1:
+                    RectangleRounded(l_inner + 0.2, w_inner + 0.2, radius=r_inner)
+                    RectangleRounded(l_bead, w_bead, radius=r_bead, mode=Mode.SUBTRACT)
+                with BuildSketch(Plane.XY.offset(z_b2)) as s2:
+                    RectangleRounded(l_inner + 0.2, w_inner + 0.2, radius=r_inner)
+                    RectangleRounded(l_inner, w_inner, radius=r_inner, mode=Mode.SUBTRACT)
+                loft([s1.sketch, s2.sketch], ruled=True, mode=Mode.ADD)
         elif c.friction_ribs:
             for z_rib in [-3.0, -6.5]:
                 if abs(z_rib) + 0.6 < st.skirt_height - st.lead_in_chamfer:
+                    lr, wr, rr = rect_in_at(z_rib)
                     with BuildSketch(Plane.XY.offset(z_rib - 0.4)):
-                        RectangleRounded(l_inner + 0.2, w_inner + 0.2, radius=r_inner)
-                        RectangleRounded(l_inner - 0.6, w_inner - 0.6, radius=max(1.0, r_inner - 0.3), mode=Mode.SUBTRACT)
+                        RectangleRounded(lr + 0.2, wr + 0.2, radius=rr)
+                        RectangleRounded(lr - 0.6, wr - 0.6, radius=max(1.0, rr - 0.3), mode=Mode.SUBTRACT)
                     extrude(amount=0.8, mode=Mode.ADD)
 
         if seal.enabled:
@@ -604,6 +663,10 @@ def build_rectangular_lid(p: ContainerLidParams) -> Solid:
             tab_total_len = tab_len + tab_overlap
             eff_gusset_depth = min(tab.gusset_depth, max(0.0, st.skirt_height - st.lead_in_chamfer))
             wall_mid = st.skirt_wall_thickness * 0.5
+            z_cut_bot = -eff_gusset_depth - 1.0
+            z_cut_top = 1.0
+            l_in_gbot, w_in_gbot, r_in_gbot = rect_in_at(z_cut_bot)
+            l_in_gtop, w_in_gtop, r_in_gtop = rect_in_at(z_cut_top)
             l_gusset_cut = l_inner + 2 * wall_mid
             w_gusset_cut = w_inner + 2 * wall_mid
             r_gusset_cut = r_inner + wall_mid
@@ -634,9 +697,16 @@ def build_rectangular_lid(p: ContainerLidParams) -> Solid:
                                 with Locations(((r_outer - tab_overlap) + (tab_overlap + tab_len * 0.8) / 2.0, 0)):
                                     RectangleRounded(tab_overlap + tab_len * 0.8, tab_w, radius=3.5)
                         loft(ruled=True)
-                        with BuildSketch(Plane.XY.offset(-eff_gusset_depth - 1.0)):
-                            RectangleRounded(l_gusset_cut, w_gusset_cut, radius=r_gusset_cut)
-                        extrude(amount=eff_gusset_depth + 2.0, mode=Mode.SUBTRACT)
+                        if taper > 0:
+                            with BuildSketch(Plane.XY.offset(z_cut_bot)) as g_cut_bot:
+                                RectangleRounded(l_in_gbot + 2 * wall_mid, w_in_gbot + 2 * wall_mid, radius=r_in_gbot + wall_mid)
+                            with BuildSketch(Plane.XY.offset(z_cut_top)) as g_cut_top:
+                                RectangleRounded(l_in_gtop + 2 * wall_mid, w_in_gtop + 2 * wall_mid, radius=r_in_gtop + wall_mid)
+                            loft([g_cut_bot.sketch, g_cut_top.sketch], ruled=True, mode=Mode.SUBTRACT)
+                        else:
+                            with BuildSketch(Plane.XY.offset(z_cut_bot)):
+                                RectangleRounded(l_gusset_cut, w_gusset_cut, radius=r_gusset_cut)
+                            extrude(amount=eff_gusset_depth + 2.0, mode=Mode.SUBTRACT)
                     if gusset.part is not None:
                         add(gusset.part, mode=Mode.ADD)
 
@@ -669,9 +739,16 @@ def build_rectangular_lid(p: ContainerLidParams) -> Solid:
                             with Locations(((l_outer / 2.0 - tab_overlap) + (tab_overlap + tab_len * 0.8) / 2.0, 0)):
                                 RectangleRounded(tab_overlap + tab_len * 0.8, tab_w, radius=3.5)
                         loft(ruled=True)
-                        with BuildSketch(Plane.XY.offset(-eff_gusset_depth - 1.0)):
-                            RectangleRounded(l_gusset_cut, w_gusset_cut, radius=r_gusset_cut)
-                        extrude(amount=eff_gusset_depth + 2.0, mode=Mode.SUBTRACT)
+                        if taper > 0:
+                            with BuildSketch(Plane.XY.offset(z_cut_bot)) as g_cut_bot:
+                                RectangleRounded(l_in_gbot + 2 * wall_mid, w_in_gbot + 2 * wall_mid, radius=r_in_gbot + wall_mid)
+                            with BuildSketch(Plane.XY.offset(z_cut_top)) as g_cut_top:
+                                RectangleRounded(l_in_gtop + 2 * wall_mid, w_in_gtop + 2 * wall_mid, radius=r_in_gtop + wall_mid)
+                            loft([g_cut_bot.sketch, g_cut_top.sketch], ruled=True, mode=Mode.SUBTRACT)
+                        else:
+                            with BuildSketch(Plane.XY.offset(z_cut_bot)):
+                                RectangleRounded(l_gusset_cut, w_gusset_cut, radius=r_gusset_cut)
+                            extrude(amount=eff_gusset_depth + 2.0, mode=Mode.SUBTRACT)
                     if gusset.part is not None:
                         add(gusset.part, mode=Mode.ADD)
 
@@ -688,30 +765,31 @@ def build_rectangular_lid(p: ContainerLidParams) -> Solid:
         if flex.enabled:
             slot_h = st.skirt_height - 1.5
             slot_root_r = flex.slot_width
+            slot_depth = st.skirt_wall_thickness * 4 + taper * 2
 
             flat_x_half = (l_inner - 2 * r_inner) / 2.0
             if flat_x_half > 10.0 and flex.rect_slots_long_side > 0:
                 step_x = (2 * flat_x_half * 0.7) / max(1, flex.rect_slots_long_side)
                 x_offsets = [-flat_x_half * 0.35 + i * step_x for i in range(flex.rect_slots_long_side)]
                 for y_sign in [-1, 1]:
-                    y_pos = y_sign * (w_outer / 2.0)
+                    y_pos = y_sign * (w_outer / 2.0 - taper / 2.0)
                     for x_pos in x_offsets:
                         with Locations((x_pos, y_pos, -st.skirt_height + slot_h / 2.0)):
-                            Box(flex.slot_width, st.skirt_wall_thickness * 4, slot_h, mode=Mode.SUBTRACT)
+                            Box(flex.slot_width, slot_depth, slot_h, mode=Mode.SUBTRACT)
                         with Locations((x_pos, y_pos, -st.skirt_height + slot_h)):
-                            Cylinder(radius=slot_root_r, height=st.skirt_wall_thickness * 4, rotation=(90, 0, 0), mode=Mode.SUBTRACT)
+                            Cylinder(radius=slot_root_r, height=slot_depth, rotation=(90, 0, 0), mode=Mode.SUBTRACT)
 
             flat_y_half = (w_inner - 2 * r_inner) / 2.0
             if flat_y_half > 10.0 and flex.rect_slots_short_side > 0:
                 step_y = (2 * flat_y_half * 0.7) / max(1, flex.rect_slots_short_side)
                 y_offsets = [-flat_y_half * 0.35 + i * step_y for i in range(flex.rect_slots_short_side)]
                 for x_sign in [-1, 1]:
-                    x_pos = x_sign * (l_outer / 2.0)
+                    x_pos = x_sign * (l_outer / 2.0 - taper / 2.0)
                     for y_pos in y_offsets:
                         with Locations((x_pos, y_pos, -st.skirt_height + slot_h / 2.0)):
-                            Box(st.skirt_wall_thickness * 4, flex.slot_width, slot_h, mode=Mode.SUBTRACT)
+                            Box(slot_depth, flex.slot_width, slot_h, mode=Mode.SUBTRACT)
                         with Locations((x_pos, y_pos, -st.skirt_height + slot_h)):
-                            Cylinder(radius=slot_root_r, height=st.skirt_wall_thickness * 4, rotation=(0, 90, 0), mode=Mode.SUBTRACT)
+                            Cylinder(radius=slot_root_r, height=slot_depth, rotation=(0, 90, 0), mode=Mode.SUBTRACT)
 
         if c.test_ring:
             cutout_l = max(10.0, l_inner - 14.0)

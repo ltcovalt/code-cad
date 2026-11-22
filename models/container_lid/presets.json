@@ -103,10 +103,15 @@
       "core": {
         "diameter": 96.0,
         "rim_lip_height": 4.5,
-        "glass_wall_thickness": 3.8
+        "glass_wall_thickness": 3.8,
+        "fit_tolerance": -0.6
       },
       "structure": {
-        "skirt_height": 9.0
+        "skirt_height": 8.5,
+        "skirt_taper": 0.6
+      },
+      "snap_bead": {
+        "depth": 1.0
       }
     }
   },
@@ -116,7 +121,15 @@
     "params": {
       "core": {
         "diameter": 122.0,
-        "rim_lip_height": 4.8
+        "rim_lip_height": 4.8,
+        "fit_tolerance": -0.8
+      },
+      "structure": {
+        "skirt_height": 9.0,
+        "skirt_taper": 0.7
+      },
+      "snap_bead": {
+        "depth": 1.1
       }
     }
   },
@@ -127,10 +140,15 @@
       "core": {
         "diameter": 152.0,
         "rim_lip_height": 5.2,
-        "glass_wall_thickness": 4.2
+        "glass_wall_thickness": 4.2,
+        "fit_tolerance": -1.0
       },
       "structure": {
-        "skirt_height": 10.5
+        "skirt_height": 9.5,
+        "skirt_taper": 0.8
+      },
+      "snap_bead": {
+        "depth": 1.1
       }
     }
   },
@@ -141,10 +159,15 @@
       "core": {
         "diameter": 187.3,
         "rim_lip_height": 5.5,
-        "glass_wall_thickness": 4.5
+        "glass_wall_thickness": 4.5,
+        "fit_tolerance": -1.2
       },
       "structure": {
-        "skirt_height": 9.0
+        "skirt_height": 10.0,
+        "skirt_taper": 1.0
+      },
+      "snap_bead": {
+        "depth": 1.2
       }
     }
   },
@@ -155,10 +178,15 @@
       "core": {
         "diameter": 186.0,
         "rim_lip_height": 5.5,
-        "glass_wall_thickness": 4.5
+        "glass_wall_thickness": 4.5,
+        "fit_tolerance": -1.2
       },
       "structure": {
-        "skirt_height": 11.5
+        "skirt_height": 10.0,
+        "skirt_taper": 1.0
+      },
+      "snap_bead": {
+        "depth": 1.2
       }
     }
   },
@@ -169,10 +197,15 @@
       "core": {
         "diameter": 219.0,
         "rim_lip_height": 6.0,
-        "glass_wall_thickness": 5.0
+        "glass_wall_thickness": 5.0,
+        "fit_tolerance": -1.4
       },
       "structure": {
-        "skirt_height": 12.0
+        "skirt_height": 10.5,
+        "skirt_taper": 1.2
+      },
+      "snap_bead": {
+        "depth": 1.2
       }
     }
   },
@@ -186,10 +219,15 @@
         "width": 148.0,
         "corner_radius": 22.0,
         "rim_lip_height": 5.2,
-        "glass_wall_thickness": 4.2
+        "glass_wall_thickness": 4.2,
+        "fit_tolerance": -1.0
       },
       "structure": {
-        "skirt_height": 10.5
+        "skirt_height": 9.5,
+        "skirt_taper": 0.8
+      },
+      "snap_bead": {
+        "depth": 1.1
       }
     }
   }
