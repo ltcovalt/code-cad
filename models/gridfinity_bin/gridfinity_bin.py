@@ -731,9 +731,9 @@ def create_stacking_lip(params: GridfinityBinParams) -> Optional[Part]:
     """
     Generates the continuous Gridfinity stacking lip around the entire top perimeter.
 
-    Sweeps the exact 2D stacking-lip cross-section along the outer RectangleRounded
-    perimeter wire, guaranteeing a 100% uniform, unbroken top rim along all 4 straight
-    walls and all 4 rounded corners without corner pinching or triangular artifacts.
+    Constructed as an outer perimeter prism minus a multi-stage ruled inner loft so
+    the lip remains 100% valid and self-intersection-free at any corner radius
+    (including tight radii smaller than the 2.6 mm lip depth).
     """
     if not params.stacking_lip.enabled:
         return None
@@ -752,32 +752,30 @@ def create_stacking_lip(params: GridfinityBinParams) -> Optional[Part]:
     z2 = env.body_h + 2.5
     z3 = env.body_h + lip_h
 
-    with BuildSketch(Plane.XY.offset(z_bot)) as path_sk:
-        with Locations([(env.top_cx, env.top_cy)]):
-            RectangleRounded(env.top_w, env.top_l, env.r_corner)
-    wire = path_sk.sketch.wire()
+    inner_stages = [
+        (z_bot, t_wall),
+        (z0, lip_depth),
+        (z1, 1.9),
+        (z2, 1.9),
+        (z3, top_flat),
+    ]
 
-    start_pt = wire.position_at(0)
-    start_tan = wire.tangent_at(0)
-    inward = Vector(0, 0, 1).cross(start_tan).normalized()
-    if inward.dot(Vector(env.top_cx, env.top_cy, z_bot) - start_pt) < 0:
-        inward = -inward
-    prof_plane = Plane(origin=start_pt, x_dir=inward, z_dir=start_tan)
+    with BuildPart() as inner_cut:
+        for z_stage, inset in inner_stages:
+            w_s = max(1.0, env.top_w - 2.0 * inset)
+            l_s = max(1.0, env.top_l - 2.0 * inset)
+            r_s = max(0.2, min(env.r_corner - inset, min(w_s, l_s) / 2.0 - 0.1))
+            with BuildSketch(Plane.XY.offset(z_stage)):
+                with Locations([(env.top_cx, env.top_cy)]):
+                    RectangleRounded(w_s, l_s, r_s)
+        loft(ruled=True)
 
     with BuildPart() as lip_builder:
-        with BuildSketch(prof_plane):
-            pts = [
-                (0.0, 0.0),
-                (t_wall, 0.0),
-                (lip_depth, z0 - z_bot),
-                (1.9, z1 - z_bot),
-                (1.9, z2 - z_bot),
-                (top_flat, z3 - z_bot),
-                (0.0, z3 - z_bot),
-                (0.0, 0.0),
-            ]
-            Polygon(*pts, align=None)
-        sweep(path=wire, transition=Transition.ROUND)
+        with BuildSketch(Plane.XY.offset(z_bot)):
+            with Locations([(env.top_cx, env.top_cy)]):
+                RectangleRounded(env.top_w, env.top_l, env.r_corner)
+        extrude(amount=z3 - z_bot)
+        add(inner_cut.part, mode=Mode.SUBTRACT)
 
         # Clear out label pocket & side tab slots from the lower support bevel (z < z0)
         # so the stacking lip's 45° underside bevel never pinches the vertical tab slot height
@@ -945,6 +943,87 @@ def create_compartment_scoops(params: GridfinityBinParams) -> Optional[Part]:
             if comp_floor_w <= 2.0 or comp_floor_l <= 2.0:
                 continue
 
+            def _build_directional_scoop(
+                axis: Literal["y", "x"],
+                s: float,
+                wall_corner: float,
+                d_slope: float,
+                comp_floor_span: float,
+                max_frac: float,
+                req_radius: float,
+            ) -> Optional[Part]:
+                if d_slope > 1e-4 and env.z_trans > env.floor_z:
+                    dz_slope = env.z_trans - env.floor_z
+                    alpha = math.atan2(dz_slope, d_slope)
+                    wall_seg_len = math.hypot(d_slope, dz_slope)
+                else:
+                    alpha = math.pi / 2.0
+                    wall_seg_len = cavity_h - 1.0
+
+                tan_half = math.tan(alpha / 2.0)
+                if tan_half <= 1e-4:
+                    return None
+
+                max_tan_len = min(comp_floor_span * max_frac, wall_seg_len * 0.95)
+                sr = min(req_radius, max_tan_len / tan_half)
+                if sr <= 0.5:
+                    return None
+
+                # Avoid exact equal-radius Steinmetz singularity where the horizontal
+                # scoop cylinder meets the vertical compartment corner cylinder (r_inner).
+                l_tan = sr * tan_half
+                if abs(sr - env.r_inner) < 1e-3 or abs(l_tan - env.r_inner) < 1e-3:
+                    sr -= 1e-3
+                    if sr <= 0.5:
+                        return None
+                    l_tan = sr * tan_half
+
+                scoop_h = l_tan * math.sin(alpha)
+                if scoop_h <= 1e-3:
+                    return None
+
+                c_arc = wall_corner + s * l_tan
+                cz_arc = env.floor_z + sr
+                wall_top = wall_corner - s * l_tan * math.cos(alpha)
+                z_top = env.floor_z + scoop_h
+                pad = 1.0
+
+                if axis == "y":
+                    prof_plane = Plane(origin=(ccx, 0.0, 0.0), x_dir=(0, 1, 0), z_dir=(1, 0, 0))
+                    half_ext = env.comp_w / 2.0 + pad
+                else:
+                    prof_plane = Plane(origin=(0.0, ccy, 0.0), x_dir=(1, 0, 0), z_dir=(0, -1, 0))
+                    half_ext = env.comp_l / 2.0 + pad
+
+                # Build the scoop by clipping the rounded compartment prism with a planar
+                # bounding wedge and subtracting the exact tangent fillet cylinder. This
+                # avoids OCCT boolean failures on coplanar knife-edge cylinder intersections.
+                with BuildPart() as comp_scoop:
+                    with BuildSketch(Plane.XY.offset(env.floor_z)):
+                        with Locations([(ccx, ccy)]):
+                            RectangleRounded(env.comp_w, env.comp_l, env.r_inner)
+                    extrude(amount=scoop_h)
+
+                    with BuildSketch(prof_plane):
+                        Polygon(
+                            (wall_corner - s * pad, env.floor_z - pad),
+                            (c_arc, env.floor_z - pad),
+                            (c_arc, z_top + pad),
+                            (wall_top - s * pad, z_top + pad),
+                            align=None,
+                        )
+                    extrude(amount=half_ext, both=True, mode=Mode.INTERSECT)
+
+                    with BuildSketch(prof_plane):
+                        with Locations([(c_arc, cz_arc)]):
+                            Circle(sr)
+                    extrude(amount=half_ext, both=True, mode=Mode.SUBTRACT)
+
+                    if env.has_overhang and env.z_trans > env.floor_z:
+                        add(inner_env_part, mode=Mode.INTERSECT)
+
+                return comp_scoop.part
+
             # Front (-Y) and Back (+Y) scoops extruded in YZ plane along X
             for wall_side, req_radius in active_y_scoops:
                 if wall_side == "front":
@@ -956,51 +1035,11 @@ def create_compartment_scoops(params: GridfinityBinParams) -> Optional[Part]:
                     y_corner = comp_y_back_floor
                     dy_slope = max(0.0, comp_y_back_top - comp_y_back_floor)
 
-                if dy_slope > 1e-4 and env.z_trans > env.floor_z:
-                    dz_slope = env.z_trans - env.floor_z
-                    alpha = math.atan2(dz_slope, dy_slope)
-                    wall_seg_len = math.hypot(dy_slope, dz_slope)
-                else:
-                    alpha = math.pi / 2.0
-                    wall_seg_len = cavity_h - 1.0
-
-                tan_half = math.tan(alpha / 2.0)
-                if tan_half <= 1e-4:
-                    continue
-
-                max_tan_len = min(comp_floor_l * max_y_frac, wall_seg_len * 0.95)
-                sr = min(req_radius, max_tan_len / tan_half)
-                if sr <= 0.5:
-                    continue
-
-                l_tan = sr * tan_half
-                p_corner = Vector(y_corner, env.floor_z)
-                p_floor = Vector(y_corner + s * l_tan, env.floor_z)
-                p_top = Vector(
-                    y_corner - s * l_tan * math.cos(alpha),
-                    env.floor_z + l_tan * math.sin(alpha),
+                part = _build_directional_scoop(
+                    "y", s, y_corner, dy_slope, comp_floor_l, max_y_frac, req_radius
                 )
-                arc_mid = Vector(
-                    y_corner + s * (l_tan - sr * math.sin(alpha / 2.0)),
-                    env.floor_z + sr * (1.0 - math.cos(alpha / 2.0)),
-                )
-
-                with BuildPart() as comp_scoop:
-                    with BuildSketch(Plane.YZ.offset(ccx)) as sk_yz:
-                        with BuildLine() as bl:
-                            Line(p_top, p_corner)
-                            Line(p_corner, p_floor)
-                            ThreePointArc(p_floor, arc_mid, p_top)
-                        make_face()
-                    extrude(amount=env.comp_w / 2.0, both=True)
-
-                    with BuildSketch(Plane.XY.offset(env.floor_z)) as sk_clip:
-                        with Locations([(ccx, ccy)]):
-                            RectangleRounded(env.comp_w, env.comp_l, env.r_inner)
-                    extrude(amount=cavity_h, mode=Mode.INTERSECT)
-                    add(inner_env_part, mode=Mode.INTERSECT)
-
-                scoop_solids.append(comp_scoop.part)
+                if part is not None:
+                    scoop_solids.append(part)
 
             # Left (-X) and Right (+X) scoops extruded in XZ plane along Y
             for wall_side, req_radius in active_x_scoops:
@@ -1013,51 +1052,11 @@ def create_compartment_scoops(params: GridfinityBinParams) -> Optional[Part]:
                     x_corner = comp_x_right_floor
                     dx_slope = max(0.0, comp_x_right_top - comp_x_right_floor)
 
-                if dx_slope > 1e-4 and env.z_trans > env.floor_z:
-                    dz_slope = env.z_trans - env.floor_z
-                    alpha = math.atan2(dz_slope, dx_slope)
-                    wall_seg_len = math.hypot(dx_slope, dz_slope)
-                else:
-                    alpha = math.pi / 2.0
-                    wall_seg_len = cavity_h - 1.0
-
-                tan_half = math.tan(alpha / 2.0)
-                if tan_half <= 1e-4:
-                    continue
-
-                max_tan_len = min(comp_floor_w * max_x_frac, wall_seg_len * 0.95)
-                sr = min(req_radius, max_tan_len / tan_half)
-                if sr <= 0.5:
-                    continue
-
-                l_tan = sr * tan_half
-                p_corner = Vector(x_corner, env.floor_z)
-                p_floor = Vector(x_corner + s * l_tan, env.floor_z)
-                p_top = Vector(
-                    x_corner - s * l_tan * math.cos(alpha),
-                    env.floor_z + l_tan * math.sin(alpha),
+                part = _build_directional_scoop(
+                    "x", s, x_corner, dx_slope, comp_floor_w, max_x_frac, req_radius
                 )
-                arc_mid = Vector(
-                    x_corner + s * (l_tan - sr * math.sin(alpha / 2.0)),
-                    env.floor_z + sr * (1.0 - math.cos(alpha / 2.0)),
-                )
-
-                with BuildPart() as comp_x_scoop:
-                    with BuildSketch(Plane.XZ.offset(ccy)) as sk_xz:
-                        with BuildLine() as bl:
-                            Line(p_top, p_corner)
-                            Line(p_corner, p_floor)
-                            ThreePointArc(p_floor, arc_mid, p_top)
-                        make_face()
-                    extrude(amount=env.comp_l / 2.0, both=True)
-
-                    with BuildSketch(Plane.XY.offset(env.floor_z)) as sk_clip:
-                        with Locations([(ccx, ccy)]):
-                            RectangleRounded(env.comp_w, env.comp_l, env.r_inner)
-                    extrude(amount=cavity_h, mode=Mode.INTERSECT)
-                    add(inner_env_part, mode=Mode.INTERSECT)
-
-                scoop_solids.append(comp_x_scoop.part)
+                if part is not None:
+                    scoop_solids.append(part)
 
     if not scoop_solids:
         return None
