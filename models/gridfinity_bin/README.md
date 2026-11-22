@@ -96,10 +96,9 @@ All geometric parameters are defined in [`GridfinityBinParams`](file:///home/luk
 
 ## Export Configuration
 
-Exports are controlled by the standardized top-level variables in [gridfinity_bin.py](file:///home/luke/repos/code-cad/models/gridfinity_bin/gridfinity_bin.py#L36-L38):
+Standalone exports write to the gitignored repo-root `exports/` folder and are controlled by the top-level variables in [gridfinity_bin.py](file:///home/luke/repos/code-cad/models/gridfinity_bin/gridfinity_bin.py#L36-L37):
 
 ```python
-EXPORT_STL: bool = False      # Enable/disable STL export
-EXPORT_STEP: bool = False     # Enable/disable STEP export
-OUTPUT_DIR: str = "exports"   # Relative subfolder alongside the script
+EXPORT_STL: bool = False     # Save .stl to repo-root exports/ (default: False)
+EXPORT_STEP: bool = False    # Save .step to repo-root exports/ (default: False)
 ```

@@ -33,9 +33,8 @@ except ImportError:
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = False     # Save .stl file on execution (default: False)
-EXPORT_STEP: bool = False     # Save .step file on execution (default: False)
-OUTPUT_DIR: str = "exports"   # Relative subfolder alongside this script
+EXPORT_STL: bool = False     # Save .stl to repo-root exports/ (default: False)
+EXPORT_STEP: bool = False    # Save .step to repo-root exports/ (default: False)
 
 
 @dataclass
@@ -1455,38 +1454,9 @@ def export_filename(params: GridfinityBinParams) -> str:
 # Model Execution & Export
 # ==============================================================================
 if __name__ == "__main__":
+    from utils.runner import run_model
+
     # Instantiate default parameters directly from dataclass definitions
     params = GridfinityBinParams()
-
-    # Generate part geometry
     part = create_gridfinity_bin(params)
-
-    # Standardized export handling
-    if EXPORT_STL or EXPORT_STEP:
-        output_dir = Path(__file__).resolve().parent / OUTPUT_DIR
-        output_dir.mkdir(parents=True, exist_ok=True)
-        base_filename = export_filename(params)
-
-        if EXPORT_STL:
-            stl_path = output_dir / f"{base_filename}.stl"
-            export_stl(part, str(stl_path))
-            print(f"Exported STL: {stl_path}")
-
-        if EXPORT_STEP:
-            step_path = output_dir / f"{base_filename}.step"
-            export_step(part, str(step_path))
-            print(f"Exported STEP: {step_path}")
-
-    # Visualize model in viewer
-    try:
-        from ocp_viewer import set_defaults, show
-        set_defaults(orbit_control=True)
-    except ImportError:
-        try:
-            from ocp_vscode import set_defaults, show
-            set_defaults(orbit_control=True)
-        except ImportError:
-            def show(*args, **kwargs):
-                pass
-
-    show(part)
+    run_model(part, export_filename(params), stl=EXPORT_STL, step=EXPORT_STEP)

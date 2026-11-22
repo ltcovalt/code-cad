@@ -22,7 +22,6 @@ from gridfinity_bin import (
     EXPORT_STL,
     GridfinityBinParams,
     LabelHolderParams,
-    OUTPUT_DIR,
     OverhangParams,
     ScoopParams,
     create_base_feet,
@@ -40,7 +39,6 @@ def validate():
     # 1. Verify export flags
     assert isinstance(EXPORT_STL, bool)
     assert isinstance(EXPORT_STEP, bool)
-    assert OUTPUT_DIR == "exports"
     print("✓ Export configuration flags verified")
 
     # 2. Test individual standalone components on default bin
