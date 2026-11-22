@@ -13,7 +13,7 @@ from typing import List, Literal, Optional
 from build123d import *
 
 try:
-    from utils.params import group, param
+    from utils.params import default_preset, group, param
 except ImportError:
     import sys
 
@@ -21,14 +21,13 @@ except ImportError:
         if (_p / "utils").is_dir():
             sys.path.insert(0, str(_p))
             break
-    from utils.params import group, param
+    from utils.params import default_preset, group, param
 
 # ==============================================================================
 # Standardized Export Configuration
 # ==============================================================================
-EXPORT_STL: bool = False                # Save .stl file on execution (default: False)
-EXPORT_STEP: bool = False               # Save .step file on execution (default: False)
-OUTPUT_DIR: str = "exports"             # Output folder (relative to this script's directory)
+EXPORT_STL: bool = False                # Save .stl to repo-root exports/ (default: False)
+EXPORT_STEP: bool = False               # Save .step to repo-root exports/ (default: False)
 
 
 @dataclass
@@ -198,6 +197,7 @@ class RackSlotsParams:
     )
 
 
+@default_preset("1U Hex Bracket", desc="1U 19-inch rackmount L-bracket with honeycomb ventilation")
 @dataclass
 class RackBracketParams:
     """Parameters for 19-inch rackmount L-bracket."""
@@ -370,34 +370,8 @@ def export_filename(params: RackBracketParams) -> str:
 
 
 if __name__ == "__main__":
+    from utils.runner import run_model
+
     params = RackBracketParams()
     bracket = create_rack_bracket(params)
-
-    if EXPORT_STEP or EXPORT_STL:
-        exports_path = Path(__file__).resolve().parent / OUTPUT_DIR
-        exports_path.mkdir(parents=True, exist_ok=True)
-
-        stem = export_filename(params)
-
-        if EXPORT_STL:
-            stl_file = exports_path / f"{stem}.stl"
-            export_stl(bracket, str(stl_file))
-            print(f"Exported STL:  {stl_file}")
-
-        if EXPORT_STEP:
-            step_file = exports_path / f"{stem}.step"
-            export_step(bracket, str(step_file))
-            print(f"Exported STEP: {step_file}")
-
-    try:
-        from ocp_viewer import set_defaults, show
-        set_defaults(orbit_control=True)
-    except ImportError:
-        try:
-            from ocp_vscode import set_defaults, show
-            set_defaults(orbit_control=True)
-        except ImportError:
-            def show(*args, **kwargs):
-                pass
-
-    show(bracket)
+    run_model(bracket, export_filename(params), stl=EXPORT_STL, step=EXPORT_STEP)

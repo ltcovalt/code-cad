@@ -47,16 +47,15 @@ Simply configure the parameters in `RackBracketParams` (e.g. `u_count=2` for 2U,
 python3 rack_bracket.py
 ```
 
-Generated `.step` and `.stl` files are saved to `models/rack_bracket/exports/`.
+Generated `.step` and `.stl` files are saved to the gitignored repo-root `exports/` folder.
 
 ### Export Settings
 
 At the top of `rack_bracket.py`, you can toggle exports using standard repo settings:
 
 ```python
-EXPORT_STL: bool = False                # Save .stl file on execution (default: False)
-EXPORT_STEP: bool = False               # Save .step file on execution (default: False)
-OUTPUT_DIR: str = "exports"            # Output folder alongside this script
+EXPORT_STL: bool = False                # Save .stl to repo-root exports/ (default: False)
+EXPORT_STEP: bool = False               # Save .step to repo-root exports/ (default: False)
 ```
 
 ### Python / Scripting API

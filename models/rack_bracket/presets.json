@@ -1,0 +1,11 @@
+{
+  "2u_hex": {
+    "label": "2U Hex Bracket",
+    "description": "2U 19-inch rackmount L-bracket with honeycomb ventilation",
+    "params": {
+      "core": {
+        "u_count": 2
+      }
+    }
+  }
+}
