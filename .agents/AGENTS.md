@@ -1,4 +1,6 @@
-# Workspace Instructions: build123d CAD Modeling
+# Workspace Instructions: code-cad (build123d CAD Modeling)
+
+> **Scope:** Applies to the `code-cad` repository.
 
 > **Pre-Release Policy (Active Until Further Notice):**
 > This project is pre-release. Always favor the cleanest, most ideal code and project structure—even when that introduces breaking changes or requires refactoring existing models, schemas, or conventions. Aggressively remove dead, redundant, or unnecessary code, and do **not** add backwards-compatibility shims, fallbacks, migration layers, or deprecated aliases.
@@ -25,9 +27,10 @@ When building CAD models in this repository:
          - Use `Optional[T] = param(None, ...)` for auto-computed parameters (rendered as `Auto` in Studio).
          - Import `group, param` with the upward-search `utils` fallback so standalone scripts run directly via `python models/<name>/<name>.py` or `:!python %` without requiring package installation.
        - Avoid string-prefix `*_enabled` grouping heuristics and redundant alias properties.
-     - **Presets Standard (`presets.json`)**:
+     - **Presets Standard (`presets.json` & `@default_preset`)**:
        - Do **not** embed preset dictionaries inside Python model scripts (only canonical dataclass defaults belong in Python).
-       - Store model presets in `models/<model_name>/presets.json` using the Studio sparse-diff JSON schema (`{ "<key>": { "label": "...", "description": "...", "params": { ... } } }`).
+       - When a model's canonical dataclass defaults represent a specific real-world target (rather than generic dimensions), decorate the root `<Model>Params` dataclass with `@default_preset("<Label>", desc="...")` from `utils/params.py` so both readers of the Python script and Studio display a friendly name instead of `"Default"`.
+       - Store additional model presets in `models/<model_name>/presets.json` using the Studio sparse-diff JSON schema (`{ "<key>": { "label": "...", "description": "...", "params": { ... } } }`).
    - **Decoupled Generator Function & Side-Effect-Free Imports**:
      - Implement CAD logic as a standalone generator function `create_<model>(params: <Model>Params) -> Part | Compound | Solid`.
      - It must accept the dataclass instance and return the generated geometry without side effects (no exports, file writes, or viewer calls inside the generator). This ensures it can be imported and plugged directly into an external GUI/web viewer worker.

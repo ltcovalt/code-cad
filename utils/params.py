@@ -2,7 +2,8 @@
 
 Produces standard ``dataclasses.Field.metadata`` consumed by Code CAD Studio
 (``label``, ``description``, ``unit``, ``min``, ``max``, ``step``, ``when``)
-with zero external dependencies.
+and optional root-class ``__default_preset__`` metadata with zero external
+dependencies.
 """
 
 from __future__ import annotations
@@ -11,6 +12,23 @@ from dataclasses import field
 from typing import Any, Callable, TypeVar, cast
 
 T = TypeVar("T")
+
+
+def default_preset(
+    label: str,
+    *,
+    desc: str | None = None,
+) -> Callable[[type[T]], type[T]]:
+    """Attach a friendly preset label and description to a root Params dataclass."""
+
+    def _decorator(cls: type[T]) -> type[T]:
+        meta: dict[str, str] = {"label": label.strip()}
+        if desc is not None and desc.strip():
+            meta["description"] = desc.strip()
+        setattr(cls, "__default_preset__", meta)
+        return cls
+
+    return _decorator
 
 
 def param(
