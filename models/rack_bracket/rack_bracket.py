@@ -35,7 +35,7 @@ class CoreParams:
     """Primary rack unit and L-bracket structural dimensions."""
 
     u_count: int = param(
-        1,
+        2,
         label="Rack Units",
         desc="Number of rack units (1U, 2U, 3U, ...)",
         unit="U", min=1, max=6, step=1,
@@ -185,9 +185,9 @@ class RackSlotsParams:
         unit="mm", min=3.0, max=12.0, step=0.25,
     )
     single_slot_1u: bool = param(
-        True,
+        False,
         label="Single Slot (1U)",
-        desc="Center 1 slot for 1U instead of 2 end slots",
+        desc="Center 1 slot for 1U instead of 2 EIA-310 end slots",
         when={"core.u_count": 1},
     )
     z_positions: Optional[List[float]] = param(
@@ -197,7 +197,7 @@ class RackSlotsParams:
     )
 
 
-@default_preset("1U Hex Bracket", desc="1U 19-inch rackmount L-bracket with honeycomb ventilation")
+@default_preset("2U Hex Bracket", desc="2U 19-inch rackmount L-bracket with honeycomb ventilation")
 @dataclass
 class RackBracketParams:
     """Parameters for 19-inch rackmount L-bracket."""
@@ -366,7 +366,8 @@ def create_rack_bracket(params: RackBracketParams) -> Part:
 
 def export_filename(params: RackBracketParams) -> str:
     """Return standardized lowercase filename stem (without extension) for exports."""
-    return f"rack_bracket_{params.core.u_count}u_{params.cutout.style.lower()}"
+    style = "solid" if params.cutout.style.lower() == "none" else params.cutout.style.lower()
+    return f"rack_bracket_{params.core.u_count}u_{style}"
 
 
 if __name__ == "__main__":
