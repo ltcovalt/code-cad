@@ -1,17 +1,20 @@
 {
-  "prusa_core_one_l_spool_clip": {
-    "label": "Prusa Core One L Spool Clip",
-    "description": "Retaining clip to prevent larger diameter filament spools from falling off",
-    "params": {
-      "jaw": {
-        "jaw_curve_depth": 0.8,
-        "jaw_flare_angle": 18
-      },
-      "removal_notch": {
-        "depth": 12,
-        "reinforce_outer": true,
-        "spine_wall": 6,
-        "width": 30
+  "schema_version": 1,
+  "presets": {
+    "prusa_core_one_l_spool_clip": {
+      "label": "Prusa Core One L Spool Clip",
+      "description": "Retaining clip to prevent larger diameter filament spools from falling off",
+      "params": {
+        "jaw": {
+          "jaw_curve_depth": 0.8,
+          "jaw_flare_angle": 18
+        },
+        "removal_notch": {
+          "depth": 12,
+          "reinforce_outer": true,
+          "spine_wall": 6,
+          "width": 30
+        }
       }
     }
   }
