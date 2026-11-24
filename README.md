@@ -47,9 +47,11 @@ cad/
 ├── .gitignore
 ├── README.md                   # Repository overview (this file)
 ├── exports/                    # Gitignored output directory for local STL/STEP/3MF exports
+├── components/                 # Reusable parametric 3D geometry components (pull_tab.py)
 ├── utils/                      # Core zero-dependency helpers (params.py, runner.py)
 ├── models/                     # Parametric generator projects
 │   ├── c_clip/                 # Parametric snap-on C-clips for rods and shafts
+│   ├── can_lid/                # Snap-on storage lids for beverage and food cans
 │   ├── container_lid/          # Container lid generator (Pyrex, etc.)
 │   ├── gridfinity_bin/         # Parametric Gridfinity bin with Pred printable label holder
 │   ├── magnetic_label/         # Magnetic label generator
@@ -66,6 +68,7 @@ cad/
 | Model | Description | Output Formats |
 | :--- | :--- | :--- |
 | **[C-Clip](models/c_clip/)** | Parametric snap-on C-clip for cylindrical rods and shafts with configurable thickness, inside/outside diameters, inside-edge removal cutout, and optional reinforced outer finger-pull lobe. | STL, STEP |
+| **[Can Lid](models/can_lid/)** | Parametric snap-on storage lid for rolled-rim beverage and food/soup cans with under-rim retention bead, configurable pull tab, optional inner splash ring, and optional rigid-plastic flexure slots. | STL, STEP |
 | **[Container Lid](models/container_lid/)** | Airtight container lid generator with sealing bead, stacking rim, and pull tab. Built-in presets for Pyrex rectangular and round glass dishes. | STL, STEP |
 | **[Gridfinity Bin](models/gridfinity_bin/)** | Parametric Gridfinity bin with Pred-compatible printable label holder, finger scoops, dividers, and drawer spacer gap overhangs. | STL, STEP |
 | **[Magnetic Label](models/magnetic_label/)** | Magnetic label generator with auto-sizing to text, embossed/debossed/flush inlay styles, and press-fit round magnet pockets. | STL, STEP (Single & Multi-body) |
