@@ -46,7 +46,6 @@ Each generator is structured in its own directory with its source script, option
 cad/
 ├── .gitignore
 ├── README.md                   # Repository overview (this file)
-├── docs/                       # Manuals and general reference PDFs
 ├── exports/                    # Gitignored output directory for local STL/STEP/3MF exports
 ├── utils/                      # Core zero-dependency helpers (params.py, runner.py)
 ├── models/                     # Parametric generator projects
