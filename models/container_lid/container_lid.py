@@ -24,6 +24,11 @@ from typing import Literal, Optional
 from build123d import *
 
 try:
+    from components.pull_tab import (
+        PullTabParams as BasePullTabParams,
+        build_pull_tab,
+        pull_tab_angular_clearance,
+    )
     from utils.params import group, param
 except ImportError:
     import sys
@@ -32,6 +37,11 @@ except ImportError:
         if (_p / "utils").is_dir():
             sys.path.insert(0, str(_p))
             break
+    from components.pull_tab import (
+        PullTabParams as BasePullTabParams,
+        build_pull_tab,
+        pull_tab_angular_clearance,
+    )
     from utils.params import group, param
 
 # ==============================================================================
@@ -210,13 +220,9 @@ class StackingRimParams:
 
 
 @dataclass
-class PullTabParams:
+class PullTabParams(BasePullTabParams):
     """Ergonomic outer pull tab for lid removal."""
 
-    enabled: bool = param(
-        True,
-        desc="Add outer peel tab",
-    )
     location: Literal["auto", "corner", "edge"] = param(
         "auto",
         desc="Corner for rectangular, edge for round",
@@ -232,28 +238,15 @@ class PullTabParams:
         desc="Tab width",
         unit="mm", min=10.0, max=50.0, step=1.0,
     )
-    root_overlap: float = param(
-        6.0,
-        desc="Root overlap into top plate/skirt",
-        unit="mm", min=2.0, max=15.0, step=0.5,
+    root_fillet: float = param(
+        4.5,
+        desc="Concave flare radius blending tab sides into the lid rim (0 = straight)",
+        unit="mm", min=0.0, max=15.0, step=0.5,
     )
     gusset_depth: float = param(
         2.5,
         desc="Under-tab structural gusset depth",
         unit="mm", min=0.0, max=8.0, step=0.5,
-    )
-    thickness: float = param(
-        2.0,
-        desc="Tab plate thickness",
-        unit="mm", min=1.0, max=5.0, step=0.2,
-    )
-    grip_ribs: bool = param(
-        True,
-        desc="Add recessed non-slip traction grooves",
-    )
-    hanging_hole: bool = param(
-        False,
-        desc="Add pegboard / drying rack hole",
     )
     hole_diameter: float = param(
         4.0,
@@ -429,60 +422,47 @@ def build_round_lid(p: ContainerLidParams) -> Solid:
         revolve(axis=Axis.Z)
 
         if tab.enabled:
-            tab_total_len = tab.length + tab.root_overlap
-            tab_center_x = (r_outer - tab.root_overlap) + tab_total_len / 2.0
-
-            with BuildSketch(Plane.XY):
-                with Locations((tab_center_x, 0)):
-                    RectangleRounded(tab_total_len, tab.width, radius=4.0)
-                if tab.hanging_hole:
-                    with Locations((r_outer + tab.length - (tab.hole_diameter / 2.0 + 2.0), 0)):
-                        Circle(radius=tab.hole_diameter / 2.0, mode=Mode.SUBTRACT)
-            extrude(amount=st.top_thickness, mode=Mode.ADD)
-
             eff_gusset_depth = min(tab.gusset_depth, max(0.0, st.skirt_height - st.lead_in_chamfer))
-            if eff_gusset_depth > 0:
-                z_cut_bot = -eff_gusset_depth - 1.0
-                z_cut_top = 1.0
-                with BuildPart() as gusset:
-                    with BuildSketch(Plane.XY.offset(-eff_gusset_depth)):
-                        with Locations(((r_outer - tab.root_overlap) + (tab.root_overlap + tab.length * 0.4) / 2.0, 0)):
-                            RectangleRounded(tab.root_overlap + tab.length * 0.4, tab.width * 0.75, radius=3.0)
-                    with BuildSketch(Plane.XY):
-                        with Locations(((r_outer - tab.root_overlap) + (tab.root_overlap + tab.length * 0.8) / 2.0, 0)):
-                            RectangleRounded(tab.root_overlap + tab.length * 0.8, tab.width, radius=3.5)
-                    loft(ruled=True)
-                    if taper > 0:
+            round_trim_solid = None
+            round_trim_radius = None
+            if eff_gusset_depth > 0.2:
+                if taper > 0:
+                    z_cut_bot = -eff_gusset_depth - 1.0
+                    z_cut_top = 1.0
+                    with BuildPart() as g_trim:
                         with BuildSketch(Plane.XY.offset(z_cut_bot)) as g_cut_bot:
                             Circle(radius=max(1.0, r_in_at(z_cut_bot) + st.skirt_wall_thickness * 0.5))
                         with BuildSketch(Plane.XY.offset(z_cut_top)) as g_cut_top:
                             Circle(radius=r_in_at(z_cut_top) + st.skirt_wall_thickness * 0.5)
-                        loft([g_cut_bot.sketch, g_cut_top.sketch], ruled=True, mode=Mode.SUBTRACT)
-                    else:
-                        with BuildSketch(Plane.XY.offset(z_cut_bot)):
-                            Circle(radius=r_inner + st.skirt_wall_thickness * 0.5)
-                        extrude(amount=eff_gusset_depth + 2.0, mode=Mode.SUBTRACT)
-                if gusset.part is not None:
-                    add(gusset.part, mode=Mode.ADD)
+                        loft([g_cut_bot.sketch, g_cut_top.sketch], ruled=True)
+                    round_trim_solid = g_trim.part
+                else:
+                    round_trim_radius = r_inner + st.skirt_wall_thickness * 0.5
 
-            if tab.grip_ribs:
-                rib_depth = min(0.6, st.top_thickness * 0.4)
-                for i in range(3):
-                    rib_x = r_outer + 2.0 + i * 2.2
-                    if rib_x + 0.8 < (r_outer + tab.length - 1.0):
-                        with BuildSketch(Plane.XY.offset(st.top_thickness + 0.1)):
-                            with Locations((rib_x, 0)):
-                                RectangleRounded(1.0, tab.width - 8.0, radius=0.4)
-                        extrude(amount=-(rib_depth + 0.1), mode=Mode.SUBTRACT)
+            tab_add, tab_cut = build_pull_tab(
+                tab,
+                x_attach=r_outer,
+                top_thickness=st.top_thickness,
+                max_gusset_depth=eff_gusset_depth,
+                outer_bevel=st.outer_fillet,
+                rim_radius=r_outer,
+                trim_solid=round_trim_solid,
+                trim_radius=round_trim_radius,
+                print_orientation=False,
+            )
+            insert(tab_add, mode=Mode.ADD)
+            if tab_cut is not None:
+                insert(tab_cut, mode=Mode.SUBTRACT)
 
         if flex.enabled and flex.round_slot_count > 0:
             slot_h = st.skirt_height - 1.5
             slot_root_r = flex.slot_width
             slot_radial_len = st.skirt_wall_thickness * 4 + taper * 2
             slot_center_r = r_outer - taper / 2.0
+            tab_clear_deg = pull_tab_angular_clearance(tab, r_outer)
             for i in range(flex.round_slot_count):
                 ang = i * (360.0 / flex.round_slot_count)
-                if tab.enabled and (ang < 25.0 or ang > 335.0):
+                if tab.enabled and (ang < tab_clear_deg or ang > 360.0 - tab_clear_deg):
                     continue
                 rot = Rotation(0, 0, ang)
                 with Locations(rot):
@@ -657,110 +637,57 @@ def build_rectangular_lid(p: ContainerLidParams) -> Solid:
 
         if tab.enabled:
             is_corner = (tab.location == "corner") or (tab.location == "auto")
-            tab_len = tab.length
-            tab_w = tab.width
-            tab_overlap = tab.root_overlap
-            tab_total_len = tab_len + tab_overlap
             eff_gusset_depth = min(tab.gusset_depth, max(0.0, st.skirt_height - st.lead_in_chamfer))
             wall_mid = st.skirt_wall_thickness * 0.5
-            z_cut_bot = -eff_gusset_depth - 1.0
-            z_cut_top = 1.0
-            l_in_gbot, w_in_gbot, r_in_gbot = rect_in_at(z_cut_bot)
-            l_in_gtop, w_in_gtop, r_in_gtop = rect_in_at(z_cut_top)
-            l_gusset_cut = l_inner + 2 * wall_mid
-            w_gusset_cut = w_inner + 2 * wall_mid
-            r_gusset_cut = r_inner + wall_mid
+            rect_trim_solid = None
+            if eff_gusset_depth > 0.2:
+                z_cut_bot = -eff_gusset_depth - 1.0
+                z_cut_top = 1.0
+                with BuildPart() as g_trim:
+                    if taper > 0:
+                        l_in_gbot, w_in_gbot, r_in_gbot = rect_in_at(z_cut_bot)
+                        l_in_gtop, w_in_gtop, r_in_gtop = rect_in_at(z_cut_top)
+                        with BuildSketch(Plane.XY.offset(z_cut_bot)) as g_cut_bot:
+                            RectangleRounded(l_in_gbot + 2 * wall_mid, w_in_gbot + 2 * wall_mid, radius=r_in_gbot + wall_mid)
+                        with BuildSketch(Plane.XY.offset(z_cut_top)) as g_cut_top:
+                            RectangleRounded(l_in_gtop + 2 * wall_mid, w_in_gtop + 2 * wall_mid, radius=r_in_gtop + wall_mid)
+                        loft([g_cut_bot.sketch, g_cut_top.sketch], ruled=True)
+                    else:
+                        with BuildSketch(Plane.XY.offset(z_cut_bot)):
+                            RectangleRounded(l_inner + 2 * wall_mid, w_inner + 2 * wall_mid, radius=r_inner + wall_mid)
+                        extrude(amount=eff_gusset_depth + 2.0)
+                rect_trim_solid = g_trim.part
 
+            rect_bevel = min(st.outer_fillet, st.skirt_wall_thickness * 0.7) if st.outer_fillet > 0 else 0.0
             if is_corner:
                 corner_cx = l_outer / 2.0 - r_outer
                 corner_cy = w_outer / 2.0 - r_outer
                 tab_loc = Location((corner_cx, corner_cy, 0), (0, 0, 45.0))
-                tab_center_dist = (r_outer - tab_overlap) + tab_total_len / 2.0
-
-                with BuildSketch(Plane.XY):
-                    with Locations(tab_loc):
-                        with Locations((tab_center_dist, 0)):
-                            RectangleRounded(tab_total_len, tab_w, radius=4.0)
-                        if tab.hanging_hole:
-                            with Locations((r_outer + tab_len - (tab.hole_diameter / 2.0 + 2.0), 0)):
-                                Circle(radius=tab.hole_diameter / 2.0, mode=Mode.SUBTRACT)
-                extrude(amount=st.top_thickness, mode=Mode.ADD)
-
-                if eff_gusset_depth > 0:
-                    with BuildPart() as gusset:
-                        with BuildSketch(Plane.XY.offset(-eff_gusset_depth)):
-                            with Locations(tab_loc):
-                                with Locations(((r_outer - tab_overlap) + (tab_overlap + tab_len * 0.4) / 2.0, 0)):
-                                    RectangleRounded(tab_overlap + tab_len * 0.4, tab_w * 0.75, radius=3.0)
-                        with BuildSketch(Plane.XY):
-                            with Locations(tab_loc):
-                                with Locations(((r_outer - tab_overlap) + (tab_overlap + tab_len * 0.8) / 2.0, 0)):
-                                    RectangleRounded(tab_overlap + tab_len * 0.8, tab_w, radius=3.5)
-                        loft(ruled=True)
-                        if taper > 0:
-                            with BuildSketch(Plane.XY.offset(z_cut_bot)) as g_cut_bot:
-                                RectangleRounded(l_in_gbot + 2 * wall_mid, w_in_gbot + 2 * wall_mid, radius=r_in_gbot + wall_mid)
-                            with BuildSketch(Plane.XY.offset(z_cut_top)) as g_cut_top:
-                                RectangleRounded(l_in_gtop + 2 * wall_mid, w_in_gtop + 2 * wall_mid, radius=r_in_gtop + wall_mid)
-                            loft([g_cut_bot.sketch, g_cut_top.sketch], ruled=True, mode=Mode.SUBTRACT)
-                        else:
-                            with BuildSketch(Plane.XY.offset(z_cut_bot)):
-                                RectangleRounded(l_gusset_cut, w_gusset_cut, radius=r_gusset_cut)
-                            extrude(amount=eff_gusset_depth + 2.0, mode=Mode.SUBTRACT)
-                    if gusset.part is not None:
-                        add(gusset.part, mode=Mode.ADD)
-
-                if tab.grip_ribs:
-                    rib_depth = min(0.6, st.top_thickness * 0.4)
-                    for i in range(3):
-                        rx = r_outer + 2.0 + i * 2.2
-                        if rx + 0.8 < (r_outer + tab_len - 1.0):
-                            with BuildSketch(Plane.XY.offset(st.top_thickness + 0.1)):
-                                with Locations(tab_loc):
-                                    with Locations((rx, 0)):
-                                        RectangleRounded(1.0, tab_w - 8.0, radius=0.4)
-                            extrude(amount=-(rib_depth + 0.1), mode=Mode.SUBTRACT)
+                tab_add, tab_cut = build_pull_tab(
+                    tab,
+                    x_attach=r_outer,
+                    top_thickness=st.top_thickness,
+                    max_gusset_depth=eff_gusset_depth,
+                    outer_bevel=rect_bevel,
+                    rim_radius=r_outer,
+                    trim_solid=rect_trim_solid,
+                    print_orientation=False,
+                    location=tab_loc,
+                )
             else:
-                tab_center_x = (l_outer / 2.0 - tab_overlap) + tab_total_len / 2.0
-                with BuildSketch(Plane.XY):
-                    with Locations((tab_center_x, 0)):
-                        RectangleRounded(tab_total_len, tab_w, radius=4.0)
-                    if tab.hanging_hole:
-                        with Locations((l_outer / 2.0 + tab_len - (tab.hole_diameter / 2.0 + 2.0), 0)):
-                            Circle(radius=tab.hole_diameter / 2.0, mode=Mode.SUBTRACT)
-                extrude(amount=st.top_thickness, mode=Mode.ADD)
-
-                if eff_gusset_depth > 0:
-                    with BuildPart() as gusset:
-                        with BuildSketch(Plane.XY.offset(-eff_gusset_depth)):
-                            with Locations(((l_outer / 2.0 - tab_overlap) + (tab_overlap + tab_len * 0.4) / 2.0, 0)):
-                                RectangleRounded(tab_overlap + tab_len * 0.4, tab_w * 0.75, radius=3.0)
-                        with BuildSketch(Plane.XY):
-                            with Locations(((l_outer / 2.0 - tab_overlap) + (tab_overlap + tab_len * 0.8) / 2.0, 0)):
-                                RectangleRounded(tab_overlap + tab_len * 0.8, tab_w, radius=3.5)
-                        loft(ruled=True)
-                        if taper > 0:
-                            with BuildSketch(Plane.XY.offset(z_cut_bot)) as g_cut_bot:
-                                RectangleRounded(l_in_gbot + 2 * wall_mid, w_in_gbot + 2 * wall_mid, radius=r_in_gbot + wall_mid)
-                            with BuildSketch(Plane.XY.offset(z_cut_top)) as g_cut_top:
-                                RectangleRounded(l_in_gtop + 2 * wall_mid, w_in_gtop + 2 * wall_mid, radius=r_in_gtop + wall_mid)
-                            loft([g_cut_bot.sketch, g_cut_top.sketch], ruled=True, mode=Mode.SUBTRACT)
-                        else:
-                            with BuildSketch(Plane.XY.offset(z_cut_bot)):
-                                RectangleRounded(l_gusset_cut, w_gusset_cut, radius=r_gusset_cut)
-                            extrude(amount=eff_gusset_depth + 2.0, mode=Mode.SUBTRACT)
-                    if gusset.part is not None:
-                        add(gusset.part, mode=Mode.ADD)
-
-                if tab.grip_ribs:
-                    rib_depth = min(0.6, st.top_thickness * 0.4)
-                    for i in range(3):
-                        rx = l_outer / 2.0 + 2.0 + i * 2.2
-                        if rx + 0.8 < (l_outer / 2.0 + tab_len - 1.0):
-                            with BuildSketch(Plane.XY.offset(st.top_thickness + 0.1)):
-                                with Locations((rx, 0)):
-                                    RectangleRounded(1.0, tab_w - 8.0, radius=0.4)
-                            extrude(amount=-(rib_depth + 0.1), mode=Mode.SUBTRACT)
+                tab_add, tab_cut = build_pull_tab(
+                    tab,
+                    x_attach=l_outer / 2.0,
+                    top_thickness=st.top_thickness,
+                    max_gusset_depth=eff_gusset_depth,
+                    outer_bevel=rect_bevel,
+                    rim_radius=None,
+                    trim_solid=rect_trim_solid,
+                    print_orientation=False,
+                )
+            insert(tab_add, mode=Mode.ADD)
+            if tab_cut is not None:
+                insert(tab_cut, mode=Mode.SUBTRACT)
 
         if flex.enabled:
             slot_h = st.skirt_height - 1.5
