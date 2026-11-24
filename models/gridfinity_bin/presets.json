@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "presets": {
+    "gridfinity_1x1x4_bin": {
+      "label": "Gridfinity 1x1x4 Bin",
+      "params": {
+        "core": {
+          "grid_x": 1,
+          "grid_y": 1,
+          "grid_z": 4
+        }
+      }
+    }
+  }
+}
