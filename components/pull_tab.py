@@ -243,25 +243,25 @@ def build_pull_tab(
             )
             if print_orientation:
                 with BuildSketch(Plane.XY) as sk_bev_lo:
-                    insert(bevel_face)
+                    add(bevel_face)
                 with BuildSketch(Plane.XY.offset(eff_bevel)) as sk_bev_hi:
-                    insert(tab_face)
+                    add(tab_face)
                 loft([sk_bev_lo.sketch, sk_bev_hi.sketch], ruled=True, mode=Mode.ADD)
                 with BuildSketch(Plane.XY.offset(eff_bevel)):
-                    insert(tab_face)
+                    add(tab_face)
                 extrude(amount=top_thickness - eff_bevel, mode=Mode.ADD)
             else:
                 with BuildSketch(Plane.XY):
-                    insert(tab_face)
+                    add(tab_face)
                 extrude(amount=top_thickness - eff_bevel, mode=Mode.ADD)
                 with BuildSketch(Plane.XY.offset(top_thickness - eff_bevel)) as sk_bev_lo:
-                    insert(tab_face)
+                    add(tab_face)
                 with BuildSketch(Plane.XY.offset(top_thickness)) as sk_bev_hi:
-                    insert(bevel_face)
+                    add(bevel_face)
                 loft([sk_bev_lo.sketch, sk_bev_hi.sketch], ruled=True, mode=Mode.ADD)
         else:
             with BuildSketch(Plane.XY):
-                insert(tab_face)
+                add(tab_face)
             extrude(amount=top_thickness, mode=Mode.ADD)
 
         if eff_gusset_depth > 0.2:
@@ -283,9 +283,9 @@ def build_pull_tab(
             )
             with BuildPart() as gusset:
                 with BuildSketch(Plane.XY.offset(z_base)):
-                    insert(base_face)
+                    add(base_face)
                 with BuildSketch(Plane.XY.offset(z_peak)):
-                    insert(peak_face)
+                    add(peak_face)
                 loft(ruled=True)
                 if trim_radius is not None:
                     z_trim_start = (z_base - 0.5) if print_orientation else (z_peak - 0.5)
@@ -300,7 +300,7 @@ def build_pull_tab(
                     gusset_solid = gusset_solid - trim_solid
                 if location is not None:
                     gusset_solid = gusset_solid.moved(location.inverse())
-                insert(gusset_solid, mode=Mode.ADD)
+                add(gusset_solid, mode=Mode.ADD)
 
     assert add_part.part is not None, "Failed to generate pull tab"
     tab_add = add_part.part
@@ -347,7 +347,7 @@ def build_pull_tab(
     if cut_solids:
         with BuildPart() as combined_cut:
             for s in cut_solids:
-                insert(s, mode=Mode.ADD)
+                add(s, mode=Mode.ADD)
         if combined_cut.part is not None:
             tab_cut = combined_cut.part
             if location is not None:
