@@ -450,9 +450,9 @@ def build_round_lid(p: ContainerLidParams) -> Solid:
                 trim_radius=round_trim_radius,
                 print_orientation=False,
             )
-            insert(tab_add, mode=Mode.ADD)
+            add(tab_add, mode=Mode.ADD)
             if tab_cut is not None:
-                insert(tab_cut, mode=Mode.SUBTRACT)
+                add(tab_cut, mode=Mode.SUBTRACT)
 
         if flex.enabled and flex.round_slot_count > 0:
             slot_h = st.skirt_height - 1.5
@@ -685,9 +685,9 @@ def build_rectangular_lid(p: ContainerLidParams) -> Solid:
                     trim_solid=rect_trim_solid,
                     print_orientation=False,
                 )
-            insert(tab_add, mode=Mode.ADD)
+            add(tab_add, mode=Mode.ADD)
             if tab_cut is not None:
-                insert(tab_cut, mode=Mode.SUBTRACT)
+                add(tab_cut, mode=Mode.SUBTRACT)
 
         if flex.enabled:
             slot_h = st.skirt_height - 1.5
