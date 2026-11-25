@@ -47,9 +47,10 @@ cad/
 ├── .gitignore
 ├── README.md                   # Repository overview (this file)
 ├── exports/                    # Gitignored output directory for local STL/STEP/3MF exports
-├── components/                 # Reusable parametric 3D geometry components (pull_tab.py)
+├── components/                 # Reusable parametric 3D geometry components (pull_tab.py, gridfinity_base.py)
 ├── utils/                      # Core zero-dependency helpers (params.py, runner.py)
 ├── models/                     # Parametric generator projects
+│   ├── battery_caddy/          # Parametric RC LiPo battery pit caddy (2S shorty, LCG, stick, custom)
 │   ├── c_clip/                 # Parametric snap-on C-clips for rods and shafts
 │   ├── can_lid/                # Snap-on storage lids for beverage and food cans
 │   ├── container_lid/          # Container lid generator (Pyrex, etc.)
@@ -67,6 +68,7 @@ cad/
 
 | Model | Description | Output Formats |
 | :--- | :--- | :--- |
+| **[Battery Caddy](models/battery_caddy/)** | Parametric RC LiPo hardcase battery caddy for 2S shorty (standard, LCG, ULCG), stick, and custom packs with flat or Gridfinity base, grid/pinwheel/auto-pack layouts, grip cutouts, and a single-section test-fit mode. | STL, STEP |
 | **[C-Clip](models/c_clip/)** | Parametric snap-on C-clip for cylindrical rods and shafts with configurable thickness, inside/outside diameters, inside-edge removal cutout, and optional reinforced outer finger-pull lobe. | STL, STEP |
 | **[Can Lid](models/can_lid/)** | Parametric snap-on storage lid for rolled-rim beverage and food/soup cans with under-rim retention bead, configurable pull tab, optional inner splash ring, and optional rigid-plastic flexure slots. | STL, STEP |
 | **[Container Lid](models/container_lid/)** | Airtight container lid generator with sealing bead, stacking rim, and pull tab. Built-in presets for Pyrex rectangular and round glass dishes. | STL, STEP |

@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "presets": {
+    "shorty_test_fit": {
+      "label": "2S Shorty Single Test-Fit Collar",
+      "description": "Fast-printing 1×1 open-bottom 15 mm collar to verify clearance on your packs before printing the full caddy",
+      "params": {
+        "test_fit": {
+          "enabled": true,
+          "height": 15,
+          "open_bottom": true
+        }
+      }
+    },
+    "shorty_2x2_pinwheel_gridfinity": {
+      "label": "2S Shorty 4-Pack Pinwheel (Gridfinity 2×2)",
+      "description": "Ultra-compact 4-pack pinwheel with center cubby fitting inside a 2×2 Gridfinity base (83.5 × 83.5 mm)",
+      "params": {
+        "base": {
+          "style": "gridfinity"
+        },
+        "layout": {
+          "pattern": "pinwheel"
+        }
+      }
+    },
+    "shorty_2x2_pinwheel_loop_gridfinity": {
+      "label": "2S Shorty 4-Pack Pinwheel + Pull Loop (Gridfinity 2×2)",
+      "description": "4-pack pinwheel on a 2×2 Gridfinity base with a support-free center finger pull loop clearing the battery tops",
+      "params": {
+        "base": {
+          "style": "gridfinity"
+        },
+        "layout": {
+          "pattern": "pinwheel",
+          "pinwheel_center": "pull_loop"
+        }
+      }
+    },
+    "shorty_3x2_pack_gridfinity": {
+      "label": "2S Shorty 6-Pack Auto-Pack (Gridfinity 3×2)",
+      "description": "Maximized 6-pack mixed layout (4 upright + 2 rotated 90°) filling a 3×2 Gridfinity base (125.5 × 83.5 mm)",
+      "params": {
+        "base": {
+          "style": "gridfinity"
+        },
+        "layout": {
+          "pack_grid_x": 3,
+          "pack_grid_y": 2,
+          "pattern": "auto_pack"
+        }
+      }
+    },
+    "shorty_3x1_strip_gridfinity": {
+      "label": "2S Shorty 2-Pack Slim Strip (Gridfinity 3×1)",
+      "description": "Slim 1U-deep Gridfinity strip holding 2 rotated standard 2S shorty packs (125.5 × 41.5 mm)",
+      "params": {
+        "base": {
+          "style": "gridfinity"
+        },
+        "layout": {
+          "columns": 2,
+          "pattern": "grid",
+          "rotate_90": true,
+          "rows": 1
+        }
+      }
+    },
+    "shorty_2x2_upright": {
+      "label": "2S Shorty 4-Pack (2×2 Flat Grid)",
+      "description": "Compact 2×2 upright flat-base block for 4 standard 2S shorty LiPo packs",
+      "params": {
+        "layout": {
+          "columns": 2,
+          "rows": 2
+        }
+      }
+    },
+    "shorty_3x2_upright": {
+      "label": "2S Shorty 6-Pack (3×2 Flat Grid)",
+      "description": "3×2 upright flat-base tray holding 6 standard 2S shorty LiPo packs",
+      "params": {
+        "layout": {
+          "columns": 3,
+          "rows": 2
+        }
+      }
+    },
+    "shorty_4x1_on_edge": {
+      "label": "2S Shorty 4-Pack (On Long Edge)",
+      "description": "Low-CG 4×1 caddy holding standard 2S shorty packs on their 96×25.1 mm long edge",
+      "params": {
+        "battery": {
+          "orientation": "on_edge"
+        },
+        "structure": {
+          "wall_height": 28
+        }
+      }
+    },
+    "shorty_lcg_4x1": {
+      "label": "2S Shorty LCG 4-Pack (Upright)",
+      "description": "4×1 upright caddy sized for LCG 2S shorty LiPo packs (96 × 47 × 22.5 mm)",
+      "params": {
+        "battery": {
+          "battery_type": "shorty_lcg"
+        }
+      }
+    },
+    "shorty_ulcg_4x1": {
+      "label": "2S Shorty ULCG / Slim 4-Pack (Upright)",
+      "description": "4×1 upright caddy sized for slim ULCG 2S shorty LiPo packs (96 × 47 × 18.5 mm)",
+      "params": {
+        "battery": {
+          "battery_type": "shorty_ulcg"
+        }
+      }
+    }
+  }
+}
