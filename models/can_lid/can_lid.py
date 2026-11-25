@@ -344,9 +344,9 @@ def create_can_lid(params: CanLidParams) -> Solid:
                 trim_radius=r_inner + st.skirt_wall_thickness * 0.5,
                 print_orientation=True,
             )
-            insert(tab_add, mode=Mode.ADD)
+            add(tab_add, mode=Mode.ADD)
             if tab_cut is not None:
-                insert(tab_cut, mode=Mode.SUBTRACT)
+                add(tab_cut, mode=Mode.SUBTRACT)
 
         if flex.enabled and flex.slot_count > 0:
             slot_h = max(2.0, st.skirt_height - 1.5)

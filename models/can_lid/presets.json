@@ -1,5 +1,11 @@
 {
   "schema_version": 1,
+  "default": {
+    "verification": {
+      "status": "verified",
+      "note": "Prusament TPU95A"
+    }
+  },
   "presets": {
     "beverage_12oz_rigid": {
       "label": "Beverage Can 12/16 oz (Rigid PLA/PETG)",
@@ -7,7 +13,7 @@
       "params": {
         "core": {
           "fit_tolerance": 0.15,
-          "rim_diameter": 54.0
+          "rim_diameter": 54
         },
         "flex_slots": {
           "enabled": true,
@@ -17,19 +23,7 @@
           "depth": 0.55
         },
         "structure": {
-          "skirt_height": 7.0
-        }
-      }
-    },
-    "beverage_slim_200": {
-      "label": "Slim / Sleek Beverage Can (200 End)",
-      "description": "50 mm rim sleek 12 oz seltzer and 8.4 oz energy drink cans",
-      "params": {
-        "core": {
-          "fit_tolerance": -0.45,
-          "rim_diameter": 50.0,
-          "rim_height": 2.9,
-          "rim_thickness": 1.6
+          "skirt_height": 7
         }
       }
     },
@@ -39,27 +33,21 @@
       "params": {
         "core": {
           "fit_tolerance": -0.5,
-          "rim_diameter": 57.0,
-          "rim_height": 3.0,
+          "rim_diameter": 57,
+          "rim_height": 3,
           "rim_thickness": 1.8
         }
       }
     },
-    "soup_10_5oz": {
-      "label": "Soup Can 10.5 oz (211x400)",
-      "description": "68 mm rim standard condensed soup can (e.g. Campbell's)",
+    "beverage_slim_200": {
+      "label": "Slim / Sleek Beverage Can (200 End)",
+      "description": "50 mm rim sleek 12 oz seltzer and 8.4 oz energy drink cans",
       "params": {
         "core": {
-          "fit_tolerance": -0.6,
-          "rim_diameter": 68.0,
-          "rim_height": 3.2,
-          "rim_thickness": 2.0
-        },
-        "pull_tab": {
-          "width": 18.0
-        },
-        "structure": {
-          "skirt_height": 6.5
+          "fit_tolerance": -0.45,
+          "rim_diameter": 50,
+          "rim_height": 2.9,
+          "rim_thickness": 1.6
         }
       }
     },
@@ -69,15 +57,15 @@
       "params": {
         "core": {
           "fit_tolerance": -0.7,
-          "rim_diameter": 75.0,
+          "rim_diameter": 75,
           "rim_height": 3.2,
-          "rim_thickness": 2.0
+          "rim_thickness": 2
         },
         "pull_tab": {
-          "width": 18.0
+          "width": 18
         },
         "structure": {
-          "skirt_height": 7.0
+          "skirt_height": 7
         }
       }
     },
@@ -92,14 +80,32 @@
           "rim_thickness": 2.2
         },
         "pull_tab": {
-          "length": 8.0,
-          "width": 20.0
+          "length": 8,
+          "width": 20
         },
         "snap_bead": {
           "depth": 0.9
         },
         "structure": {
           "skirt_height": 7.5
+        }
+      }
+    },
+    "soup_10_5oz": {
+      "label": "Soup Can 10.5 oz (211x400)",
+      "description": "68 mm rim standard condensed soup can (e.g. Campbell's)",
+      "params": {
+        "core": {
+          "fit_tolerance": -0.6,
+          "rim_diameter": 68,
+          "rim_height": 3.2,
+          "rim_thickness": 2
+        },
+        "pull_tab": {
+          "width": 18
+        },
+        "structure": {
+          "skirt_height": 6.5
         }
       }
     }
