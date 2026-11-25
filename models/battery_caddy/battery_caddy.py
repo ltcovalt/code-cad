@@ -188,11 +188,11 @@ class LayoutParams:
         unit="mm", min=5.0, max=120.0, step=1.0,
         when={"pattern": ["pinwheel", "auto_pack"], "pinwheel_center": "cubby"},
     )
-    pull_loop_height: Optional[float] = param(
-        None,
+    pull_loop_height: float = param(
+        55.0,
         label="Pull Loop Height",
-        desc="Height of pull loop above caddy rim (Auto = clears battery tops so your finger fits cleanly)",
-        unit="mm", min=30.0, max=140.0, step=2.0,
+        desc="Height of pull loop above caddy rim (55 mm ≈ flush with upright shorty tops)",
+        unit="mm", min=30.0, max=110.0, step=2.0,
         when={"pattern": ["pinwheel", "auto_pack"], "pinwheel_center": "pull_loop"},
     )
 
@@ -554,78 +554,90 @@ def _auto_pack_pockets(
     return (best_pockets, best_is_pinwheel)
 
 
-def resolve_battery_height(battery: BatteryParams) -> float:
-    """Return nominal vertical battery height in mm for the selected orientation."""
-    length, width, thickness = resolve_battery_dimensions(battery)
-    if battery.orientation == "upright":
-        return length
-    if battery.orientation == "on_edge":
-        return width
-    return thickness
-
-
 def _build_pinwheel_pull_loop(
     center_clear: float,
+    lead_in: float,
     total_h: float,
-    floor_top_z: float,
-    bat_height: float,
-    custom_height: Optional[float],
+    loop_height: float,
 ) -> Optional[Part]:
-    """Build a 45°-rotated, 100% support-free center finger pull loop for pinwheel layouts."""
-    loop_t = min(7.5, center_clear * 0.30)
-    safe_s = center_clear - 0.8
-    max_w = safe_s * math.sqrt(2.0) - loop_t
+    """Build a smoothly blended, ergonomic center finger pull loop for pinwheel layouts.
+
+    Starts strictly inside the flat center square (clear of all 4 pocket top
+    lead-in chamfers), lofts smoothly into a 45°-aligned rounded handle stem,
+    and finishes with a smooth round finger hole and generous edge fillets.
+    """
+    # Keep the loft footprint strictly inside the flat center square between the 4 lead-in chamfers
+    flat_s = center_clear - 2.0 * lead_in
+    base_s = flat_s - 0.4
+    safe_s = center_clear - 1.0
+    loop_t = min(8.5, flat_s * 0.36)
+    ring_wall = 4.0
+    fillet_r = min(1.8, loop_t * 0.22, ring_wall * 0.42)
+    # Rounded rectangle W×T (corner r) rotated 45° has max X/Y extent:
+    # (W + T - 4r) / (2*sqrt(2)) + r <= safe_s / 2
+    max_w = (safe_s / 2.0 - fillet_r) * (2.0 * math.sqrt(2.0)) - loop_t + 4.0 * fillet_r
     loop_w = min(28.0, max_w)
-    ring_wall = 3.5
     hole_w = loop_w - 2.0 * ring_wall
-    if hole_w < 12.0 or loop_t < 4.0:
+    if base_s < 8.0 or hole_w < 14.0 or loop_t < 5.0:
         return None
 
-    r = hole_w / 2.0
-    straight_h = 6.0
-    hole_h = 2.0 * r + straight_h
+    hole_r = hole_w / 2.0
+    hole_h = min(hole_w + 3.0, max(hole_w, loop_height - 20.0))
+    min_height = hole_h + ring_wall + 10.0
+    eff_h = max(loop_height, min_height)
 
-    if custom_height is None:
-        hole_bot_z = max(total_h + 6.0, floor_top_z + bat_height + 2.0)
-        top_z = hole_bot_z + hole_h + ring_wall + 1.5
-    else:
-        top_z = total_h + max(custom_height, hole_h + ring_wall + 5.0)
-        hole_bot_z = max(total_h + 4.0, top_z - ring_wall - 1.5 - hole_h)
+    top_z = total_h + eff_h
+    hole_top_z = top_z - ring_wall
+    hole_bot_z = hole_top_z - hole_h
+    hole_mid_z = (hole_bot_z + hole_top_z) / 2.0
 
-    z_base = total_h - 1.5  # overlap slightly into center pillar for clean boolean union
-    outer_h = top_z - z_base
-    outer_r = min(loop_w / 2.0 - 0.1, outer_h / 2.0 - 0.1)
+    # Smooth sculpted transition from flat center square into handle cross-section
+    trans_h = min(14.0, max(6.0, hole_bot_z - total_h - 2.0))
+    trans_top_z = total_h + trans_h
+    z_base = total_h - 0.2  # shallow overlap inside flat center square (never touches pocket chamfers)
 
-    z_arc_center = hole_bot_z + r
-    z_straight_top = z_arc_center + straight_h
-    z_apex = z_straight_top + r
+    # 1. Sculpted base transition: square center pillar -> 45° handle cross-section
+    with BuildPart(mode=Mode.PRIVATE) as stem_bp:
+        with BuildSketch(Plane.XY.offset(z_base)):
+            RectangleRounded(base_s, base_s, min(3.5, base_s * 0.2))
+        with BuildSketch(Plane.XY.offset(trans_top_z).rotated((0, 0, 45))):
+            RectangleRounded(loop_w, loop_t, fillet_r)
+        loft()
 
-    with BuildPart(mode=Mode.PRIVATE) as loop_bp:
-        # Outer stem + rounded top loop in Plane.XZ (local X = width, local Y = world Z)
-        with BuildSketch(Plane.XZ):
-            with Locations((0.0, z_base + outer_h / 2.0)):
-                RectangleRounded(loop_w, outer_h, outer_r)
-        extrude(amount=loop_t / 2.0, both=True)
+    # 2. Upper ring body (tombstone arch in XZ from trans_top_z to top_z, rotated 45° around Z)
+    arch_r = loop_w / 2.0
+    arch_center_z = top_z - arch_r
 
-        # Support-free 45° arched finger hole
+    with BuildPart(mode=Mode.PRIVATE) as ring_bp:
         with BuildSketch(Plane.XZ):
             with BuildLine():
-                ThreePointArc((-r, z_arc_center), (0.0, hole_bot_z), (r, z_arc_center))
-                Line((r, z_arc_center), (r, z_straight_top))
-                Line((r, z_straight_top), (0.0, z_apex))
-                Line((0.0, z_apex), (-r, z_straight_top))
-                Line((-r, z_straight_top), (-r, z_arc_center))
+                Line((-arch_r, trans_top_z), (arch_r, trans_top_z))
+                Line((arch_r, trans_top_z), (arch_r, arch_center_z))
+                ThreePointArc((arch_r, arch_center_z), (0.0, top_z), (-arch_r, arch_center_z))
+                Line((-arch_r, arch_center_z), (-arch_r, trans_top_z))
             make_face()
+        extrude(amount=loop_t / 2.0, both=True)
+
+        # Smooth rounded finger hole (no sharp points!)
+        with BuildSketch(Plane.XZ):
+            with Locations((0.0, hole_mid_z)):
+                if hole_h > hole_w + 0.5:
+                    RectangleRounded(hole_w, hole_h, hole_r - 0.05)
+                else:
+                    Circle(hole_r)
         extrude(amount=loop_t / 2.0 + 1.0, both=True, mode=Mode.SUBTRACT)
 
-        # Smooth finger-friendly bevels on the loop faces above the caddy rim
-        chamfer_r = min(1.2, loop_t * 0.22, ring_wall * 0.35)
-        if chamfer_r > 0.2:
-            loop_edges = loop_bp.edges().filter_by(lambda e: e.center().Z > total_h + 0.5)
-            if loop_edges:
-                chamfer(loop_edges, length=chamfer_r)
+        # Round all finger-contact & outer edges (excluding bottom seam at trans_top_z)
+        if fillet_r > 0.3:
+            ring_edges = ring_bp.edges().filter_by(lambda e: e.center().Z > trans_top_z + 0.2)
+            if ring_edges:
+                fillet(ring_edges, radius=fillet_r)
 
-    return loop_bp.part.rotate(Axis.Z, 45.0)
+    with BuildPart(mode=Mode.PRIVATE) as combined_bp:
+        add(stem_bp.part)
+        add(ring_bp.part.rotate(Axis.Z, 45.0))
+
+    return combined_bp.part
 
 
 def _rounded_rect(width: float, height: float, radius: float) -> None:
@@ -968,10 +980,9 @@ def create_battery_caddy(params: BatteryCaddyParams) -> Part:
             center_clear = span - 2.0 * short_s
             pull_loop = _build_pinwheel_pull_loop(
                 center_clear=center_clear,
+                lead_in=lead_in,
                 total_h=total_h,
-                floor_top_z=floor_top_z,
-                bat_height=resolve_battery_height(params.battery),
-                custom_height=params.layout.pull_loop_height,
+                loop_height=params.layout.pull_loop_height,
             )
             if pull_loop is not None:
                 add(pull_loop)
