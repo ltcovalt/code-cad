@@ -147,7 +147,7 @@ def create_gridfinity_base(
                     Circle(params.magnet_diameter / 2.0)
             extrude(amount=params.magnet_depth, mode=Mode.SUBTRACT)
 
-    with BuildPart() as feet_grid:
+    with BuildPart(mode=Mode.PRIVATE) as feet_grid:
         with GridLocations(unit_size, unit_size, gx, gy):
             add(single_foot.part)
 

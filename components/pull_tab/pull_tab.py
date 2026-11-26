@@ -1,9 +1,9 @@
 """
 Reusable Flared Pull Tab Component (build123d)
 
-Provides a shared `PullTabParams` dataclass, `build_pull_tab(...)` two-pass
-geometry builder for lid models (e.g. `can_lid`, `container_lid`), and a
-standalone `create_pull_tab(params)` preview generator for Code CAD Studio.
+Provides a shared `PullTabParams` dataclass and unified `create_pull_tab(...)`
+generator used both for standalone preview/export in Code CAD Studio and for
+composing into lid models (e.g. `can_lid`, `container_lid`).
 
 Features:
 - Smooth G1-tangent concave root fillets where the tab meets a circular or straight rim
@@ -197,24 +197,25 @@ def pull_tab_angular_clearance(
     return math.degrees(math.atan2(half_span, max(1.0, r_outer)))
 
 
-def build_pull_tab(
-    tab: PullTabParams,
+def create_pull_tab(
+    params: PullTabParams,
     *,
-    x_attach: float,
-    top_thickness: float,
-    max_gusset_depth: float,
-    outer_bevel: float = 0.0,
+    x_attach: Optional[float] = None,
+    top_thickness: float = 2.0,
+    max_gusset_depth: Optional[float] = None,
+    outer_bevel: float = 0.8,
     rim_radius: Optional[float] = None,
     trim_solid: Optional[Solid] = None,
     trim_radius: Optional[float] = None,
     print_orientation: bool = True,
     location: Optional[Location] = None,
-) -> tuple[Solid, Optional[Solid]]:
-    """Build a flared pull tab + optional gusset and return `(add_solid, cut_solid)`.
+) -> Part:
+    """Generate a flared pull tab with gusset, grip ribs, and optional hanging hole.
 
-    - `add_solid`: The tab plate + gusset to union (`Mode.ADD`) onto the lid.
-    - `cut_solid`: Optional combined through-hanging-hole + recessed grip-rib cutters
-      to subtract (`Mode.SUBTRACT`) after unioning `add_solid`.
+    - Standalone (`x_attach=None`): mounts the tab onto a reference straight rim
+      stub and centers the preview around the origin for Code CAD Studio.
+    - Embedded (`x_attach` provided): builds a finished solid ready to union
+      (`Mode.ADD`) onto a host lid at `x_attach` (and optional `location`).
 
     Coordinate conventions:
     - `print_orientation=True`: Flat outer face sits at `Z = 0`, tab spans `[0, top_thickness]`,
@@ -224,36 +225,63 @@ def build_pull_tab(
       outer perimeter bevel runs from `Z = top_thickness - outer_bevel` to `Z = top_thickness`,
       gusset drops in `-Z` from `0` to `-eff_gusset_depth`, grip ribs cut into `Z = top_thickness`.
     """
-    eff_gusset_depth = min(tab.gusset_depth, max(0.0, max_gusset_depth))
+    standalone = x_attach is None
+    eff_x_attach = 6.0 if standalone else x_attach
+    assert eff_x_attach is not None
+
+    stub_height = top_thickness + max(params.gusset_depth, 2.5) + 1.5
+    stub_width = params.width + 2.0 * params.root_fillet + 8.0
+
+    eff_trim_solid = trim_solid
+    stub_z_base = 0.0 if print_orientation else (top_thickness - stub_height)
+    if standalone and eff_trim_solid is None:
+        with BuildPart(mode=Mode.PRIVATE) as trim_part:
+            with Locations((eff_x_attach - 4.0, 0.0, stub_z_base + stub_height / 2.0)):
+                Box(5.0, stub_width + 4.0, stub_height + 2.0)
+        eff_trim_solid = trim_part.part
+
+    gusset_cap = (
+        (stub_height - top_thickness)
+        if standalone and max_gusset_depth is None
+        else (params.gusset_depth if max_gusset_depth is None else max_gusset_depth)
+    )
+    eff_gusset_depth = min(params.gusset_depth, max(0.0, gusset_cap))
     eff_bevel = min(
         max(0.0, outer_bevel),
         top_thickness * 0.85,
-        tab.width * 0.35,
-        tab.length * 0.4,
+        params.width * 0.35,
+        params.length * 0.4,
     )
 
-    with BuildPart() as add_part:
+    with BuildPart(mode=Mode.PRIVATE) as tab_part:
+        if standalone:
+            # Reference straight rim stub so root flares, bevel, and gusset are clearly visible
+            with BuildSketch(Plane.XY.offset(stub_z_base)):
+                with Locations((eff_x_attach - 2.0, 0.0)):
+                    Rectangle(4.0, stub_width)
+            extrude(amount=stub_height)
+
         tab_face = _flared_tab_sketch(
-            x_attach=x_attach,
-            length=tab.length,
-            width=tab.width,
-            root_fillet=tab.root_fillet,
+            x_attach=eff_x_attach,
+            length=params.length,
+            width=params.width,
+            root_fillet=params.root_fillet,
             rim_radius=rim_radius,
             inward_offset=0.0,
         )
         if eff_bevel > 0.05:
             bevel_face = _flared_tab_sketch(
-                x_attach=x_attach,
-                length=tab.length,
-                width=tab.width,
-                root_fillet=tab.root_fillet,
+                x_attach=eff_x_attach,
+                length=params.length,
+                width=params.width,
+                root_fillet=params.root_fillet,
                 rim_radius=rim_radius,
                 inward_offset=eff_bevel,
             )
             if print_orientation:
-                with BuildSketch(Plane.XY) as sk_bev_lo:
+                with BuildSketch(Plane.XY, mode=Mode.PRIVATE) as sk_bev_lo:
                     add(bevel_face)
-                with BuildSketch(Plane.XY.offset(eff_bevel)) as sk_bev_hi:
+                with BuildSketch(Plane.XY.offset(eff_bevel), mode=Mode.PRIVATE) as sk_bev_hi:
                     add(tab_face)
                 loft([sk_bev_lo.sketch, sk_bev_hi.sketch], ruled=True, mode=Mode.ADD)
                 with BuildSketch(Plane.XY.offset(eff_bevel)):
@@ -263,9 +291,9 @@ def build_pull_tab(
                 with BuildSketch(Plane.XY):
                     add(tab_face)
                 extrude(amount=top_thickness - eff_bevel, mode=Mode.ADD)
-                with BuildSketch(Plane.XY.offset(top_thickness - eff_bevel)) as sk_bev_lo:
+                with BuildSketch(Plane.XY.offset(top_thickness - eff_bevel), mode=Mode.PRIVATE) as sk_bev_lo:
                     add(tab_face)
-                with BuildSketch(Plane.XY.offset(top_thickness)) as sk_bev_hi:
+                with BuildSketch(Plane.XY.offset(top_thickness), mode=Mode.PRIVATE) as sk_bev_hi:
                     add(bevel_face)
                 loft([sk_bev_lo.sketch, sk_bev_hi.sketch], ruled=True, mode=Mode.ADD)
         else:
@@ -274,23 +302,24 @@ def build_pull_tab(
             extrude(amount=top_thickness, mode=Mode.ADD)
 
         if eff_gusset_depth > 0.2:
-            z_base = top_thickness if print_orientation else 0.0
+            gusset_overlap = min(0.25, top_thickness * 0.25)
+            z_base = (top_thickness - gusset_overlap) if print_orientation else gusset_overlap
             z_peak = (top_thickness + eff_gusset_depth) if print_orientation else -eff_gusset_depth
             base_face = _flared_tab_sketch(
-                x_attach=x_attach,
-                length=tab.length * 0.75,
-                width=tab.width * 0.95,
-                root_fillet=tab.root_fillet * 0.9,
+                x_attach=eff_x_attach,
+                length=params.length * 0.75,
+                width=params.width * 0.95,
+                root_fillet=params.root_fillet * 0.9,
                 rim_radius=rim_radius,
             )
             peak_face = _flared_tab_sketch(
-                x_attach=x_attach,
-                length=tab.length * 0.35,
-                width=tab.width * 0.75,
-                root_fillet=tab.root_fillet * 0.5,
+                x_attach=eff_x_attach,
+                length=params.length * 0.35,
+                width=params.width * 0.75,
+                root_fillet=params.root_fillet * 0.5,
                 rim_radius=rim_radius,
             )
-            with BuildPart() as gusset:
+            with BuildPart(mode=Mode.PRIVATE) as gusset:
                 with BuildSketch(Plane.XY.offset(z_base)):
                     add(base_face)
                 with BuildSketch(Plane.XY.offset(z_peak)):
@@ -300,112 +329,59 @@ def build_pull_tab(
                     z_trim_start = (z_base - 0.5) if print_orientation else (z_peak - 0.5)
                     with BuildSketch(Plane.XY.offset(z_trim_start)):
                         Circle(radius=trim_radius)
-                    extrude(amount=eff_gusset_depth + 1.5, mode=Mode.SUBTRACT)
+                    extrude(amount=eff_gusset_depth + gusset_overlap + 1.5, mode=Mode.SUBTRACT)
             if gusset.part is not None:
                 gusset_solid = gusset.part
                 if location is not None:
                     gusset_solid = gusset_solid.moved(location)
-                if trim_solid is not None:
-                    gusset_solid = gusset_solid - trim_solid
+                if eff_trim_solid is not None:
+                    gusset_solid = gusset_solid - eff_trim_solid
                 if location is not None:
                     gusset_solid = gusset_solid.moved(location.inverse())
                 add(gusset_solid, mode=Mode.ADD)
 
-    assert add_part.part is not None, "Failed to generate pull tab"
-    tab_add = add_part.part
-    if location is not None:
-        tab_add = tab_add.moved(location)
-
-    # Build combined subtraction cutters (hanging through-hole + grip ribs)
-    cut_solids: list[Solid] = []
-
-    if tab.hanging_hole:
-        hole_x = x_attach + tab.length - (tab.hole_diameter / 2.0 + 1.8)
-        if hole_x > x_attach + tab.hole_diameter / 2.0:
-            z_lo = -0.5 if print_orientation else (-eff_gusset_depth - 0.5)
-            cut_h = top_thickness + eff_gusset_depth + 1.5
-            with BuildPart() as hole_part:
+        # Hanging through-hole (strictly outside x_attach)
+        if params.hanging_hole:
+            hole_x = eff_x_attach + params.length - (params.hole_diameter / 2.0 + 1.8)
+            if hole_x > eff_x_attach + params.hole_diameter / 2.0:
+                z_lo = -0.5 if print_orientation else (-eff_gusset_depth - 0.5)
+                cut_h = top_thickness + eff_gusset_depth + 1.5
                 with BuildSketch(Plane.XY.offset(z_lo)):
                     with Locations((hole_x, 0.0)):
-                        Circle(radius=tab.hole_diameter / 2.0)
-                extrude(amount=cut_h)
-            if hole_part.part is not None:
-                cut_solids.append(hole_part.part)
+                        Circle(radius=params.hole_diameter / 2.0)
+                extrude(amount=cut_h, mode=Mode.SUBTRACT)
 
-    if tab.grip_ribs:
-        rib_depth = min(0.55, top_thickness * 0.35)
-        rib_span = max(3.0, tab.width - 6.0)
-        for i in range(3):
-            rib_x = x_attach + 1.8 + i * 2.1
-            if rib_x + 0.7 < (x_attach + tab.length - 0.8):
-                with BuildPart() as rib_part:
+        # Recessed non-slip traction grooves (strictly outside x_attach)
+        if params.grip_ribs:
+            rib_depth = min(0.55, top_thickness * 0.35)
+            rib_span = max(3.0, params.width - 6.0)
+            for i in range(3):
+                rib_x = eff_x_attach + 1.8 + i * 2.1
+                if rib_x + 0.7 < (eff_x_attach + params.length - 0.8):
                     if print_orientation:
                         with BuildSketch(Plane.XY.offset(-0.1)):
                             with Locations((rib_x, 0.0)):
                                 RectangleRounded(0.95, rib_span, radius=0.35)
-                        extrude(amount=rib_depth + 0.1)
+                        extrude(amount=rib_depth + 0.1, mode=Mode.SUBTRACT)
                     else:
                         with BuildSketch(Plane.XY.offset(top_thickness + 0.1)):
                             with Locations((rib_x, 0.0)):
                                 RectangleRounded(0.95, rib_span, radius=0.35)
-                        extrude(amount=-(rib_depth + 0.1))
-                if rib_part.part is not None:
-                    cut_solids.append(rib_part.part)
+                        extrude(amount=-(rib_depth + 0.1), mode=Mode.SUBTRACT)
 
-    tab_cut: Optional[Solid] = None
-    if cut_solids:
-        with BuildPart() as combined_cut:
-            for s in cut_solids:
-                add(s, mode=Mode.ADD)
-        if combined_cut.part is not None:
-            tab_cut = combined_cut.part
-            if location is not None:
-                tab_cut = tab_cut.moved(location)
-
-    return tab_add, tab_cut
+    assert tab_part.part is not None, "Failed to generate pull tab"
+    result = tab_part.part
+    if location is not None:
+        return result.moved(location)
+    if standalone:
+        return result.moved(Location((-(eff_x_attach + params.length / 2.0), 0.0, 0.0)))
+    return result
 
 
 def export_filename(params: PullTabParams) -> str:
     """Return standardized lowercase filename stem (without extension) for exports."""
     style = "hanging" if params.hanging_hole else ("ribbed" if params.grip_ribs else "smooth")
     return f"pull_tab_{params.length:g}x{params.width:g}mm_{style}"
-
-
-def create_pull_tab(params: PullTabParams) -> Part:
-    """Generate a standalone preview of the pull tab mounted on a reference rim stub."""
-    x_attach = 6.0
-    top_thickness = 2.0
-    outer_bevel = 0.8
-    stub_height = top_thickness + max(params.gusset_depth, 2.5) + 1.5
-    stub_width = params.width + 2.0 * params.root_fillet + 8.0
-
-    with BuildPart() as trim_part:
-        with Locations((2.0, 0.0, stub_height / 2.0)):
-            Box(5.0, stub_width + 4.0, stub_height + 2.0)
-
-    tab_add, tab_cut = build_pull_tab(
-        params,
-        x_attach=x_attach,
-        top_thickness=top_thickness,
-        max_gusset_depth=stub_height - top_thickness,
-        outer_bevel=outer_bevel,
-        rim_radius=None,
-        trim_solid=trim_part.part,
-        print_orientation=True,
-    )
-
-    with BuildPart() as preview:
-        # Reference straight rim stub so root flares, bevel, and gusset are clearly visible
-        with BuildSketch(Plane.XY):
-            with Locations((x_attach - 2.0, 0.0)):
-                Rectangle(4.0, stub_width)
-        extrude(amount=stub_height)
-        add(tab_add, mode=Mode.ADD)
-        if tab_cut is not None:
-            add(tab_cut, mode=Mode.SUBTRACT)
-
-    assert preview.part is not None, "Failed to generate pull tab preview"
-    return preview.part.moved(Location((-(x_attach + params.length / 2.0), 0.0, 0.0)))
 
 
 if __name__ == "__main__":
