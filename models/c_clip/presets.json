@@ -1,9 +1,13 @@
 {
   "schema_version": 1,
   "presets": {
-    "prusa_core_one_l_spool_clip": {
-      "label": "Prusa Core One L Spool Clip",
+    "prusa_core_one_l_spool_clip_w_finger_pull": {
+      "label": "Prusa Core One L Spool Clip w/Finger Pull",
       "description": "Retaining clip to prevent larger diameter filament spools from falling off",
+      "verification": {
+        "status": "verified",
+        "note": "PCTG, 4 perimeters, 15% gyroid infill"
+      },
       "params": {
         "jaw": {
           "jaw_curve_depth": 0.8,
