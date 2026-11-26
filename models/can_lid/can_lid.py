@@ -15,6 +15,8 @@ Features:
 - Built-in presets for standard beverage and food/soup cans in `presets.json`
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -209,7 +211,7 @@ class CanLidParams:
     structure: LidStructureParams = group(LidStructureParams, label="Lid Structure")
     snap_bead: SnapBeadParams = group(SnapBeadParams)
     inner_seal: InnerSealParams = group(InnerSealParams)
-    pull_tab: PullTabParams = group(PullTabParams)
+    pull_tab: PullTabParams | None = group(PullTabParams)
     flex_slots: FlexSlotsParams = group(FlexSlotsParams)
     stacking_rim: StackingRimParams = group(StackingRimParams)
 
@@ -333,7 +335,7 @@ def create_can_lid(params: CanLidParams) -> Solid:
             Polygon(pts)
         revolve(axis=Axis.Z)
 
-        if tab.enabled:
+        if tab is not None:
             tab_add, tab_cut = build_pull_tab(
                 tab,
                 x_attach=r_outer,
@@ -356,7 +358,7 @@ def create_can_lid(params: CanLidParams) -> Solid:
             tab_clear_deg = pull_tab_angular_clearance(tab, r_outer)
             for i in range(flex.slot_count):
                 ang = i * (360.0 / flex.slot_count)
-                if tab.enabled and (ang < tab_clear_deg or ang > 360.0 - tab_clear_deg):
+                if tab is not None and (ang < tab_clear_deg or ang > 360.0 - tab_clear_deg):
                     continue
                 with Locations(Rotation(0, 0, ang)):
                     with Locations((r_outer, 0.0, slot_root_z + slot_h / 2.0)):
