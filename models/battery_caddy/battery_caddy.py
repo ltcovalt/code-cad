@@ -39,8 +39,9 @@ try:
         GRIDFINITY_CORNER_RADIUS,
         GRIDFINITY_FOOT_HEIGHT,
         GRIDFINITY_UNIT_XY,
-        build_gridfinity_feet,
+        GridfinityBaseParams,
         compute_gridfinity_footprint,
+        create_gridfinity_base,
     )
     from utils.params import default_preset, group, param
 except ImportError:
@@ -55,8 +56,9 @@ except ImportError:
         GRIDFINITY_CORNER_RADIUS,
         GRIDFINITY_FOOT_HEIGHT,
         GRIDFINITY_UNIT_XY,
-        build_gridfinity_feet,
+        GridfinityBaseParams,
         compute_gridfinity_footprint,
+        create_gridfinity_base,
     )
     from utils.params import default_preset, group, param
 
@@ -198,49 +200,6 @@ class LayoutParams:
 
 
 @dataclass
-class BaseParams:
-    """Flat pit-table base or Gridfinity-compatible 42 mm modular base."""
-
-    style: Literal["flat", "gridfinity"] = param(
-        "flat",
-        label="Base Style",
-        desc="Flat base or standard 42 mm Gridfinity-compatible base",
-    )
-    grid_x: Optional[int] = param(
-        None,
-        label="Gridfinity X Override",
-        desc="Gridfinity units along X (Auto = smallest grid that fits)",
-        unit="U", min=1, max=12, step=1,
-        when={"style": "gridfinity"},
-    )
-    grid_y: Optional[int] = param(
-        None,
-        label="Gridfinity Y Override",
-        desc="Gridfinity units along Y (Auto = smallest grid that fits)",
-        unit="U", min=1, max=12, step=1,
-        when={"style": "gridfinity"},
-    )
-    magnets: bool = param(
-        True,
-        label="Base Magnet Pockets",
-        desc="Cut 4 corner magnet pockets per Gridfinity foot cell (6×2 mm)",
-        when={"style": "gridfinity"},
-    )
-    magnet_diameter: float = param(
-        6.1,
-        desc="Magnet pocket diameter",
-        unit="mm", min=4.0, max=12.0, step=0.1,
-        when={"style": "gridfinity", "magnets": True},
-    )
-    magnet_depth: float = param(
-        2.2,
-        desc="Magnet pocket depth",
-        unit="mm", min=1.0, max=4.0, step=0.1,
-        when={"style": "gridfinity", "magnets": True},
-    )
-
-
-@dataclass
 class StructureParams:
     """Wall height, thicknesses, corner radii, and chamfers."""
 
@@ -268,7 +227,7 @@ class StructureParams:
         5.0,
         desc="Outer vertical corner fillet radius (Gridfinity uses standard 3.75 mm)",
         unit="mm", min=0.0, max=15.0, step=0.5,
-        when={"base.style": "flat"},
+        when={"gridfinity": None},
     )
     pocket_corner_radius: float = param(
         2.0,
@@ -285,7 +244,7 @@ class StructureParams:
         1.0,
         desc="Outer bottom perimeter chamfer to reduce elephant's foot",
         unit="mm", min=0.0, max=3.0, step=0.1,
-        when={"base.style": "flat"},
+        when={"gridfinity": None},
     )
 
 
@@ -318,13 +277,13 @@ class CutoutsParams:
     floor_holes: bool = param(
         True,
         desc="Centered bottom cutouts for finger push-out, airflow, and dirt drainage (flat base)",
-        when={"base.style": "flat"},
+        when={"gridfinity": None},
     )
     floor_ledge_width: float = param(
         5.0,
         desc="Solid floor ledge width retained around each pocket perimeter",
         unit="mm", min=3.0, max=12.0, step=0.5,
-        when={"base.style": "flat", "floor_holes": True},
+        when={"gridfinity": None, "floor_holes": True},
     )
 
 
@@ -358,7 +317,11 @@ class BatteryCaddyParams:
 
     battery: BatteryParams = group(BatteryParams)
     layout: LayoutParams = group(LayoutParams)
-    base: BaseParams = group(BaseParams)
+    gridfinity: GridfinityBaseParams | None = group(
+        GridfinityBaseParams,
+        enabled=False,
+        label="Gridfinity Base",
+    )
     structure: StructureParams = group(StructureParams)
     cutouts: CutoutsParams = group(CutoutsParams)
     test_fit: TestFitParams = group(TestFitParams)
@@ -589,7 +552,6 @@ def _build_pinwheel_pull_loop(
     top_z = total_h + eff_h
     hole_top_z = top_z - ring_wall
     hole_bot_z = hole_top_z - hole_h
-    hole_mid_z = (hole_bot_z + hole_top_z) / 2.0
 
     # Smooth sculpted transition from flat center square into handle cross-section
     trans_h = min(14.0, max(6.0, hole_bot_z - total_h - 2.0))
@@ -608,6 +570,18 @@ def _build_pinwheel_pull_loop(
     arch_r = loop_w / 2.0
     arch_center_z = top_z - arch_r
 
+    # Smoothly rounded flat-crowned finger hole: rounded shoulders transitioning
+    # tangentially into a short straight horizontal bridge (comfortable & clean to print)
+    flat_w = min(8.0, hole_w * 0.42)
+    flat_half = flat_w / 2.0
+    top_corner_r = hole_r - flat_half
+    straight_h = max(2.0, hole_h - hole_r - top_corner_r)
+    eff_hole_h = hole_r + straight_h + top_corner_r
+    hole_bot_z = hole_top_z - eff_hole_h
+    z_arc_center = hole_bot_z + hole_r
+    z_top_arc_center = z_arc_center + straight_h
+    diag = top_corner_r * math.sqrt(0.5)
+
     with BuildPart(mode=Mode.PRIVATE) as ring_bp:
         with BuildSketch(Plane.XZ):
             with BuildLine():
@@ -618,20 +592,42 @@ def _build_pinwheel_pull_loop(
             make_face()
         extrude(amount=loop_t / 2.0, both=True)
 
-        # Smooth rounded finger hole (no sharp points!)
+        # Round outer arch & sides (flush with stem_bp's fillet_r) before cutting hole
+        if fillet_r > 0.3:
+            outer_edges = ring_bp.edges().filter_by(lambda e: e.center().Z > trans_top_z + 0.2)
+            if outer_edges:
+                fillet(outer_edges, radius=fillet_r)
+
+        # Smooth rounded-shoulder flat-crowned finger hole
         with BuildSketch(Plane.XZ):
-            with Locations((0.0, hole_mid_z)):
-                if hole_h > hole_w + 0.5:
-                    RectangleRounded(hole_w, hole_h, hole_r - 0.05)
-                else:
-                    Circle(hole_r)
+            with BuildLine():
+                ThreePointArc((-hole_r, z_arc_center), (0.0, hole_bot_z), (hole_r, z_arc_center))
+                Line((hole_r, z_arc_center), (hole_r, z_top_arc_center))
+                ThreePointArc(
+                    (hole_r, z_top_arc_center),
+                    (flat_half + diag, z_top_arc_center + diag),
+                    (flat_half, hole_top_z),
+                )
+                Line((flat_half, hole_top_z), (-flat_half, hole_top_z))
+                ThreePointArc(
+                    (-flat_half, hole_top_z),
+                    (-flat_half - diag, z_top_arc_center + diag),
+                    (-hole_r, z_top_arc_center),
+                )
+                Line((-hole_r, z_top_arc_center), (-hole_r, z_arc_center))
+            make_face()
         extrude(amount=loop_t / 2.0 + 1.0, both=True, mode=Mode.SUBTRACT)
 
-        # Round all finger-contact & outer edges (excluding bottom seam at trans_top_z)
-        if fillet_r > 0.3:
-            ring_edges = ring_bp.edges().filter_by(lambda e: e.center().Z > trans_top_z + 0.2)
-            if ring_edges:
-                fillet(ring_edges, radius=fillet_r)
+        # 45° comfort chamfer on inner hole rims (prints cleanly on overhangs, unlike a fillet)
+        hole_chamfer = min(1.2, loop_t * 0.16, ring_wall * 0.30)
+        if hole_chamfer > 0.2:
+            hole_rim_edges = ring_bp.edges().filter_by(
+                lambda e: abs(abs(e.center().Y) - loop_t / 2.0) < 0.15
+                and (hole_bot_z - 0.5) <= e.center().Z <= (hole_top_z + 0.5)
+                and abs(e.center().X) <= (hole_r + 0.5)
+            )
+            if hole_rim_edges:
+                chamfer(hole_rim_edges, length=hole_chamfer)
 
     with BuildPart(mode=Mode.PRIVATE) as combined_bp:
         add(stem_bp.part)
@@ -679,12 +675,12 @@ def _resolve_layout(
     """Compute (pockets, outer_x, outer_y, gx, gy, is_pinwheel) for the active config."""
     bat = params.battery
     lay = params.layout
-    base = params.base
+    gf = params.gridfinity
     st = params.structure
     tf = params.test_fit
 
     px, py = resolve_pocket_xy(bat)
-    use_gridfinity = (base.style == "gridfinity") and not tf.enabled
+    use_gridfinity = (gf is not None) and not tf.enabled
 
     if tf.enabled:
         pockets = [_Pocket(cx=0.0, cy=0.0, sx=px, sy=py)]
@@ -702,9 +698,9 @@ def _resolve_layout(
         short_s = min(px, py)
         min_span = long_s + short_s + st.divider_thickness
         min_outer = min_span + 2.0 * st.outer_wall_thickness
-        if use_gridfinity:
+        if use_gridfinity and gf is not None:
             gx, gy, outer_x, outer_y = compute_gridfinity_footprint(
-                min_outer, min_outer, grid_x=base.grid_x, grid_y=base.grid_y,
+                min_outer, min_outer, grid_x=gf.grid_x, grid_y=gf.grid_y,
             )
             span = min(outer_x, outer_y) - 2.0 * st.outer_wall_thickness
         else:
@@ -719,11 +715,11 @@ def _resolve_layout(
     if lay.pattern == "auto_pack":
         target_gx = lay.pack_grid_x
         target_gy = lay.pack_grid_y
-        if use_gridfinity:
-            if base.grid_x is not None:
-                target_gx = max(target_gx, base.grid_x)
-            if base.grid_y is not None:
-                target_gy = max(target_gy, base.grid_y)
+        if use_gridfinity and gf is not None:
+            if gf.grid_x is not None:
+                target_gx = max(target_gx, gf.grid_x)
+            if gf.grid_y is not None:
+                target_gy = max(target_gy, gf.grid_y)
         outer_x = target_gx * GRIDFINITY_UNIT_XY - GRIDFINITY_CLEARANCE
         outer_y = target_gy * GRIDFINITY_UNIT_XY - GRIDFINITY_CLEARANCE
         avail_x = outer_x - 2.0 * st.outer_wall_thickness
@@ -749,9 +745,9 @@ def _resolve_layout(
     pockets = _build_grid_pockets(slot_x, slot_y, lay.columns, lay.rows, st.divider_thickness)
     min_outer_x = lay.columns * slot_x + (lay.columns - 1) * st.divider_thickness + 2.0 * st.outer_wall_thickness
     min_outer_y = lay.rows * slot_y + (lay.rows - 1) * st.divider_thickness + 2.0 * st.outer_wall_thickness
-    if use_gridfinity:
+    if use_gridfinity and gf is not None:
         gx, gy, outer_x, outer_y = compute_gridfinity_footprint(
-            min_outer_x, min_outer_y, grid_x=base.grid_x, grid_y=base.grid_y,
+            min_outer_x, min_outer_y, grid_x=gf.grid_x, grid_y=gf.grid_y,
         )
     else:
         gx, gy = 0, 0
@@ -782,13 +778,13 @@ def _has_neighbor(pk: _Pocket, all_pockets: list[_Pocket], side: Literal["-Y", "
 
 def create_battery_caddy(params: BatteryCaddyParams) -> Part:
     """Generate the parametric RC LiPo battery caddy."""
-    base = params.base
+    gf = params.gridfinity
     st = params.structure
     cut = params.cutouts
     tf = params.test_fit
 
     pockets, outer_x, outer_y, gx, gy, is_pinwheel = _resolve_layout(params)
-    use_gridfinity = (base.style == "gridfinity") and not tf.enabled
+    use_gridfinity = (gf is not None) and not tf.enabled
     open_bottom = tf.enabled and tf.open_bottom
 
     base_z = GRIDFINITY_FOOT_HEIGHT if use_gridfinity else 0.0
@@ -852,14 +848,8 @@ def create_battery_caddy(params: BatteryCaddyParams) -> Part:
             chamfer(top_edges, length=top_outer_bevel)
 
         # 3. Standard Gridfinity 3-stage feet fused underneath
-        if use_gridfinity:
-            feet = build_gridfinity_feet(
-                gx,
-                gy,
-                magnets=base.magnets,
-                magnet_diameter=base.magnet_diameter,
-                magnet_depth=base.magnet_depth,
-            )
+        if use_gridfinity and gf is not None:
+            feet = create_gridfinity_base(gf, grid_x=gx, grid_y=gy)
             add(feet)
 
         # 4. Battery pockets (and optional pinwheel center cubby)
@@ -871,6 +861,17 @@ def create_battery_caddy(params: BatteryCaddyParams) -> Part:
                 with Locations((pk.cx, pk.cy)):
                     _rounded_rect(pk.sx, pk.sy, st.pocket_corner_radius)
         extrude(amount=wall_h + 1.0, mode=Mode.SUBTRACT)
+
+        # Subtle internal pocket floor fillet to strengthen wall roots & soften the floor-to-wall hull line
+        if not open_bottom and wall_h >= 12.0:
+            floor_fillet_r = min(1.0, wall_h * 0.15)
+            inner_floor_edges = caddy.edges().filter_by(
+                lambda e: abs(e.center().Z - floor_top_z) < 0.05
+                and abs(e.center().X) < (outer_x / 2.0 - 0.5)
+                and abs(e.center().Y) < (outer_y / 2.0 - 0.5)
+            )
+            if inner_floor_edges:
+                fillet(inner_floor_edges, radius=floor_fillet_r)
 
         cubby_depth = (
             wall_h
@@ -892,11 +893,11 @@ def create_battery_caddy(params: BatteryCaddyParams) -> Part:
                 with Locations((pk.cx, pk.cy)):
                     add(lead_in_tools[key], mode=Mode.SUBTRACT)
 
-        # 6. Floor push-out / drainage / cooling cutouts (flat base only)
+        # 6. Floor push-out / drainage / cooling cutouts (flat base only; keep center cubby floor solid)
         if cut.enabled and cut.floor_holes and not open_bottom and not use_gridfinity:
             hole_specs: list[tuple[float, float, float, float, float]] = []
             for pk in pockets:
-                if pk.is_center_cubby and cubby_depth < wall_h - 0.1:
+                if pk.is_center_cubby:
                     continue
                 hole_x = pk.sx - 2.0 * cut.floor_ledge_width
                 hole_y = pk.sy - 2.0 * cut.floor_ledge_width
@@ -1011,7 +1012,7 @@ def export_filename(params: BatteryCaddyParams) -> str:
         rot_tag = "_rot90" if lay.rotate_90 else ""
         layout_tag = f"{lay.columns}x{lay.rows}{rot_tag}"
 
-    base_tag = "_gridfinity" if params.base.style == "gridfinity" else ""
+    base_tag = "_gridfinity" if params.gridfinity is not None else ""
     return f"battery_caddy_{bat_tag}_{layout_tag}_{bat.orientation}{base_tag}"
 
 
