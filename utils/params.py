@@ -9,7 +9,7 @@ dependencies.
 from __future__ import annotations
 
 from dataclasses import field
-from typing import Any, Callable, TypeVar, cast
+from typing import Any, Callable, Literal, TypeVar, cast, overload
 
 T = TypeVar("T")
 
@@ -97,14 +97,41 @@ def param_list(
     return cast(list[T], field(default_factory=factory, metadata=meta))
 
 
+@overload
 def group(
     factory: Callable[[], T],
     *,
+    enabled: Literal[True] = True,
     label: str | None = None,
     desc: str | None = None,
     when: dict[str, Any] | None = None,
-) -> T:
-    """Define a nested parameter-group dataclass field with optional UI metadata."""
+) -> T: ...
+
+
+@overload
+def group(
+    factory: Callable[[], T],
+    *,
+    enabled: Literal[False],
+    label: str | None = None,
+    desc: str | None = None,
+    when: dict[str, Any] | None = None,
+) -> T | None: ...
+
+
+def group(
+    factory: Callable[[], T],
+    *,
+    enabled: bool = True,
+    label: str | None = None,
+    desc: str | None = None,
+    when: dict[str, Any] | None = None,
+) -> Any:
+    """Define a nested parameter-group dataclass field with optional UI metadata.
+
+    Pass ``enabled=False`` on a nullable group (``T | None``) to make the section
+    optional and disabled by default (``None``).
+    """
     meta: dict[str, Any] = {}
     if label is not None:
         meta["label"] = label
@@ -112,4 +139,6 @@ def group(
         meta["description"] = desc
     if when is not None:
         meta["when"] = when
-    return cast(T, field(default_factory=factory, metadata=meta))
+    if not enabled:
+        return field(default=None, metadata=meta)
+    return field(default_factory=factory, metadata=meta)
