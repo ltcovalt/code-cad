@@ -1,8 +1,9 @@
 """
 Reusable Flared Pull Tab Component (build123d)
 
-Provides a shared `PullTabParams` base dataclass and `build_pull_tab(...)` geometry
-builder for lid models (e.g. `can_lid`, `container_lid`).
+Provides a shared `PullTabParams` dataclass, `build_pull_tab(...)` two-pass
+geometry builder for lid models (e.g. `can_lid`, `container_lid`), and a
+standalone `create_pull_tab(params)` preview generator for Code CAD Studio.
 
 Features:
 - Smooth G1-tangent concave root fillets where the tab meets a circular or straight rim
@@ -14,6 +15,8 @@ Features:
   upright orientation (top face at Z = top_thickness, gusset dropping in -Z)
 """
 
+from __future__ import annotations
+
 import math
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,7 +25,7 @@ from typing import Optional
 from build123d import *
 
 try:
-    from utils.params import param
+    from utils.params import default_preset, param
 except ImportError:
     import sys
 
@@ -30,17 +33,23 @@ except ImportError:
         if (_p / "utils").is_dir():
             sys.path.insert(0, str(_p))
             break
-    from utils.params import param
+    from utils.params import default_preset, param
+
+# ==============================================================================
+# Standardized Export Configuration
+# ==============================================================================
+EXPORT_STL: bool = False      # Save .stl to repo-root exports/ (default: False)
+EXPORT_STEP: bool = False     # Save .step to repo-root exports/ (default: False)
 
 
+@default_preset(
+    "Standard Flared (6 × 16 mm)",
+    desc="Compact flared pull tab with grip ribs and 2 mm structural gusset",
+)
 @dataclass
 class PullTabParams:
     """Configurable outer pull tab for easy lid removal."""
 
-    enabled: bool = param(
-        True,
-        desc="Add outer finger pull tab",
-    )
     length: float = param(
         6.0,
         desc="Protrusion length beyond outer skirt",
@@ -177,12 +186,12 @@ def _flared_tab_sketch(
 
 
 def pull_tab_angular_clearance(
-    tab: PullTabParams,
+    tab: Optional[PullTabParams],
     r_outer: float,
     margin: float = 3.0,
 ) -> float:
     """Return half-angle (degrees) around +X occupied by the tab including its root flare."""
-    if not tab.enabled:
+    if tab is None:
         return 0.0
     half_span = tab.width / 2.0 + tab.root_fillet + margin
     return math.degrees(math.atan2(half_span, max(1.0, r_outer)))
@@ -354,3 +363,54 @@ def build_pull_tab(
                 tab_cut = tab_cut.moved(location)
 
     return tab_add, tab_cut
+
+
+def export_filename(params: PullTabParams) -> str:
+    """Return standardized lowercase filename stem (without extension) for exports."""
+    style = "hanging" if params.hanging_hole else ("ribbed" if params.grip_ribs else "smooth")
+    return f"pull_tab_{params.length:g}x{params.width:g}mm_{style}"
+
+
+def create_pull_tab(params: PullTabParams) -> Part:
+    """Generate a standalone preview of the pull tab mounted on a reference rim stub."""
+    x_attach = 6.0
+    top_thickness = 2.0
+    outer_bevel = 0.8
+    stub_height = top_thickness + max(params.gusset_depth, 2.5) + 1.5
+    stub_width = params.width + 2.0 * params.root_fillet + 8.0
+
+    with BuildPart() as trim_part:
+        with Locations((2.0, 0.0, stub_height / 2.0)):
+            Box(5.0, stub_width + 4.0, stub_height + 2.0)
+
+    tab_add, tab_cut = build_pull_tab(
+        params,
+        x_attach=x_attach,
+        top_thickness=top_thickness,
+        max_gusset_depth=stub_height - top_thickness,
+        outer_bevel=outer_bevel,
+        rim_radius=None,
+        trim_solid=trim_part.part,
+        print_orientation=True,
+    )
+
+    with BuildPart() as preview:
+        # Reference straight rim stub so root flares, bevel, and gusset are clearly visible
+        with BuildSketch(Plane.XY):
+            with Locations((x_attach - 2.0, 0.0)):
+                Rectangle(4.0, stub_width)
+        extrude(amount=stub_height)
+        add(tab_add, mode=Mode.ADD)
+        if tab_cut is not None:
+            add(tab_cut, mode=Mode.SUBTRACT)
+
+    assert preview.part is not None, "Failed to generate pull tab preview"
+    return preview.part.moved(Location((-(x_attach + params.length / 2.0), 0.0, 0.0)))
+
+
+if __name__ == "__main__":
+    from utils.runner import run_model
+
+    params = PullTabParams()
+    part = create_pull_tab(params)
+    run_model(part, export_filename(params), stl=EXPORT_STL, step=EXPORT_STEP)

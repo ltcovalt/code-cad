@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "presets": {
+    "magnets_6x3": {
+      "label": "6×3 mm Magnets",
+      "description": "Deeper 3.2 mm pockets for 6×3 mm neodymium magnets",
+      "params": {
+        "magnet_depth": 3.2
+      }
+    },
+    "magnets_tight": {
+      "label": "Tight Press-Fit (6.0 × 2.1 mm)",
+      "description": "Snug press-fit magnet pockets for calibrated printers",
+      "params": {
+        "magnet_depth": 2.1,
+        "magnet_diameter": 6
+      }
+    },
+    "no_magnets": {
+      "label": "No Magnets (Solid Feet)",
+      "description": "Solid Gridfinity feet without corner magnet pockets",
+      "params": {
+        "magnets": false
+      }
+    }
+  }
+}

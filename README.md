@@ -47,7 +47,9 @@ cad/
 ├── .gitignore
 ├── README.md                   # Repository overview (this file)
 ├── exports/                    # Gitignored output directory for local STL/STEP/3MF exports
-├── components/                 # Reusable parametric 3D geometry components (pull_tab.py, gridfinity_base.py)
+├── components/                 # Reusable parametric 3D geometry components
+│   ├── gridfinity_base/        # 42 mm Gridfinity base feet with optional magnet pockets
+│   └── pull_tab/               # Flared lid pull tab with gusset, grip ribs, and hanging hole
 ├── utils/                      # Core zero-dependency helpers (params.py, runner.py)
 ├── models/                     # Parametric generator projects
 │   ├── battery_caddy/          # Parametric RC LiPo battery pit caddy (2S shorty, LCG, stick, custom)

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "presets": {
+    "bowl_lid": {
+      "label": "Bowl Lid (8.5 × 22 mm)",
+      "description": "Generous flared pull tab suited for large glass bowl and food storage lids",
+      "params": {
+        "gusset_depth": 2.5,
+        "hole_diameter": 4,
+        "length": 8.5,
+        "root_fillet": 4.5,
+        "width": 22
+      }
+    },
+    "hanging": {
+      "label": "Hanging Tab (10 × 18 mm)",
+      "description": "Extended pull tab with 4 mm peg through-hole for hanging or drying",
+      "params": {
+        "hanging_hole": true,
+        "hole_diameter": 4,
+        "length": 10,
+        "width": 18
+      }
+    },
+    "large": {
+      "label": "Large Flared (8 × 20 mm)",
+      "description": "Wider, longer pull tab for large 28 oz cans and mid-size containers",
+      "params": {
+        "length": 8,
+        "width": 20
+      }
+    },
+    "medium": {
+      "label": "Medium Flared (6 × 18 mm)",
+      "description": "Slightly wider 18 mm pull tab for 10.5-15 oz soup and food cans",
+      "params": {
+        "width": 18
+      }
+    }
+  }
+}
