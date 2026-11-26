@@ -17,6 +17,8 @@ Features:
 - Verified Pyrex and Anchor Hocking container size presets in `presets.json`
 """
 
+from __future__ import annotations
+
 import copy
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,7 +27,7 @@ from build123d import *
 
 try:
     from components.pull_tab import (
-        PullTabParams as BasePullTabParams,
+        PullTabParams,
         build_pull_tab,
         pull_tab_angular_clearance,
     )
@@ -38,7 +40,7 @@ except ImportError:
             sys.path.insert(0, str(_p))
             break
     from components.pull_tab import (
-        PullTabParams as BasePullTabParams,
+        PullTabParams,
         build_pull_tab,
         pull_tab_angular_clearance,
     )
@@ -142,6 +144,12 @@ class LidStructureParams:
         desc="Inside bottom rim bevel for easy mounting",
         unit="mm", min=0.0, max=3.0, step=0.1,
     )
+    pull_tab_location: Literal["auto", "corner", "edge"] = param(
+        "auto",
+        label="Pull Tab Placement",
+        desc="Corner for rectangular, edge for round",
+        when={"core.shape": "rectangular"},
+    )
 
 
 @dataclass
@@ -220,42 +228,6 @@ class StackingRimParams:
 
 
 @dataclass
-class PullTabParams(BasePullTabParams):
-    """Ergonomic outer pull tab for lid removal."""
-
-    location: Literal["auto", "corner", "edge"] = param(
-        "auto",
-        desc="Corner for rectangular, edge for round",
-        when={"core.shape": "rectangular"},
-    )
-    length: float = param(
-        8.5,
-        desc="Protrusion length beyond skirt",
-        unit="mm", min=4.0, max=25.0, step=0.5,
-    )
-    width: float = param(
-        22.0,
-        desc="Tab width",
-        unit="mm", min=10.0, max=50.0, step=1.0,
-    )
-    root_fillet: float = param(
-        4.5,
-        desc="Concave flare radius blending tab sides into the lid rim (0 = straight)",
-        unit="mm", min=0.0, max=15.0, step=0.5,
-    )
-    gusset_depth: float = param(
-        2.5,
-        desc="Under-tab structural gusset depth",
-        unit="mm", min=0.0, max=8.0, step=0.5,
-    )
-    hole_diameter: float = param(
-        4.0,
-        desc="Hanging hole diameter",
-        unit="mm", min=2.0, max=10.0, step=0.5, when={"hanging_hole": True},
-    )
-
-
-@dataclass
 class FlexSlotsParams:
     """Rigid flexure relief slots (for PCTG / PETG / rigid plastics)."""
 
@@ -294,7 +266,7 @@ class ContainerLidParams:
     snap_bead: SnapBeadParams = group(SnapBeadParams, when={"core.rim_style": "beaded"})
     inner_seal: InnerSealParams = group(InnerSealParams)
     stacking_rim: StackingRimParams = group(StackingRimParams)
-    pull_tab: PullTabParams = group(PullTabParams)
+    pull_tab: PullTabParams | None = group(PullTabParams)
     flex_slots: FlexSlotsParams = group(FlexSlotsParams)
 
     def get_effective_params(self) -> "ContainerLidParams":
@@ -421,7 +393,7 @@ def build_round_lid(p: ContainerLidParams) -> Solid:
             Polygon(pts)
         revolve(axis=Axis.Z)
 
-        if tab.enabled:
+        if tab is not None:
             eff_gusset_depth = min(tab.gusset_depth, max(0.0, st.skirt_height - st.lead_in_chamfer))
             round_trim_solid = None
             round_trim_radius = None
@@ -462,7 +434,7 @@ def build_round_lid(p: ContainerLidParams) -> Solid:
             tab_clear_deg = pull_tab_angular_clearance(tab, r_outer)
             for i in range(flex.round_slot_count):
                 ang = i * (360.0 / flex.round_slot_count)
-                if tab.enabled and (ang < tab_clear_deg or ang > 360.0 - tab_clear_deg):
+                if tab is not None and (ang < tab_clear_deg or ang > 360.0 - tab_clear_deg):
                     continue
                 rot = Rotation(0, 0, ang)
                 with Locations(rot):
@@ -635,8 +607,8 @@ def build_rectangular_lid(p: ContainerLidParams) -> Solid:
                     RectangleRounded(l_stack_in, w_stack_in, radius=r_stack_in, mode=Mode.SUBTRACT)
                 extrude(amount=stack.height, mode=Mode.ADD)
 
-        if tab.enabled:
-            is_corner = (tab.location == "corner") or (tab.location == "auto")
+        if tab is not None:
+            is_corner = (st.pull_tab_location == "corner") or (st.pull_tab_location == "auto")
             eff_gusset_depth = min(tab.gusset_depth, max(0.0, st.skirt_height - st.lead_in_chamfer))
             wall_mid = st.skirt_wall_thickness * 0.5
             rect_trim_solid = None
