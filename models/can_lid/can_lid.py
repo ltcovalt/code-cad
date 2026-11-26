@@ -24,7 +24,7 @@ from typing import Optional
 from build123d import *
 
 try:
-    from components.pull_tab import PullTabParams, build_pull_tab, pull_tab_angular_clearance
+    from components.pull_tab import PullTabParams, create_pull_tab, pull_tab_angular_clearance
     from utils.params import default_preset, group, param
 except ImportError:
     import sys
@@ -33,7 +33,7 @@ except ImportError:
         if (_p / "utils").is_dir():
             sys.path.insert(0, str(_p))
             break
-    from components.pull_tab import PullTabParams, build_pull_tab, pull_tab_angular_clearance
+    from components.pull_tab import PullTabParams, create_pull_tab, pull_tab_angular_clearance
     from utils.params import default_preset, group, param
 
 # ==============================================================================
@@ -336,19 +336,19 @@ def create_can_lid(params: CanLidParams) -> Solid:
         revolve(axis=Axis.Z)
 
         if tab is not None:
-            tab_add, tab_cut = build_pull_tab(
-                tab,
-                x_attach=r_outer,
-                top_thickness=st.top_thickness,
-                max_gusset_depth=st.skirt_height - eff_lead_in - 0.5,
-                outer_bevel=eff_outer_bevel,
-                rim_radius=r_outer,
-                trim_radius=r_inner + st.skirt_wall_thickness * 0.5,
-                print_orientation=True,
+            add(
+                create_pull_tab(
+                    tab,
+                    x_attach=r_outer,
+                    top_thickness=st.top_thickness,
+                    max_gusset_depth=st.skirt_height - eff_lead_in - 0.5,
+                    outer_bevel=eff_outer_bevel,
+                    rim_radius=r_outer,
+                    trim_radius=r_inner + st.skirt_wall_thickness * 0.5,
+                    print_orientation=True,
+                ),
+                mode=Mode.ADD,
             )
-            add(tab_add, mode=Mode.ADD)
-            if tab_cut is not None:
-                add(tab_cut, mode=Mode.SUBTRACT)
 
         if flex.enabled and flex.slot_count > 0:
             slot_h = max(2.0, st.skirt_height - 1.5)
