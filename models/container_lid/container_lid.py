@@ -1,20 +1,21 @@
 """
-Parametric Container Lid Generator (build123d) [DRAFT / WIP]
+Snap-fit lid for round and rectangular food containers. (WIP)
 
-NOTE: This model is currently in DRAFT / WORK-IN-PROGRESS status.
+NOTE: This model is currently in work-in-progress status.
 
-Generates replacement lids for round and rectangular containers (e.g., Pyrex glass bowls
-and baking dishes). Supports flexible materials (TPU) with continuous stretch-fit retention beads,
-as well as rigid food-safe materials (PCTG / PETG) featuring compliant cantilever flexure slots.
+Fits round and rectangular containers (e.g., Pyrex glass bowls and baking
+dishes). Supports flexible materials (TPU) with continuous stretch-fit retention
+beads, as well as rigid food-safe materials (PCTG / PETG) with compliant flexure
+slots.
 
 Features:
 - Shapes: Round, Rectangular, and Square containers
-- Under-lip snap-fit retention bead (airtight stretch seal for TPU, snap clips for PCTG)
-- Inner seal plug ring (prevents liquid slosh and leakage)
+- Under-lip snap-fit retention bead (stretch seal for TPU, snap clips for PCTG/PETG)
+- Inner seal plug ring (reduces liquid slosh and leakage)
 - Stacking nesting rim on top surface
 - Ergonomic pull tab (corner tab on rectangular lids, edge tab on round lids)
   with non-slip grip ridges and hanging/drying peg hole
-- Verified Pyrex and Anchor Hocking container size presets in `presets.json`
+- Pyrex and Anchor Hocking container size presets in `presets.json`
 """
 
 from __future__ import annotations
@@ -703,7 +704,7 @@ def build_rectangular_lid(p: ContainerLidParams) -> Solid:
 
 
 def create_container_lid(params: ContainerLidParams) -> Solid:
-    """Standalone generator function returning container lid CAD solid without side effects."""
+    """Build a container lid solid."""
     p = params.get_effective_params()
     shape_lower = p.core.shape.lower()
     if shape_lower == "round":
