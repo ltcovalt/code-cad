@@ -1,21 +1,21 @@
 """
-Parametric Shaft End Cap (build123d Model)
+Press-fit end cap for cylindrical rods and shelving shafts.
 
-Designed for cylindrical rods/shafts (e.g. 1/2" rod shelving used for filament spool storage)
-to retain spools and prevent them from sliding off.
+Designed for cylindrical rods and shafts (such as 1/2" shelving rods used for
+filament spool storage) to retain spools and keep them from sliding off.
 
 Features:
-- Parametric shaft diameter and 3D-print press-fit clearance.
-- Customizable collar sleeve length and wall thickness.
-- Wide retention flange with customizable diameter, thickness, and fillet transition.
-- Multiple selectable end cap styles:
-    * 'dome' (or 'semi-spherical'): smooth spherical dome for bump protection.
-    * 'flat': clean flat face with filleted or chamfered outer edge.
-    * 'chamfer': conical beveled face.
-    * 'round': flat face with prominent rounded front rim.
-- Internal lead-in chamfer for easy push-on installation.
-- Optional air-relief vent hole to prevent trapped air resistance during press-fit.
-- Optional perimeter grip flutes/grooves for easy twist-off removal.
+- Configurable shaft diameter and 3D-print press-fit clearance
+- Customizable collar sleeve length and wall thickness
+- Wide retention flange with customizable diameter, thickness, and fillet transition
+- Multiple end cap styles:
+    * 'dome' (or 'semi-spherical'): smooth spherical dome for bump protection
+    * 'flat': clean flat face with filleted or chamfered outer edge
+    * 'chamfer': conical beveled face
+    * 'round': flat face with prominent rounded front rim
+- Internal lead-in chamfer for easy push-on installation
+- Optional air-relief vent hole to prevent trapped air during press-fit
+- Optional perimeter grip flutes for easy twist-off removal
 """
 
 from dataclasses import dataclass
@@ -215,7 +215,7 @@ class ShaftEndCapParams:
 
 
 def create_shaft_end_cap(params: ShaftEndCapParams) -> Part:
-    """Generates a parametric shaft end cap solid body."""
+    """Build a shaft end cap solid body."""
     core = params.core
     flange = params.flange
     tip = params.cap
