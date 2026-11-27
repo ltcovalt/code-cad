@@ -1,7 +1,7 @@
 """
-Parametric RC LiPo Battery Caddy Generator (build123d)
+Storage rack and pit caddy for RC LiPo hardcase batteries.
 
-Generates a sturdy, 100% support-free 3D-printable pit caddy and storage rack
+Builds a sturdy, 100% support-free 3D-printable pit caddy and storage rack
 for RC car LiPo hardcase batteries—pre-configured for standard 2S Shorty packs
 (used in 1/10 scale 2WD buggies like the Schumacher Cougar LD2 and XRAY XB2)
 with built-in profiles for LCG shorty, ULCG/slim shorty, standard 2S stick
@@ -9,19 +9,19 @@ packs, and custom dimensions.
 
 Features:
 - Built-in RC LiPo hardcase profiles (Standard 2S Shorty, LCG, ULCG/Slim,
-  Standard 2S Stick) plus fully custom dimensions
+  Standard 2S Stick) plus custom dimensions
 - Three layout patterns:
   - `grid`: configurable columns × rows with optional 90° slot rotation
-  - `pinwheel`: compact 4-pack pinwheel (fits 4 shorties in 2×2 Gridfinity!)
-  - `auto_pack`: automatically maximizes battery count inside a target
-    Gridfinity footprint by mixing 0°/90° rows or pinwheel (e.g. 6 packs in 3×2)
+  - `pinwheel`: compact 4-pack pinwheel (fits 4 shorties in 2×2 Gridfinity)
+  - `auto_pack`: maximizes battery count inside a target Gridfinity footprint
+    by mixing 0°/90° rows or pinwheel (e.g. 6 packs in 3×2)
 - Flat pit-table base or auto-sized Gridfinity-compatible 42 mm modular base
   with optional 6×2 mm corner magnet pockets
 - Configurable wall height, XY fit clearance, wall/divider/floor thicknesses,
   pocket corner radius, top lead-in chamfer, and anti-elephant's-foot base bevel
 - Optional U-shaped finger-grip & label-viewing cutouts and bottom drain holes
-- Dedicated single-section Test Fit mode to quickly print a 1×1 collar/cup and
-  verify battery clearance before printing the full caddy
+- Single-section Test Fit mode to quickly print a 1×1 collar/cup and verify
+  battery clearance before printing the full caddy
 """
 
 from __future__ import annotations
@@ -61,6 +61,8 @@ except ImportError:
         create_gridfinity_base,
     )
     from utils.params import default_preset, group, param
+
+MODEL_NAME: str = "RC LiPo Battery Caddy"
 
 # ==============================================================================
 # Standardized Export Configuration
@@ -312,7 +314,7 @@ class TestFitParams:
     desc="4×1 upright pit caddy for standard 2S shorty LiPo hardcase packs (96 × 47 × 25.1 mm)",
 )
 @dataclass
-class BatteryCaddyParams:
+class RcBatteryCaddyParams:
     """Master parameter schema for the RC LiPo Battery Caddy generator."""
 
     battery: BatteryParams = group(BatteryParams)
@@ -670,7 +672,7 @@ def _make_lead_in_tool(
 
 
 def _resolve_layout(
-    params: BatteryCaddyParams,
+    params: RcBatteryCaddyParams,
 ) -> tuple[list[_Pocket], float, float, int, int, bool]:
     """Compute (pockets, outer_x, outer_y, gx, gy, is_pinwheel) for the active config."""
     bat = params.battery
@@ -776,8 +778,8 @@ def _has_neighbor(pk: _Pocket, all_pockets: list[_Pocket], side: Literal["-Y", "
     return False
 
 
-def create_battery_caddy(params: BatteryCaddyParams) -> Part:
-    """Generate the parametric RC LiPo battery caddy."""
+def create_rc_battery_caddy(params: RcBatteryCaddyParams) -> Part:
+    """Build the RC LiPo battery caddy solid."""
     gf = params.gridfinity
     st = params.structure
     cut = params.cutouts
@@ -991,7 +993,7 @@ def create_battery_caddy(params: BatteryCaddyParams) -> Part:
     return caddy.part
 
 
-def export_filename(params: BatteryCaddyParams) -> str:
+def export_filename(params: RcBatteryCaddyParams) -> str:
     """Return standardized lowercase snake_case export filename stem."""
     bat = params.battery
     if bat.battery_type == "custom":
@@ -1001,7 +1003,7 @@ def export_filename(params: BatteryCaddyParams) -> str:
         bat_tag = bat.battery_type
 
     if params.test_fit.enabled:
-        return f"battery_caddy_{bat_tag}_{bat.orientation}_test_fit"
+        return f"rc_battery_caddy_{bat_tag}_{bat.orientation}_test_fit"
 
     lay = params.layout
     if lay.pattern == "pinwheel":
@@ -1013,12 +1015,12 @@ def export_filename(params: BatteryCaddyParams) -> str:
         layout_tag = f"{lay.columns}x{lay.rows}{rot_tag}"
 
     base_tag = "_gridfinity" if params.gridfinity is not None else ""
-    return f"battery_caddy_{bat_tag}_{layout_tag}_{bat.orientation}{base_tag}"
+    return f"rc_battery_caddy_{bat_tag}_{layout_tag}_{bat.orientation}{base_tag}"
 
 
 if __name__ == "__main__":
     from utils.runner import run_model
 
-    params = BatteryCaddyParams()
-    part = create_battery_caddy(params)
+    params = RcBatteryCaddyParams()
+    part = create_rc_battery_caddy(params)
     run_model(part, export_filename(params), stl=EXPORT_STL, step=EXPORT_STEP)
