@@ -5,7 +5,7 @@
       "label": "2S Shorty 4-Pack Pinwheel (Gridfinity 2×2)",
       "description": "Ultra-compact 4-pack pinwheel with center cubby fitting inside a 2×2 Gridfinity base (83.5 × 83.5 mm)",
       "component_presets": {
-        "gridfinity": "default"
+        "gridfinity_base": "default"
       },
       "params": {
         "layout": {
@@ -21,12 +21,9 @@
         "note": "Printed in PCTG. Top loop was slightly messy and needed some cleanup, but otherwise printed great."
       },
       "component_presets": {
-        "gridfinity": "default"
+        "gridfinity_base": "default"
       },
       "params": {
-        "gridfinity": {
-          "magnets": false
-        },
         "layout": {
           "pattern": "pinwheel",
           "pinwheel_center": "pull_loop"
@@ -47,7 +44,7 @@
       "label": "2S Shorty 2-Pack Slim Strip (Gridfinity 3×1)",
       "description": "Slim 1U-deep Gridfinity strip holding 2 rotated standard 2S shorty packs (125.5 × 41.5 mm)",
       "component_presets": {
-        "gridfinity": "default"
+        "gridfinity_base": "default"
       },
       "params": {
         "layout": {
@@ -62,12 +59,9 @@
       "label": "2S Shorty 6-Pack Auto-Pack (Gridfinity 3×2)",
       "description": "Maximized 6-pack mixed layout (4 upright + 2 rotated 90°) filling a 3×2 Gridfinity base (125.5 × 83.5 mm)",
       "component_presets": {
-        "gridfinity": "default"
+        "gridfinity_base": "default"
       },
       "params": {
-        "gridfinity": {
-          "magnets": false
-        },
         "layout": {
           "pattern": "auto_pack"
         }

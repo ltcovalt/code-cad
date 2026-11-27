@@ -229,7 +229,7 @@ class StructureParams:
         5.0,
         desc="Outer vertical corner fillet radius (Gridfinity uses standard 3.75 mm)",
         unit="mm", min=0.0, max=15.0, step=0.5,
-        when={"gridfinity": None},
+        when={"gridfinity_base": None},
     )
     pocket_corner_radius: float = param(
         2.0,
@@ -246,7 +246,7 @@ class StructureParams:
         1.0,
         desc="Outer bottom perimeter chamfer to reduce elephant's foot",
         unit="mm", min=0.0, max=3.0, step=0.1,
-        when={"gridfinity": None},
+        when={"gridfinity_base": None},
     )
 
 
@@ -279,13 +279,13 @@ class CutoutsParams:
     floor_holes: bool = param(
         True,
         desc="Centered bottom cutouts for finger push-out, airflow, and dirt drainage (flat base)",
-        when={"gridfinity": None},
+        when={"gridfinity_base": None},
     )
     floor_ledge_width: float = param(
         5.0,
         desc="Solid floor ledge width retained around each pocket perimeter",
         unit="mm", min=3.0, max=12.0, step=0.5,
-        when={"gridfinity": None, "floor_holes": True},
+        when={"gridfinity_base": None, "floor_holes": True},
     )
 
 
@@ -319,7 +319,7 @@ class RcBatteryCaddyParams:
 
     battery: BatteryParams = group(BatteryParams)
     layout: LayoutParams = group(LayoutParams)
-    gridfinity: GridfinityBaseParams | None = group(
+    gridfinity_base: GridfinityBaseParams | None = group(
         GridfinityBaseParams,
         enabled=False,
         label="Gridfinity Base",
@@ -677,7 +677,7 @@ def _resolve_layout(
     """Compute (pockets, outer_x, outer_y, gx, gy, is_pinwheel) for the active config."""
     bat = params.battery
     lay = params.layout
-    gf = params.gridfinity
+    gf = params.gridfinity_base
     st = params.structure
     tf = params.test_fit
 
@@ -780,7 +780,7 @@ def _has_neighbor(pk: _Pocket, all_pockets: list[_Pocket], side: Literal["-Y", "
 
 def create_rc_battery_caddy(params: RcBatteryCaddyParams) -> Part:
     """Build the RC LiPo battery caddy solid."""
-    gf = params.gridfinity
+    gf = params.gridfinity_base
     st = params.structure
     cut = params.cutouts
     tf = params.test_fit
@@ -1014,7 +1014,7 @@ def export_filename(params: RcBatteryCaddyParams) -> str:
         rot_tag = "_rot90" if lay.rotate_90 else ""
         layout_tag = f"{lay.columns}x{lay.rows}{rot_tag}"
 
-    base_tag = "_gridfinity" if params.gridfinity is not None else ""
+    base_tag = "_gridfinity" if params.gridfinity_base is not None else ""
     return f"rc_battery_caddy_{bat_tag}_{layout_tag}_{bat.orientation}{base_tag}"
 
 
