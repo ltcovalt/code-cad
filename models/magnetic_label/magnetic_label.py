@@ -1,5 +1,5 @@
 """
-Parametric Magnetic Label Generator using build123d.
+Custom text label with press-fit magnet pockets for toolboxes and bins.
 
 Features:
 - Configurable dimensions: Auto-sized to text (+ padding) or fixed static width/height.
@@ -13,8 +13,6 @@ Features:
     * Auto-spaced along the width or manual magnet count/positions.
     * Calibrated press-fit clearance and sub-flush pocket depth.
     * Automatic plate thickness verification to guarantee solid floor behind magnets.
-- Visual display: Integrated ocp_viewer / ocp_vscode viewer preview with contrasting part colors
-  and semi-transparent magnets inside the pockets.
 """
 
 from __future__ import annotations
@@ -526,8 +524,7 @@ def build_magnetic_label(params: MagneticLabelParams) -> GeneratedLabel:
 
 def create_magnetic_label(params: MagneticLabelParams) -> Compound | Part | Solid:
     """
-    Decoupled generator function returning CAD geometry without side effects.
-    Returns Part/Solid for single-body labels, or Compound if multi-body flush text is present.
+    Build a magnetic label solid (or Compound when multi-body flush text is enabled).
     """
     label = build_magnetic_label(params)
     if label.text_part is not None:
