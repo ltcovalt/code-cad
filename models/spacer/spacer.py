@@ -1,13 +1,13 @@
 """
-Parametric Spacer Generator (build123d)
+Straight, L-corner, T-shape, and cross spacers for drawers and enclosures.
 
-Generates precision straight, L-corner, T-shape, and cross (+) spacers for filling
-gaps in drawers, enclosures, trays, and shelving.
+Builds straight, L-corner, T-shape, and cross (+) spacers for filling gaps in
+drawers, enclosures, trays, and shelving.
 
-Clean, Unified Leg Architecture:
-- Setting both `leg_x_length > 0` and `leg_y_length > 0` generates an L-corner, T-shape, or Cross (+).
-- Setting `leg_y_length = 0` generates a straight Leg X spacer.
-- Setting `leg_x_length = 0` generates a straight Leg Y spacer.
+Unified Leg Architecture:
+- Setting both `leg_x_length > 0` and `leg_y_length > 0` builds an L-corner, T-shape, or Cross (+).
+- Setting `leg_y_length = 0` builds a straight Leg X spacer.
+- Setting `leg_x_length = 0` builds a straight Leg Y spacer.
 - Each leg has independent length, width, and junction alignment/offset.
 - Height (Z) is shared across both legs.
 - Customizable outer, inner, and end corner radii plus top edge fillet/chamfer.
@@ -584,12 +584,12 @@ def _resolve_leg_position(
 
 def create_spacer(params: SpacerParams) -> Solid:
     """
-    Decoupled generator function for parametric spacers.
+    Build a straight, L-corner, T-shape, or cross (+) spacer solid.
 
-    - leg_x_length > 0 and leg_y_length > 0: generates an L-corner, T-shape, or Cross (+) spacer
+    - leg_x_length > 0 and leg_y_length > 0: builds an L-corner, T-shape, or Cross (+) spacer
       depending on `junction.leg_y_align` / `leg_y_offset` and `leg_x_align` / `leg_x_offset`.
-    - leg_x_length > 0 and leg_y_length <= 0: generates straight Leg X spacer.
-    - leg_x_length <= 0 and leg_y_length > 0: generates straight Leg Y spacer.
+    - leg_x_length > 0 and leg_y_length <= 0: builds straight Leg X spacer.
+    - leg_x_length <= 0 and leg_y_length > 0: builds straight Leg Y spacer.
     - `junction.mirror_x` / `mirror_y`: mirrors the finished spacer for opposite corners.
     """
     core = params.core
