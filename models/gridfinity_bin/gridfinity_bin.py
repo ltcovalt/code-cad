@@ -1,14 +1,12 @@
 """
-Parametric Gridfinity Bin with Pred-Compatible Printable Label Holder (build123d)
+Stackable Gridfinity storage bin with label holder, scoops, and dividers.
 
-A modular, component-based parametric Gridfinity bin generator built with build123d.
-Each major geometric feature is implemented as a standalone component function and
-composed cleanly in `create_gridfinity_bin(params)`:
+Composes five modular feature stages in `create_gridfinity_bin(params)`:
 
 1. `create_base_feet(params)`           - Standard Gridfinity 3-stage feet + magnet/screw holes
 2. `create_bin_body(params)`            - Outer shell, solid angled drawer-spacer overhangs, and tapered compartments
-3. `create_stacking_lip(params)`        - Complete, continuous concentric top stacking rim
-4. `create_compartment_scoops(params)`  - True circular finger-scoop ramps (adapts to vertical & overhanging walls)
+3. `create_stacking_lip(params)`        - Continuous concentric top stacking rim
+4. `create_compartment_scoops(params)`  - Circular finger-scoop ramps (adapts to vertical & overhanging walls)
 5. `create_label_holders(params)`       - Pred-compatible horizontal label shelves with recessed
                                           snap-in label sockets, side-tab notches, and bridged support fins
 """
@@ -1408,9 +1406,9 @@ def create_label_holders(params: GridfinityBinParams) -> Optional[Part]:
 # ==============================================================================
 def create_gridfinity_bin(params: GridfinityBinParams) -> Part:
     """
-    Decoupled generator function for parametric Gridfinity bins with Pred label compatibility.
+    Build a Gridfinity storage bin with Pred-compatible label holders.
 
-    Composes standalone feature components:
+    Composes standalone feature stages:
       1. Base Feet (`create_base_feet`)
       2. Main Bin Body & Compartments (`create_bin_body`)
       3. Compartment Finger Scoops (`create_compartment_scoops`)
