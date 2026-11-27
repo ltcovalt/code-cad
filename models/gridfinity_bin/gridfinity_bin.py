@@ -97,7 +97,7 @@ class MagnetHolesParams:
     """Base foot corner magnet pockets."""
 
     enabled: bool = param(
-        True,
+        False,
         desc="Cut 4 corner pockets per foot cell (6×2 mm magnets)",
     )
     diameter: float = param(
