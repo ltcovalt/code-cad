@@ -60,7 +60,7 @@ class GridfinityBaseParams:
         unit="U", min=1, max=12, step=1,
     )
     magnets: bool = param(
-        True,
+        False,
         label="Base Magnet Pockets",
         desc="Cut 4 corner magnet pockets per Gridfinity foot cell",
     )
