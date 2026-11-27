@@ -2,7 +2,7 @@
   "schema_version": 1,
   "presets": {
     "prusa_core_one_l_spool_clip_w_finger_pull": {
-      "label": "Prusa Core One L Spool Clip w/Finger Pull",
+      "label": "Prusa Core One L Spool Clip (Finger Pull)",
       "description": "Retaining clip to prevent larger diameter filament spools from falling off",
       "verification": {
         "status": "verified",

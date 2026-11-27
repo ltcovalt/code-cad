@@ -1,21 +1,18 @@
 """
-Parametric C-Clip (build123d Model)
+Snap-on retaining clip and spacer for cylindrical rods and shafts.
 
-Snap-on C-clip for cylindrical rods and shafts—usable as a retaining clip
-(e.g., filament spool keeper, shaft collar) or axial spacer without requiring
-disassembly.
+Usable as a retaining clip (e.g., filament spool keeper, shaft collar) or axial
+spacer without requiring disassembly.
 
 Features:
-- Parametric clip thickness (axial width along the shaft).
-- Parametric inside diameter (rod/shaft size) with optional 3D-print fit clearance.
-- Parametric outside diameter.
-- Snap-on C-opening with configurable opening angle and smooth rounded jaw tips.
+- Configurable clip thickness (axial width along the shaft)
+- Configurable inside diameter (rod/shaft size) with optional 3D-print fit clearance
+- Configurable outside diameter
+- Snap-on C-opening with configurable opening angle and smooth rounded jaw tips
 - Smooth inside-edge removal cutout bordering the shaft (spine pry/grab pocket)
-  for easy removal with a fingernail, finger, or small tool without creating sharp
-  stress risers, with optional G1-tangent outer wall reinforcement for large
-  finger-pull cutouts.
-- Optional subtle top/bottom edge chamfer to eliminate print-bed elephant's foot
-  and sharp edges.
+  for easy removal with a finger or small tool, with optional outer wall
+  reinforcement for large finger-pull cutouts
+- Optional top/bottom edge chamfer to reduce elephant's foot and sharp edges
 """
 
 import math
@@ -35,6 +32,8 @@ except ImportError:
             sys.path.insert(0, str(_p))
             break
     from utils.params import default_preset, group, param
+
+MODEL_NAME: str = "C-Clip"
 
 # ==============================================================================
 # Standardized Export Configuration
@@ -484,7 +483,7 @@ def _rotate_2d(pt: tuple[float, float], angle_rad: float) -> tuple[float, float]
 
 
 def create_c_clip(params: CClipParams) -> Part:
-    """Generate a parametric snap-on C-clip solid body."""
+    """Build a snap-on C-clip solid body."""
     core = params.core
     jaw = params.jaw
     notch = params.removal_notch
