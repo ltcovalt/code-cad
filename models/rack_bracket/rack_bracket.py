@@ -1,8 +1,8 @@
 """
-19-Inch Rackmount L-Bracket (Parametric build123d Model with M4 Thread-In Holes & Stacking Clearance)
+19-inch rackmount L-bracket with mounting slots and optional ventilation.
 
-Fully parameterized L-bracket supporting arbitrary rack unit counts (1U, 2U, 3U, 4U, etc.),
-custom lengths, repeating M4 thread-in side hole arrays, EIA-310 standard mounting slots,
+Supports arbitrary rack unit counts (1U, 2U, 3U, 4U, etc.), custom lengths,
+repeating M4 thread-in side hole arrays, EIA-310 standard mounting slots,
 and selectable ventilation styles ('hex', 'window', 'none').
 """
 
@@ -413,7 +413,7 @@ def _build_l_profile_solid(
 
 
 def create_rack_bracket(params: RackBracketParams) -> Part:
-    """Generates a parametric 19-inch rackmount L-bracket solid body."""
+    """Build a 19-inch rackmount L-bracket solid body."""
     core = params.core
     side = params.side_holes
     cutout = params.cutout
