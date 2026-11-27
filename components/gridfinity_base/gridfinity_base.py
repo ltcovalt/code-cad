@@ -39,8 +39,8 @@ GRIDFINITY_CORNER_RADIUS: float = 3.75
 
 
 @default_preset(
-    "Standard 6×2 mm Magnets",
-    desc="42 mm-pitch Gridfinity base feet with 6.1 × 2.2 mm corner magnet pockets",
+    "Solid Feet (No Magnets)",
+    desc="42 mm-pitch solid Gridfinity base feet without corner magnet pockets",
 )
 @dataclass
 class GridfinityBaseParams:
