@@ -1,10 +1,9 @@
 """
-Reusable Gridfinity Base Feet Component (build123d)
+Standard 42 mm Gridfinity base feet with optional magnet pockets.
 
-Provides standard 42 mm-pitch 3-stage Gridfinity base feet (z = 0 to 4.75 mm)
-with optional corner magnet pockets so any organizer or caddy model can offer
-a drop-in Gridfinity-compatible base, and a standalone `create_gridfinity_base`
-entrypoint for Code CAD Studio preview and preset management.
+Shared geometry component intended to be imported and composed into other models
+(such as `rc_battery_caddy`), while also supporting standalone preview and export
+via `create_gridfinity_base(...)`.
 """
 
 from __future__ import annotations

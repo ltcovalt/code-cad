@@ -1,13 +1,13 @@
 """
-Reusable Flared Pull Tab Component (build123d)
+Flared lid pull tab with grip ribs and optional hanging hole.
 
-Provides a shared `PullTabParams` dataclass and unified `create_pull_tab(...)`
-generator used both for standalone preview/export in Code CAD Studio and for
-composing into lid models (e.g. `can_lid`, `container_lid`).
+Shared geometry component intended to be imported and composed into lid models
+(such as `can_lid` and `container_lid`), while also supporting standalone preview
+and export via `create_pull_tab(...)`.
 
 Features:
 - Smooth G1-tangent concave root fillets where the tab meets a circular or straight rim
-  (eliminates sharp stress-riser corners and replaces the "slapped-on rectangle" look)
+  (eliminates sharp stress-riser corners)
 - Optional lofted under-tab gusset trimmed cleanly to the lid wall
 - Optional recessed non-slip traction grooves on the flat outer face
 - Optional through-cut hanging / drying peg hole (cuts cleanly through tab + gusset)
