@@ -1,10 +1,9 @@
 """
-Parametric Can Lid Generator (build123d)
+Snap-on storage lid for beverage and food cans.
 
-Generates reusable snap-on storage lids for rolled-rim aluminum beverage cans
-(soda, sparkling water, tallboys, slim cans) and steel food/soup cans. Supports
-both flexible filaments (TPU stretch-fit) and rigid plastics (PLA / PETG / PCTG
-with compliant cantilever flexure slots).
+Fits rolled-rim aluminum beverage cans (soda, sparkling water, tallboys, slim
+cans) and steel food/soup cans. Supports both flexible filaments (TPU
+stretch-fit) and rigid plastics (PLA / PETG / PCTG with compliant flexure slots).
 
 Features:
 - Circular rolled-rim retention geometry with under-rim snap bead
@@ -226,7 +225,7 @@ def export_filename(params: CanLidParams) -> str:
 
 
 def create_can_lid(params: CanLidParams) -> Solid:
-    """Generate a parametric rolled-rim can lid solid."""
+    """Build a rolled-rim can lid solid."""
     c = params.core
     st = params.structure
     bead = params.snap_bead
