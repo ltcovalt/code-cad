@@ -51,16 +51,16 @@ cad/
 │   ├── gridfinity_base/        # 42 mm Gridfinity base feet with optional magnet pockets
 │   └── pull_tab/               # Flared lid pull tab with gusset, grip ribs, and hanging hole
 ├── utils/                      # Core zero-dependency helpers (params.py, runner.py)
-├── models/                     # Parametric generator projects
-│   ├── battery_caddy/          # Parametric RC LiPo battery pit caddy (2S shorty, LCG, stick, custom)
-│   ├── c_clip/                 # Parametric snap-on C-clips for rods and shafts
+├── models/                     # 3D printable model scripts
+│   ├── c_clip/                 # Snap-on retaining clips and spacers for rods and shafts
 │   ├── can_lid/                # Snap-on storage lids for beverage and food cans
-│   ├── container_lid/          # Container lid generator (Pyrex, etc.)
-│   ├── gridfinity_bin/         # Parametric Gridfinity bin with Pred printable label holder
-│   ├── magnetic_label/         # Magnetic label generator
+│   ├── container_lid/          # Snap-fit lids for round and rectangular food containers (WIP)
+│   ├── gridfinity_bin/         # Stackable Gridfinity bins with label holder, scoops, and dividers
+│   ├── magnetic_label/         # Custom text labels with press-fit magnet pockets
 │   ├── rack_bracket/           # 19" EIA-310 rackmount brackets (1U, 2U+)
-│   ├── shaft_end_cap/          # Retention end caps for cylindrical shelving rods
-│   └── spacer/                 # Parametric straight, L-corner, T-shape, and cross spacers
+│   ├── rc_battery_caddy/       # Storage rack and pit caddy for RC LiPo hardcase batteries
+│   ├── shaft_end_cap/          # Press-fit end caps for cylindrical rods and shelving shafts
+│   └── spacer/                 # Straight, L-corner, T-shape, and cross spacers
 └── .agents/                    # Agent skills, references, and validation scripts
 ```
 
@@ -70,15 +70,15 @@ cad/
 
 | Model | Description | Output Formats |
 | :--- | :--- | :--- |
-| **[Battery Caddy](models/battery_caddy/)** | Parametric RC LiPo hardcase battery caddy for 2S shorty (standard, LCG, ULCG), stick, and custom packs with flat or Gridfinity base, grid/pinwheel/auto-pack layouts, grip cutouts, and a single-section test-fit mode. | STL, STEP |
-| **[C-Clip](models/c_clip/)** | Parametric snap-on C-clip for cylindrical rods and shafts with configurable thickness, inside/outside diameters, inside-edge removal cutout, and optional reinforced outer finger-pull lobe. | STL, STEP |
-| **[Can Lid](models/can_lid/)** | Parametric snap-on storage lid for rolled-rim beverage and food/soup cans with under-rim retention bead, configurable pull tab, optional inner splash ring, and optional rigid-plastic flexure slots. | STL, STEP |
-| **[Container Lid](models/container_lid/)** | Airtight container lid generator with sealing bead, stacking rim, and pull tab. Built-in presets for Pyrex rectangular and round glass dishes. | STL, STEP |
-| **[Gridfinity Bin](models/gridfinity_bin/)** | Parametric Gridfinity bin with Pred-compatible printable label holder, finger scoops, dividers, and drawer spacer gap overhangs. | STL, STEP |
-| **[Magnetic Label](models/magnetic_label/)** | Magnetic label generator with auto-sizing to text, embossed/debossed/flush inlay styles, and press-fit round magnet pockets. | STL, STEP (Single & Multi-body) |
+| **[C-Clip](models/c_clip/)** | Snap-on retaining clip and spacer for cylindrical rods and shafts with configurable thickness, inside/outside diameters, removal cutout, and optional outer finger-pull reinforcement. | STL, STEP |
+| **[Can Lid](models/can_lid/)** | Snap-on storage lid for rolled-rim beverage and food/soup cans with under-rim retention bead, configurable pull tab, optional inner splash ring, and rigid-plastic flexure slots. | STL, STEP |
+| **[Container Lid](models/container_lid/)** | Snap-fit lid for round and rectangular food containers with sealing bead, stacking rim, and pull tab, plus Pyrex and Anchor Hocking presets (WIP). | STL, STEP |
+| **[Gridfinity Bin](models/gridfinity_bin/)** | Stackable Gridfinity storage bin with Pred-compatible printable label holder, finger scoops, dividers, and drawer spacer gap overhangs. | STL, STEP |
+| **[Magnetic Label](models/magnetic_label/)** | Custom text label with auto-sizing to text, embossed/debossed/flush inlay styles, and press-fit round magnet pockets. | STL, STEP (Single & Multi-body) |
 | **[Rackmount Brackets](models/rack_bracket/)** | 19-inch rackmount L-brackets (1U, 2U, custom lengths) with EIA-310 mounting slots, M4 thread-in holes, and honeycomb cutouts. | STL, STEP |
-| **[Shaft End Cap](models/shaft_end_cap/)** | Press-fit retention end caps for spool storage rods with dome/flat/chamfer styles, internal lead-in chamfer, and optional grip flutes. | STL, STEP |
-| **[Spacer](models/spacer/)** | Parametric straight, L-corner, mirrored L, T-shape, and cross spacers with configurable notches, pockets, pass-through cutouts, and rounded/chamfered edges. | STL, STEP |
+| **[RC LiPo Battery Caddy](models/rc_battery_caddy/)** | Storage rack and pit caddy for RC LiPo hardcase batteries (2S shorty, LCG, ULCG, stick, and custom packs) with flat or Gridfinity base, grid/pinwheel/auto-pack layouts, grip cutouts, and test-fit mode. | STL, STEP |
+| **[Shaft End Cap](models/shaft_end_cap/)** | Press-fit end caps for cylindrical rods and shelving shafts with dome/flat/chamfer styles, internal lead-in chamfer, and optional grip flutes. | STL, STEP |
+| **[Spacer](models/spacer/)** | Straight, L-corner, T-shape, and cross spacers for drawers and enclosures with configurable notches, pockets, pass-through cutouts, and rounded/chamfered edges. | STL, STEP |
 
 ---
 
