@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "presets": {
+    "buggy_2wd_1set_compact": {
+      "label": "2WD Carpet 1 Set — Single Tower + Lid (4 Tires)",
+      "description": "Compact single-tower C-sleeve caddy with matching press-fit lid holding 1 complete set (2 rears + 2 fronts)",
+      "verification": {
+        "status": "unverified",
+        "note": "Printed in PCTG, not yet verified results\nTop of the cutouts quality was terrible\nLid did not snap on at all, had at least 2mm or slop"
+      },
+      "params": {
+        "base": {
+          "base_thickness": 4
+        },
+        "layout": {
+          "sets": 1
+        },
+        "lid": {
+          "flexure_slots": false,
+          "skirt_depth": 7
+        },
+        "support": {
+          "cutout_count": 8,
+          "cutout_width": 14,
+          "wall_thickness": 3.2
+        }
+      }
+    },
+    "buggy_2wd_2sets_by_axle": {
+      "label": "2WD Carpet 2 Sets — Snug Front \u0026 Rear Towers + Lids",
+      "description": "2-tower C-sleeve caddy with a snug 78.5 mm front tower and 86.5 mm rear tower plus both matching press-fit lids",
+      "params": {
+        "layout": {
+          "arrangement": "by_axle",
+          "sets": 2
+        }
+      }
+    },
+    "buggy_test_fit_sleeve": {
+      "label": "C-Sleeve \u0026 Press-Fit Lid Test Ring (22 mm)",
+      "description": "Fast-printing single-tower 22 mm C-sleeve ring + matching press-fit lid on one plate to verify tire OD and lid tightness",
+      "params": {
+        "test_fit": {
+          "enabled": true,
+          "height": 22
+        }
+      }
+    }
+  }
+}

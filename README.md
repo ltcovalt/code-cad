@@ -59,6 +59,7 @@ cad/
 │   ├── magnetic_label/         # Custom text labels with press-fit magnet pockets
 │   ├── rack_bracket/           # 19" EIA-310 rackmount brackets (1U, 2U+)
 │   ├── rc_battery_caddy/       # Storage rack and pit caddy for RC LiPo hardcase batteries
+│   ├── rc_tire_caddy/          # Vertical stacking C-sleeve caddy for 1/10 RC buggy tires
 │   ├── shaft_end_cap/          # Press-fit end caps for cylindrical rods and shelving shafts
 │   └── spacer/                 # Straight, L-corner, T-shape, and cross spacers
 └── .agents/                    # Agent skills, references, and validation scripts
@@ -77,6 +78,7 @@ cad/
 | **[Magnetic Label](models/magnetic_label/)** | Custom text label with auto-sizing to text, embossed/debossed/flush inlay styles, and press-fit round magnet pockets. | STL, STEP (Single & Multi-body) |
 | **[Rackmount Brackets](models/rack_bracket/)** | 19-inch rackmount L-brackets (1U, 2U, custom lengths) with EIA-310 mounting slots, M4 thread-in holes, and honeycomb cutouts. | STL, STEP |
 | **[RC LiPo Battery Caddy](models/rc_battery_caddy/)** | Storage rack and pit caddy for RC LiPo hardcase batteries (2S shorty, LCG, ULCG, stick, and custom packs) with flat or Gridfinity base, grid/pinwheel/auto-pack layouts, grip cutouts, and test-fit mode. | STL, STEP |
+| **[RC Tire Caddy](models/rc_tire_caddy/)** | Vertical stacking C-sleeve caddy for 1/10 RC buggy & stadium truck tires (2WD/4WD carpet, dirt, custom) with 45° base root gussets, joined tower bridges, support-free hex-truss cutouts, matching press-fit retention lids, flat or Gridfinity base, and test-fit mode. | STL, STEP |
 | **[Shaft End Cap](models/shaft_end_cap/)** | Press-fit end caps for cylindrical rods and shelving shafts with dome/flat/chamfer styles, internal lead-in chamfer, and optional grip flutes. | STL, STEP |
 | **[Spacer](models/spacer/)** | Straight, L-corner, T-shape, and cross spacers for drawers and enclosures with configurable notches, pockets, pass-through cutouts, and rounded/chamfered edges. | STL, STEP |
 
